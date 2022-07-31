@@ -63,7 +63,7 @@ Before submitting new code make sure to run it against our test suite to check i
 If you implement code which does something completely new (like new api endpoints) and does not get used by any existing test, write tests for it which covers your new code completely.
 When changing the library in a way that it is incompatible with prior version note these changes in your PR (or however the changes are published) to find the source of these changes easier.
 
-Run tests with the following two commands:
+All test are in the [tests](tests) directory and can be run with the following two commands:
 ```shell
 $ cargo test
 $ cargo test --features __test_strict
