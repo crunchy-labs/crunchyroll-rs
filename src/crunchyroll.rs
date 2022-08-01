@@ -133,7 +133,8 @@ impl CrunchyrollBuilder {
                 HashMap::from([
                     ("username", user.as_str()),
                     ("password", password.as_str()),
-                    ("grant_type", "password")
+                    ("grant_type", "password"),
+                    ("scope", "offline_access")
                 ])
             ).unwrap())
             .send()
@@ -165,7 +166,8 @@ impl CrunchyrollBuilder {
             .header("Cookie", format!("etp_rt={}", etp_rt))
             .body(serde_urlencoded::to_string(
                 HashMap::from([
-                    ("grant_type", "etp_rt_cookie")
+                    ("grant_type", "etp_rt_cookie"),
+                    ("scope", "offline_access")
                 ])
             ).unwrap())
             .send()
