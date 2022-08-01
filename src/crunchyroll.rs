@@ -34,7 +34,7 @@ impl Display for Locale {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Crunchyroll {
     pub client: reqwest::Client,
     pub locale: Locale,
@@ -48,6 +48,7 @@ pub struct Crunchyroll {
 pub struct CrunchyrollConfig {
     pub token_type: String,
     pub access_token: String,
+    pub refresh_token: String,
 
     pub bucket: String,
 
@@ -61,10 +62,12 @@ pub struct CrunchyrollConfig {
 
 
 #[derive(Deserialize, Debug)]
+#[cfg_attr(all(test, feature = "__test_strict"), serde(deny_unknown_fields))]
 #[cfg_attr(not(all(test, feature = "__test_strict")), serde(default), derive(Default))]
 #[allow(dead_code)]
 struct LoginResponse {
     access_token: String,
+    refresh_token: String,
     expires_in: i32,
     token_type: String,
     scope: String,
@@ -264,6 +267,7 @@ impl CrunchyrollBuilder {
         let config = CrunchyrollConfig{
             token_type: login_response.token_type,
             access_token: login_response.access_token,
+            refresh_token: login_response.refresh_token,
 
             // '/' is trimmed so that urls which require it must be in .../{bucket}/... like format.
             // this just looks cleaner
