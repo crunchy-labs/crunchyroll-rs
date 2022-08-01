@@ -1,3 +1,7 @@
+/// Begins with an underscore because this must be the first file to be called
+
+mod utils;
+
 use std::env;
 use crunchyroll_rs::Crunchyroll;
 
@@ -10,7 +14,11 @@ async fn login_with_credentials() {
         .login_with_credentials(user.into(), password.into())
         .await;
 
-    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string())
+    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
+
+    if !utils::session::has_session() {
+        utils::session::set_session(crunchy.unwrap()).unwrap()
+    }
 }
 
 #[tokio::test]
@@ -21,7 +29,11 @@ async fn login_with_etp_rt() {
         .login_with_etp_rt(etp_rt)
         .await;
 
-    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string())
+    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
+
+    if !utils::session::has_session() {
+        utils::session::set_session(crunchy.unwrap()).unwrap()
+    }
 }
 
 #[tokio::test]
@@ -32,5 +44,9 @@ async fn login_with_session_id() {
         .login_with_session_id(session_id)
         .await;
 
-    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string())
+    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
+
+    if !utils::session::has_session() {
+        utils::session::set_session(crunchy.unwrap()).unwrap()
+    }
 }
