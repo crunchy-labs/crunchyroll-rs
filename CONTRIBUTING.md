@@ -25,9 +25,9 @@ You can always look at the [commit history](https://github.com/crunchy-labs/crun
 _**This section is only necessary for structs which get used to scan crunchyroll api results in.**_
 
 When defining a new struct two attributes must be specified for it.
-`#[cfg_attr(all(test, feature = "__test_strict"), serde(deny_unknown_fields))]` is required for testing.
+`#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]` is required for testing.
 It ensures that the api result does not contain any unknown fields when running the tests with the `__test_strict` feature.
-`#[cfg_attr(not(all(test, feature = "__test_strict")), serde(default), derive(Default))]` enables default values for all fields.
+`#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]` enables default values for all fields.
 If the api changes at some point and some fields are getting removed, the library does not fail immediately and uses the default value for the field instead.
 Some field attributes might not impl `Default` and therefore `derive(Default)` causes a compile error.
 For this case, the [`smart-default`](https://github.com/idanarye/rust-smart-default) crate is a dependency.
@@ -37,20 +37,20 @@ This attribute gets disabled when the library is tested with the `__test_strict`
 
 Some api results are "polluted" with fields which are not really necessary.
 To guarantee test integrity with `__test_strict` these fields must also be included.
-Attribute the fields with `#[cfg(all(test, feature = "__test_strict"))]` to only include them when testing with the `__test_strict` feature.
+Attribute the fields with `#[cfg(feature = "__test_strict")]` to only include them when testing with the `__test_strict` feature.
 This ensures that no extra memory is allocated for field values which will never be used.
 Use `StrictValue` as type for the fields.
 
 A struct after the named conventions looks like this:
 ```rust
-#[cfg_attr(all(test, feature = "__test_strict"), serde(deny_unknown_fields))]
-#[cfg_attr(not(all(test, feature = "__test_strict")), serde(default), derive(Default))]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct ExampleResponse {
     ...
     
-    #[cfg(all(test, feature = "__test_strict"))]
+    #[cfg(feature = "__test_strict")]
     __object__: crate::StrictValue,
-    #[cfg(all(test, feature = "__test_strict"))]
+    #[cfg(feature = "__test_strict")]
     __owo__: crate::StrictValue,
     
     ...

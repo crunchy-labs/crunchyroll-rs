@@ -62,8 +62,8 @@ pub struct CrunchyrollConfig {
 
 
 #[derive(Deserialize, Debug)]
-#[cfg_attr(all(test, feature = "__test_strict"), serde(deny_unknown_fields))]
-#[cfg_attr(not(all(test, feature = "__test_strict")), serde(default), derive(Default))]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 #[allow(dead_code)]
 struct LoginResponse {
     access_token: String,
@@ -221,26 +221,27 @@ impl CrunchyrollBuilder {
 
         let index_endpoint = "https://beta-api.crunchyroll.com/index/v2";
         #[derive(Deserialize)]
-        #[cfg_attr(not(all(test, feature = "__test_strict")), serde(default), derive(SmartDefault))]
+        #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+        #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(SmartDefault))]
         #[allow(dead_code)]
         struct IndexRespCms {
             bucket: String,
-            #[cfg_attr(not(all(test, feature = "__test_strict")), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+            #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
             expires: DateTime<Utc>,
             key_pair_id: String,
             policy: String,
             signature: String
         }
         #[derive(Deserialize)]
-        #[cfg_attr(all(test, feature = "__test_strict"), serde(deny_unknown_fields))]
-        #[cfg_attr(not(all(test, feature = "__test_strict")), serde(default), derive(Default))]
+        #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+        #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
         #[allow(dead_code)]
         struct IndexResp {
             cms: IndexRespCms,
             default_marketing_opt_in: bool,
             service_available: bool,
 
-            #[cfg(all(test, feature = "__test_strict"))]
+            #[cfg(feature = "__test_strict")]
             cms_beta: crate::StrictValue
         }
         let index_req = self.client
@@ -250,11 +251,11 @@ impl CrunchyrollBuilder {
 
         let me_endpoint = "https://beta-api.crunchyroll.com/accounts/v1/me";
         #[derive(Deserialize)]
-        #[cfg_attr(not(all(test, feature = "__test_strict")), serde(default), derive(SmartDefault))]
+        #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(SmartDefault))]
         #[allow(dead_code)]
         struct MeResp {
             account_id: String,
-            #[cfg_attr(not(all(test, feature = "__test_strict")), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+            #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
             created: DateTime<Utc>,
             email_verified: bool,
             external_id: String

@@ -8,6 +8,7 @@ edition = "2021"
 [features]
 default = []
 
+# Internal! Do not use it outside of testing
 __test_strict = []
 
 [dependencies]
