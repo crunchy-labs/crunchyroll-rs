@@ -32,7 +32,7 @@ If the api changes at some point and some fields are getting removed, the librar
 Some field attributes might not impl `Default` and therefore `derive(Default)` causes a compile error.
 For this case, the [`smart-default`](https://github.com/idanarye/rust-smart-default) crate is a dependency.
 Use `derive(SmartDefault)` instead of `derive(Default)` and then set the default value for the field manually via `smart-default`.
-See [here](https://github.com/crunchy-labs/crunchyroll-rs/blob/3509cdd6d4d3e92ee98e7ecaea27f36c07c71914/src/crunchyroll.rs#L254) how it's used in practice (since [`chrono::DateTime`](https://github.com/chronotope/chrono) does not support / impl `Default`).
+See [here](https://github.com/crunchy-labs/crunchyroll-rs/blob/caf0018cd9bb93ac7948bcc47a0baffe3ed883a3/src/crunchyroll.rs#L229) how it's used in practice (since [`chrono::DateTime`](https://github.com/chronotope/chrono) does not support / impl `Default`).
 This attribute gets disabled when the library is tested with the `__test_strict` feature to ensure failing when a field is missing.
 
 Some api results are "polluted" with fields which are not really necessary.
