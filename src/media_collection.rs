@@ -27,8 +27,8 @@ impl Display for MediaType {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct MovieListingImages {
-    poster_tall: Vec<Vec<Image>>,
-    poster_wide: Vec<Vec<Image>>
+    pub poster_tall: Vec<Vec<Image>>,
+    pub poster_wide: Vec<Vec<Image>>
 }
 
 /// This struct represents a movie collection.
