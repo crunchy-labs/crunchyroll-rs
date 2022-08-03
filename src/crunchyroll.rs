@@ -1,16 +1,14 @@
 use std::collections::HashMap;
-use serde::{Deserialize};
+use serde::Deserialize;
 use std::fmt::{Display, Formatter};
 use chrono::{DateTime, Utc};
 use reqwest::RequestBuilder;
 use reqwest::header::HeaderMap;
 use serde::de::DeserializeOwned;
-#[allow(unused_imports)]
 use smart_default::SmartDefault;
 use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
 
-
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Deserialize)]
 pub enum Locale {
     JP,US, LA, ES, FR, PT, BR, IT, DE, RU, AR
 }
@@ -54,6 +52,7 @@ pub struct CrunchyrollConfig {
 
     pub country_code: String,
     pub premium: bool,
+    pub signature: String,
     pub policy: String,
     pub key_pair_id: String,
     pub account_id: String,
@@ -85,13 +84,6 @@ impl Crunchyroll {
         }
     }
 
-    async fn request<T: DeserializeOwned>(&self, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
-        builder = builder.
-            bearer_auth(self.config.access_token.clone());
-
-        request(builder).await
-    }
-
     pub fn is_caching(&self) -> bool {
         return self.cache
     }
@@ -103,6 +95,30 @@ impl Crunchyroll {
     pub async fn invalidate_session(self) -> Result<()> {
         let endpoint = "https://crunchyroll.com/logout";
         self.request::<()>(self.client.get(endpoint)).await
+    }
+}
+
+/// Private / crate exclusive implementations
+impl Crunchyroll {
+    pub(crate) async fn request<T: DeserializeOwned>(&self, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
+        builder = builder.
+            bearer_auth(self.config.access_token.clone());
+
+        request(builder).await
+    }
+
+    pub(crate) fn default_for_struct<'a>() -> Option<&'a Crunchyroll> {
+        None
+    }
+
+    pub(crate) fn media_query(&self) -> HashMap<String, String> {
+        let mut query = HashMap::new();
+        query.insert("locale".to_string(), self.locale.to_string());
+        query.insert("Signature".to_string(), self.config.signature.clone());
+        query.insert("Policy".to_string(), self.config.policy.clone());
+        query.insert("Key-Pair-Id".to_string(), self.config.key_pair_id.clone());
+
+        query
     }
 }
 
@@ -278,6 +294,7 @@ impl CrunchyrollBuilder {
 
             country_code: login_response.country,
             premium: index.cms.bucket.ends_with("crunchyroll"),
+            signature: index.cms.signature,
             policy: index.cms.policy,
             key_pair_id: index.cms.key_pair_id,
             account_id: login_response.account_id,
@@ -305,7 +322,29 @@ async fn request<T: DeserializeOwned>(builder: RequestBuilder) -> Result<T> {
             CrunchyrollErrorContext{ message: e.to_string() }
         ))?;
 
-    check_request_error(resp.json().await.map_err(|e| CrunchyrollError::DecodeError(
+    let result = check_request_error(resp.json().await.map_err(|e| CrunchyrollError::DecodeError(
         CrunchyrollErrorContext{ message: e.to_string() }
-    ))?)
+    ))?)?;
+
+    #[cfg(not(feature = "__test_strict"))]
+    return Ok(result);
+    #[cfg(feature = "__test_strict")]
+    {
+        let cleaned = clean_request(result);
+        return T::deserialize(serde::de::value::MapDeserializer::new(cleaned.into_iter())).map_err(|e| CrunchyrollError::DecodeError(
+            CrunchyrollErrorContext { message: e.to_string() }
+        ));
+    }
+}
+
+#[cfg(feature = "__test_strict")]
+fn clean_request(mut map: serde_json::Map<String, serde_json::Value>) -> serde_json::Map<String, serde_json::Value> {
+    for (key, value) in map.clone() {
+        if key.starts_with("__") && key.ends_with("__") {
+            map.remove(key.as_str());
+        } else if let Some(object) = value.as_object() {
+            map.insert(key, serde_json::to_value(clean_request(object.clone())).unwrap());
+        }
+    }
+    map
 }

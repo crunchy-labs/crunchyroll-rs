@@ -43,8 +43,16 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
         context: Vec<CodeFieldContext>,
         error: String
     }
+    #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
+    struct CodeContextError2 {
+        code: String,
+        // I haven't encountered a error with a populated value for this yet
+        context: serde_json::Value,
+        message: String
+    }
 
-    if let Ok(err) = serde_json::from_value::<CodeContextError>(value) {
+    if let Ok(err) = serde_json::from_value::<CodeContextError>(value.clone()) {
         let mut details: Vec<String> = vec![];
 
         for item in err.context.iter() {
@@ -54,6 +62,10 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
         return Err(CrunchyrollError::RequestError(
             CrunchyrollErrorContext{ message: format!("{} ({}) - {}", err.error, err.code, details.join(", ")) }
         ));
+    } else if let Ok(err) = serde_json::from_value::<CodeContextError2>(value) {
+        return Err(CrunchyrollError::RequestError(
+            CrunchyrollErrorContext{ message: format!("{} ({})", err.message, err.code) }
+        ))
     }
     Ok(())
 }
