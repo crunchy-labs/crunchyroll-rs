@@ -31,7 +31,7 @@ It ensures that the api result does not contain any unknown fields when running 
 If the api changes at some point and some fields are getting removed, the library does not fail immediately and uses the default value for the field instead.
 Some field attributes might not impl `Default` and therefore `derive(Default)` causes a compile error.
 For this case, the [`smart-default`](https://github.com/idanarye/rust-smart-default) crate is a dependency.
-Use `derive(SmartDefault)` instead of `derive(Default)` and then set the default value for the field manually via `smart-default`.
+Use `derive(smart_defailt::SmartDefault)` instead of `derive(Default)` and then set the default value for the field manually via `smart-default`.
 See [here](https://github.com/crunchy-labs/crunchyroll-rs/blob/caf0018cd9bb93ac7948bcc47a0baffe3ed883a3/src/crunchyroll.rs#L229) how it's used in practice (since [`chrono::DateTime`](https://github.com/chronotope/chrono) does not support / impl `Default`).
 This attribute gets disabled when the library is tested with the `__test_strict` feature to ensure failing when a field is missing.
 
@@ -39,7 +39,8 @@ Some api results are "polluted" with fields which are not really necessary.
 To guarantee test integrity with `__test_strict` these fields must also be included.
 Attribute the fields with `#[cfg(feature = "__test_strict")]` to only include them when testing with the `__test_strict` feature.
 This ensures that no extra memory is allocated for field values which will never be used.
-Use `StrictValue` as type for the fields.
+Use `crate::StrictValue` as type for the fields.
+See [here](https://github.com/crunchy-labs/crunchyroll-rs/blob/7afffd6a2ce04e90a825f4da504690800979b015/src/media.rs#L98) for an example how it's used in a struct.
 
 A struct after the named conventions looks like this:
 ```rust
@@ -49,9 +50,9 @@ pub struct ExampleResponse {
     ...
     
     #[cfg(feature = "__test_strict")]
-    __object__: crate::StrictValue,
+    versions: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    __owo__: crate::StrictValue,
+    media_type: crate::StrictValue,
     
     ...
 }
