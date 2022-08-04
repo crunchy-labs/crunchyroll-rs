@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use std::fmt::{Display, Formatter};
 use chrono::{DateTime, Utc};
 use reqwest::RequestBuilder;
@@ -7,9 +7,9 @@ use reqwest::header::HeaderMap;
 use serde::de::DeserializeOwned;
 use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
 
-#[derive(Copy, Clone, Debug, Deserialize)]
+#[derive(Copy, Clone, Debug)]
 pub enum Locale {
-    JP,US, LA, ES, FR, PT, BR, IT, DE, RU, AR
+    JP, US, LA, ES, FR, PT, BR, IT, DE, RU, AR
 }
 
 impl Display for Locale {
@@ -28,6 +28,37 @@ impl Display for Locale {
             Locale::AR => "ar-SA"
         };
         write!(f, "{}", locale)
+    }
+}
+
+impl TryFrom<String> for Locale {
+    type Error = CrunchyrollError;
+
+    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+        match value.as_str() {
+            "ja-JP" => Ok(Locale::JP),
+            "en-US" => Ok(Locale::US),
+            "es-419" => Ok(Locale::LA),
+            "es-ES" => Ok(Locale::ES),
+            "fr-FR" => Ok(Locale::FR),
+            "pt-PT" => Ok(Locale::PT),
+            "pr-BR"=> Ok(Locale::BR),
+            "it-IT" => Ok(Locale::IT),
+            "de-DE" => Ok(Locale::DE),
+            "ru-RU" => Ok(Locale::RU),
+            "ar-SA" => Ok(Locale::AR),
+            _ => Err(CrunchyrollError::DecodeError(
+                CrunchyrollErrorContext{ message: format!("`{}` is not a valid locale", value) }
+            ))
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Locale {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        crate::internal::serde::string_to_enum(deserializer)
     }
 }
 
