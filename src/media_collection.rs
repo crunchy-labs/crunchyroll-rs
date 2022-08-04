@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use chrono::{DateTime, Utc};
-use smart_default::SmartDefault;
-use async_trait::async_trait;
 use crate::common::{Available, Crunchy, FromId, Image};
 use crate::{Crunchyroll, Locale};
 use crate::error::Result;
@@ -34,7 +32,7 @@ pub struct MovieListingImages {
 /// This struct represents a movie collection.
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(SmartDefault))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
 pub struct MovieListing<'a> {
     #[serde(skip)]
     #[serde(default = "Crunchyroll::default_for_struct")]
@@ -98,7 +96,7 @@ impl<'a> Available<'a> for MovieListing<'a> {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl<'a> FromId<'a> for MovieListing<'a> {
     async fn from_id(crunchy: &'a Crunchyroll, id: String) -> Result<Self> {
         let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/movie_listings/{}", crunchy.config.bucket, id);
@@ -118,7 +116,7 @@ type SeriesImages = MovieListingImages;
 /// This struct represents a crunchyroll series.
 #[derive(Deserialize, Debug)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(SmartDefault))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
 pub struct Series<'a> {
     #[serde(skip)]
     #[serde(default = "Crunchyroll::default_for_struct")]
@@ -175,7 +173,7 @@ impl<'a> Available<'a> for Series<'a> {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl<'a> FromId<'a> for Series<'a> {
     async fn from_id(crunchy: &'a Crunchyroll, id: String) -> Result<Self> {
         let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/series/{}", crunchy.config.bucket, id);

@@ -5,7 +5,6 @@ use chrono::{DateTime, Utc};
 use reqwest::RequestBuilder;
 use reqwest::header::HeaderMap;
 use serde::de::DeserializeOwned;
-use smart_default::SmartDefault;
 use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
 
 #[derive(Copy, Clone, Debug, Deserialize)]
@@ -240,7 +239,7 @@ impl CrunchyrollBuilder {
         let index_endpoint = "https://beta-api.crunchyroll.com/index/v2";
         #[derive(Deserialize)]
         #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-        #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(SmartDefault))]
+        #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
         #[allow(dead_code)]
         struct IndexRespCms {
             bucket: String,
@@ -269,7 +268,7 @@ impl CrunchyrollBuilder {
 
         let me_endpoint = "https://beta-api.crunchyroll.com/accounts/v1/me";
         #[derive(Deserialize)]
-        #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(SmartDefault))]
+        #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
         #[allow(dead_code)]
         struct MeResp {
             account_id: String,

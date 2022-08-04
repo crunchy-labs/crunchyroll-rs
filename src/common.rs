@@ -1,6 +1,5 @@
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
-use async_trait::async_trait;
 use crate::Crunchyroll;
 use crate::error::Result;
 
@@ -36,7 +35,7 @@ pub trait Available<'a>: Crunchy<'a> {
 }
 
 /// Every instance of the struct which this implements can be constructed by an id
-#[async_trait]
+#[async_trait::async_trait]
 pub trait FromId<'a> {
     /// Creates a new [`Self`] by the provided id or returns an [`CrunchyrollError`] if something
     /// caused an issue.
