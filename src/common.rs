@@ -23,7 +23,7 @@ pub struct Image {
 }
 
 /// Every struct which implements this must provide a usable [`Crunchyroll`] instance.
-pub trait Crunchy<'a>: DeserializeOwned {
+pub(crate) trait Crunchy<'a>: DeserializeOwned {
     /// Returns a usable [`Crunchyroll`] instance.
     fn get_crunchyroll(&self) -> &'a Crunchyroll;
 }
