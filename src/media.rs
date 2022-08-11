@@ -104,6 +104,8 @@ pub struct Episode {
     #[cfg(feature = "__test_strict")]
     versions: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
+    identifier: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
     media_type: crate::StrictValue,
 }
 
