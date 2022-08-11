@@ -1,6 +1,7 @@
+use std::sync::Arc;
 use serde::Deserialize;
-use serde::de::DeserializeOwned;
 use crate::Crunchyroll;
+use crate::crunchyroll::Executor;
 use crate::error::Result;
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
@@ -22,22 +23,31 @@ pub struct Image {
     pub width: u32
 }
 
-/// Every struct which implements this must provide a usable [`Crunchyroll`] instance.
-pub(crate) trait Crunchy<'a>: DeserializeOwned {
-    /// Returns a usable [`Crunchyroll`] instance.
-    fn get_crunchyroll(&self) -> &'a Crunchyroll;
+/// Every struct which implements this must provide a usable [`Executor`] instance.
+pub(crate) trait ExecutorControl {
+    /// Returns a usable [`Executor`] instance.
+    fn get_executor(&self) -> Arc<Executor>;
+
+    fn set_executor(&mut self, executor: Arc<Executor>);
 }
 
 /// Check if further actions with the struct which implements this are available.
-pub trait Available<'a>: Crunchy<'a> {
+pub trait Available {
     /// Returns if the current episode, series, ... is available.
     fn available(&self) -> bool;
 }
 
 /// Every instance of the struct which this implements can be constructed by an id
 #[async_trait::async_trait]
-pub trait FromId<'a> {
+pub trait FromId {
     /// Creates a new [`Self`] by the provided id or returns an [`CrunchyrollError`] if something
     /// caused an issue.
-    async fn from_id(crunchy: &'a Crunchyroll, id: String) -> Result<Self> where Self: Sized;
+    async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> where Self: Sized;
 }
+
+/*#[async_trait::async_trait]
+pub trait Playback {
+    async fn playback(&self) -> Result<Stream>;
+}
+
+ */

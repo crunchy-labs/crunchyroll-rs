@@ -16,7 +16,7 @@ pub async fn get_session() -> Result<Crunchyroll, Box<dyn Error>> {
 }
 
 pub fn set_session(crunchy: Crunchyroll) -> Result<(), Box<dyn Error>> {
-    Ok(set_store("session".into(), crunchy.config.refresh_token)?)
+    Ok(set_store("session".into(), crunchy.config().refresh_token)?)
 }
 
 pub fn has_session() -> bool {

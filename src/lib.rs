@@ -6,9 +6,12 @@ mod internal;
 mod media_collection;
 mod common;
 mod media;
+//mod stream;
 
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;
+
+use crunchyroll::Executor;
 
 pub use crunchyroll::Crunchyroll;
 pub use crunchyroll::Locale;

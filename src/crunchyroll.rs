@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Deserializer};
 use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use reqwest::RequestBuilder;
 use reqwest::header::HeaderMap;
 use serde::de::DeserializeOwned;
 use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Locale {
     JP, US, LA, ES, FR, PT, BR, IT, DE, RU, AR
 }
@@ -62,14 +63,69 @@ impl<'de> Deserialize<'de> for Locale {
     }
 }
 
+#[derive(Debug)]
+pub(crate) struct Executor {
+    pub(crate) client: reqwest::Client,
+    pub(crate) locale: Locale,
+
+    pub(crate) config: CrunchyrollConfig
+}
+
 #[derive(Debug, Clone)]
 pub struct Crunchyroll {
-    pub client: reqwest::Client,
-    pub locale: Locale,
+    pub(crate) executor: Arc<Executor>
+}
 
-    pub config: CrunchyrollConfig,
+impl Executor {
+    pub(crate) async fn request<T: DeserializeOwned>(&self, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
+        builder = builder.
+            bearer_auth(self.config.access_token.clone());
 
-    cache: bool
+        let resp = request(builder).await?;
+
+        /*let res: T;
+        if impls!(T: Crunchy) {
+            unsafe {
+                let mut x = mem::transmute::<T, Box<dyn Crunchy>>(resp);
+                x.set_crunchyroll(Box::new(self));
+                res = mem::transmute_copy::<Box<dyn Crunchy>, T>(&x);
+            }
+        } else {
+            res = resp;
+        }
+        Ok(res)*/
+        Ok(resp)
+    }
+
+    pub(crate) fn default_for_struct() -> Arc<Executor> {
+        Arc::new(Executor {
+            client: Default::default(),
+            locale: Locale::JP,
+            config: CrunchyrollConfig {
+                token_type: "".to_string(),
+                access_token: "".to_string(),
+                refresh_token: "".to_string(),
+                bucket: "".to_string(),
+                country_code: "".to_string(),
+                premium: false,
+                signature: "".to_string(),
+                policy: "".to_string(),
+                key_pair_id: "".to_string(),
+                account_id: "".to_string(),
+                external_id: "".to_string()
+            }
+        })
+    }
+
+    pub(crate) fn media_query(&self) -> HashMap<String, String> {
+        let mut query = HashMap::new();
+        query.insert("locale".to_string(), self.locale.to_string());
+        query.insert("Signature".to_string(), self.config.signature.clone());
+        query.insert("Policy".to_string(), self.config.policy.clone());
+        query.insert("Key-Pair-Id".to_string(), self.config.key_pair_id.clone());
+
+        query
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -114,41 +170,13 @@ impl Crunchyroll {
         }
     }
 
-    pub fn is_caching(&self) -> bool {
-        return self.cache
-    }
-
-    pub fn set_caching(&mut self, caching: bool) {
-        self.cache = caching
+    pub fn config(&self) -> CrunchyrollConfig {
+        self.executor.config.clone()
     }
 
     pub async fn invalidate_session(self) -> Result<()> {
         let endpoint = "https://crunchyroll.com/logout";
-        self.request::<()>(self.client.get(endpoint)).await
-    }
-}
-
-/// Private / crate exclusive implementations
-impl Crunchyroll {
-    pub(crate) async fn request<T: DeserializeOwned>(&self, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
-        builder = builder.
-            bearer_auth(self.config.access_token.clone());
-
-        request(builder).await
-    }
-
-    pub(crate) fn default_for_struct<'a>() -> Option<&'a Crunchyroll> {
-        None
-    }
-
-    pub(crate) fn media_query(&self) -> HashMap<String, String> {
-        let mut query = HashMap::new();
-        query.insert("locale".to_string(), self.locale.to_string());
-        query.insert("Signature".to_string(), self.config.signature.clone());
-        query.insert("Policy".to_string(), self.config.policy.clone());
-        query.insert("Key-Pair-Id".to_string(), self.config.key_pair_id.clone());
-
-        query
+        self.executor.request::<()>(self.executor.client.get(endpoint)).await
     }
 }
 
@@ -332,12 +360,12 @@ impl CrunchyrollBuilder {
         };
 
         let crunchy = Crunchyroll{
-            client: self.client,
-            locale: self.locale,
+            executor: Arc::new(Executor {
+                client: self.client,
+                locale: self.locale,
 
-            config,
-
-            cache: true
+                config
+            }),
         };
 
         Ok(crunchy)
