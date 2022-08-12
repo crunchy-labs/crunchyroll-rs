@@ -6,6 +6,7 @@ use chrono::{DateTime, Utc};
 use reqwest::RequestBuilder;
 use reqwest::header::HeaderMap;
 use serde::de::DeserializeOwned;
+use crate::common::ExecutorControl;
 use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
@@ -71,29 +72,20 @@ pub(crate) struct Executor {
     pub(crate) config: CrunchyrollConfig
 }
 
-#[derive(Debug, Clone)]
-pub struct Crunchyroll {
-    pub(crate) executor: Arc<Executor>
-}
-
 impl Executor {
-    pub(crate) async fn request<T: DeserializeOwned>(&self, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
+    pub(crate) async fn request<T: DeserializeOwned + ExecutorControl>(self: &Arc<Self>, builder: RequestBuilder) -> Result<T, CrunchyrollError> {
+        let mut resp: T = self.request_raw(builder).await?;
+        resp.set_executor(self.clone());
+
+        Ok(resp)
+    }
+
+    pub(crate) async fn request_raw<T: DeserializeOwned>(self: &Arc<Self>, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
         builder = builder.
             bearer_auth(self.config.access_token.clone());
 
-        let resp = request(builder).await?;
+        let resp: T = request(builder).await?;
 
-        /*let res: T;
-        if impls!(T: Crunchy) {
-            unsafe {
-                let mut x = mem::transmute::<T, Box<dyn Crunchy>>(resp);
-                x.set_crunchyroll(Box::new(self));
-                res = mem::transmute_copy::<Box<dyn Crunchy>, T>(&x);
-            }
-        } else {
-            res = resp;
-        }
-        Ok(res)*/
         Ok(resp)
     }
 
@@ -126,6 +118,11 @@ impl Executor {
 
         query
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Crunchyroll {
+    pub(crate) executor: Arc<Executor>
 }
 
 #[derive(Debug, Clone)]
@@ -176,7 +173,7 @@ impl Crunchyroll {
 
     pub async fn invalidate_session(self) -> Result<()> {
         let endpoint = "https://crunchyroll.com/logout";
-        self.executor.request::<()>(self.executor.client.get(endpoint)).await
+        self.executor.to_owned().request_raw::<()>(self.executor.client.get(endpoint)).await
     }
 }
 
