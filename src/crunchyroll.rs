@@ -11,7 +11,18 @@ use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContex
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Locale {
-    JP, US, LA, ES, FR, PT, BR, IT, DE, RU, AR
+    JP,
+    US,
+    LA,
+    ES,
+    FR,
+    PT,
+    BR,
+    IT,
+    DE,
+    RU,
+    AR,
+    Custom(String)
 }
 
 impl Display for Locale {
@@ -27,7 +38,8 @@ impl Display for Locale {
             Locale::IT => "it-IT",
             Locale::DE => "de-DE",
             Locale::RU => "ru-RU",
-            Locale::AR => "ar-SA"
+            Locale::AR => "ar-SA",
+            Locale::Custom(raw) => raw
         };
         write!(f, "{}", locale)
     }
