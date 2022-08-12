@@ -89,8 +89,20 @@ impl Executor {
         Ok(resp)
     }
 
-    pub(crate) fn default_for_struct() -> Arc<Executor> {
-        Arc::new(Executor {
+    pub(crate) fn media_query(&self) -> HashMap<String, String> {
+        let mut query = HashMap::new();
+        query.insert("locale".to_string(), self.locale.to_string());
+        query.insert("Signature".to_string(), self.config.signature.clone());
+        query.insert("Policy".to_string(), self.config.policy.clone());
+        query.insert("Key-Pair-Id".to_string(), self.config.key_pair_id.clone());
+
+        query
+    }
+}
+
+impl Default for Executor {
+    fn default() -> Self {
+        Self {
             client: Default::default(),
             locale: Locale::JP,
             config: CrunchyrollConfig {
@@ -106,17 +118,7 @@ impl Executor {
                 account_id: "".to_string(),
                 external_id: "".to_string()
             }
-        })
-    }
-
-    pub(crate) fn media_query(&self) -> HashMap<String, String> {
-        let mut query = HashMap::new();
-        query.insert("locale".to_string(), self.locale.to_string());
-        query.insert("Signature".to_string(), self.config.signature.clone());
-        query.insert("Policy".to_string(), self.config.policy.clone());
-        query.insert("Key-Pair-Id".to_string(), self.config.key_pair_id.clone());
-
-        query
+        }
     }
 }
 

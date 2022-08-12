@@ -36,7 +36,6 @@ pub struct MovieListingImages {
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
 pub struct MovieListing {
     #[serde(skip)]
-    #[serde(default = "Executor::default_for_struct")]
     executor: Arc<Executor>,
 
     pub id: String,
@@ -123,7 +122,6 @@ type SeriesImages = MovieListingImages;
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
 pub struct Series {
     #[serde(skip)]
-    #[serde(default = "Executor::default_for_struct")]
     executor: Arc<Executor>,
 
     pub id: String,
