@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use crate::common::Request;
 use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
 
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Locale {
     JP,
     US,
