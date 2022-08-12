@@ -1,9 +1,11 @@
 use std::sync::Arc;
+
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
-use crate::common::{ExecutorControl, Image};
-use crate::error::Result;
+
 use crate::{Crunchyroll, Executor, FromId, Locale};
+use crate::common::{ExecutorControl, Image, Request};
+use crate::error::Result;
 
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -108,6 +110,12 @@ pub struct Episode {
     media_type: crate::StrictValue,
 }
 
+impl Request for Episode {
+    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
+        Some(self)
+    }
+}
+
 impl ExecutorControl for Episode {
     fn get_executor(&self) -> Arc<Executor> {
         self.executor.clone()
@@ -195,6 +203,12 @@ pub struct Movie {
     premium_date: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     media_type: crate::StrictValue,
+}
+
+impl Request for Movie {
+    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
+        Some(self)
+    }
 }
 
 impl ExecutorControl for Movie {

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use crate::Crunchyroll;
 use crate::crunchyroll::Executor;
@@ -22,6 +23,16 @@ pub struct Image {
     pub height: u32,
     pub width: u32
 }
+
+/// Helper trait for [`Crunchyroll::request`] generic returns.
+/// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
+pub(crate) trait Request: DeserializeOwned {
+    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
+        None
+    }
+}
+
+impl Request for () {}
 
 /// Every struct which implements this must provide a usable [`Executor`] instance.
 pub(crate) trait ExecutorControl {

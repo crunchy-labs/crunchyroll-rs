@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use reqwest::RequestBuilder;
 use reqwest::header::HeaderMap;
 use serde::de::DeserializeOwned;
-use crate::common::ExecutorControl;
+use crate::common::Request;
 use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
@@ -73,18 +73,15 @@ pub(crate) struct Executor {
 }
 
 impl Executor {
-    pub(crate) async fn request<T: DeserializeOwned + ExecutorControl>(self: &Arc<Self>, builder: RequestBuilder) -> Result<T, CrunchyrollError> {
-        let mut resp: T = self.request_raw(builder).await?;
-        resp.set_executor(self.clone());
-
-        Ok(resp)
-    }
-
-    pub(crate) async fn request_raw<T: DeserializeOwned>(self: &Arc<Self>, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
+    pub(crate) async fn request<T: Request>(self: &Arc<Self>, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
         builder = builder.
             bearer_auth(self.config.access_token.clone());
 
-        let resp: T = request(builder).await?;
+        let mut resp: T = request(builder).await?;
+
+        if let Some(executor_control) = resp.executor_control() {
+            executor_control.set_executor(self.clone());
+        }
 
         Ok(resp)
     }
@@ -175,7 +172,7 @@ impl Crunchyroll {
 
     pub async fn invalidate_session(self) -> Result<()> {
         let endpoint = "https://crunchyroll.com/logout";
-        self.executor.to_owned().request_raw::<()>(self.executor.client.get(endpoint)).await
+        self.executor.to_owned().request(self.executor.client.get(endpoint)).await
     }
 }
 

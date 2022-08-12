@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
-use crate::common::{Available, ExecutorControl, FromId, Image};
+use crate::common::{Available, ExecutorControl, FromId, Image, Request};
 use crate::{Crunchyroll, Executor, Locale};
 use crate::error::Result;
 
@@ -84,6 +84,12 @@ pub struct MovieListing {
     premium_date: crate::StrictValue
 }
 
+impl Request for MovieListing {
+    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
+        Some(self)
+    }
+}
+
 impl ExecutorControl for MovieListing {
     fn get_executor(&self) -> Arc<Executor> {
         self.executor.clone()
@@ -161,6 +167,12 @@ pub struct Series {
 
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue
+}
+
+impl Request for Series {
+    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
+        Some(self)
+    }
 }
 
 impl ExecutorControl for Series {
