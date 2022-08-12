@@ -27,20 +27,11 @@ pub struct Image {
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
 pub(crate) trait Request: DeserializeOwned {
-    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
-        None
-    }
+    /// Set a usable [`Executor`] instance to the struct if required
+    fn set_executor(&mut self, _: Arc<Executor>) {}
 }
 
 impl Request for () {}
-
-/// Every struct which implements this must provide a usable [`Executor`] instance.
-pub(crate) trait ExecutorControl {
-    /// Returns a usable [`Executor`] instance.
-    fn get_executor(&self) -> Arc<Executor>;
-
-    fn set_executor(&mut self, executor: Arc<Executor>);
-}
 
 /// Check if further actions with the struct which implements this are available.
 pub trait Available {

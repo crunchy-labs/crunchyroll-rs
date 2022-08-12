@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
 
 use crate::{Crunchyroll, Executor, FromId, Locale};
-use crate::common::{ExecutorControl, Image, Request};
+use crate::common::{Image, Request};
 use crate::error::Result;
 
 #[derive(Debug, Deserialize)]
@@ -111,16 +111,6 @@ pub struct Episode {
 }
 
 impl Request for Episode {
-    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
-        Some(self)
-    }
-}
-
-impl ExecutorControl for Episode {
-    fn get_executor(&self) -> Arc<Executor> {
-        self.executor.clone()
-    }
-
     fn set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }
@@ -206,16 +196,6 @@ pub struct Movie {
 }
 
 impl Request for Movie {
-    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
-        Some(self)
-    }
-}
-
-impl ExecutorControl for Movie {
-    fn get_executor(&self) -> Arc<Executor> {
-        self.executor.clone()
-    }
-
     fn set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }

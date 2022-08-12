@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
-use crate::common::{Available, ExecutorControl, FromId, Image, Request};
+use crate::common::{Available, FromId, Image, Request};
 use crate::{Crunchyroll, Executor, Locale};
 use crate::error::Result;
 
@@ -85,16 +85,6 @@ pub struct MovieListing {
 }
 
 impl Request for MovieListing {
-    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
-        Some(self)
-    }
-}
-
-impl ExecutorControl for MovieListing {
-    fn get_executor(&self) -> Arc<Executor> {
-        self.executor.clone()
-    }
-
     fn set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }
@@ -102,7 +92,7 @@ impl ExecutorControl for MovieListing {
 
 impl Available for MovieListing {
     fn available(&self) -> bool {
-        !self.is_premium_only || self.get_executor().config.clone().premium
+        !self.is_premium_only || self.executor.config.clone().premium
     }
 }
 
@@ -170,16 +160,6 @@ pub struct Series {
 }
 
 impl Request for Series {
-    fn executor_control(&mut self) -> Option<&mut dyn ExecutorControl> {
-        Some(self)
-    }
-}
-
-impl ExecutorControl for Series {
-    fn get_executor(&self) -> Arc<Executor> {
-        self.executor.clone()
-    }
-
     fn set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }
@@ -187,7 +167,7 @@ impl ExecutorControl for Series {
 
 impl Available for Series {
     fn available(&self) -> bool {
-        self.channel_id.is_empty() || self.get_executor().config.premium
+        self.channel_id.is_empty() || self.executor.config.premium
     }
 }
 

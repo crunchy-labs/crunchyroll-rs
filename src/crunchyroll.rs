@@ -45,6 +45,12 @@ impl Display for Locale {
     }
 }
 
+impl Default for Locale {
+    fn default() -> Self {
+        Locale::Custom("".to_string())
+    }
+}
+
 impl TryFrom<String> for Locale {
     type Error = CrunchyrollError;
 
@@ -91,9 +97,7 @@ impl Executor {
 
         let mut resp: T = request(builder).await?;
 
-        if let Some(executor_control) = resp.executor_control() {
-            executor_control.set_executor(self.clone());
-        }
+        resp.set_executor(self.clone());
 
         Ok(resp)
     }
