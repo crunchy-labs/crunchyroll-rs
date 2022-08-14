@@ -70,8 +70,14 @@ Multiple tests files may need to share values / state.
 The [tests/utils](tests/utils) directory contains helpers to store variables and to receive the current `Crunchyroll` session.
 `crate::utils::store` (in the context of the `tests` directory) contains helpers to store variables (which must be type `String`) and `crate::utils::session` helpers for the test `Crunchyroll` session.
 
+If different methods in one test file needs to share state, use the test exclusive `crate::utils::Store` struct to archive this.
+You can take a look at the existing test files to see how it works.
+
 Test can be run with the following two commands:
 ```shell
-$ cargo test
-$ cargo test --features __test_strict
+$ cargo test -- --test-threads=1
+$ cargo test --features __test_strict -- --test-threads=1
 ```
+`-- --test-threads=1` is required because the test are running with `#[tokio::test]` which spawns a new async runtime for every test method.
+It's a know issue that tokio async tests can cause a `dispatch dropped without returning error` when using with `reqwest::Client` (which the library uses to make web request) and running multiple test jobs at once.
+See [reqwest (#1148)](https://github.com/seanmonstar/reqwest/issues/1148) for more information.
