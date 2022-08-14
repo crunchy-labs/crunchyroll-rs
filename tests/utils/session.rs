@@ -3,7 +3,7 @@ use once_cell::sync::OnceCell;
 use crunchyroll_rs::Crunchyroll;
 use crate::utils::store::{get_store, has_store, set_store};
 
-const SESSION: OnceCell<Crunchyroll> = OnceCell::new();
+static SESSION: OnceCell<Crunchyroll> = OnceCell::new();
 
 pub async fn get_session() -> Result<Crunchyroll, Box<dyn Error>> {
     if let Some(session) = SESSION.get() {
