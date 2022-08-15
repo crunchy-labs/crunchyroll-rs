@@ -297,7 +297,7 @@ impl CrunchyrollBuilder {
         if let Some(cookie) = etp_rt {
             self.login_with_etp_rt(cookie).await
         } else {
-            Err(CrunchyrollError::LoginError(
+            Err(CrunchyrollError::AuthenticationError(
                 CrunchyrollErrorContext{ message: "invalid session id".into() }
             ))
         }

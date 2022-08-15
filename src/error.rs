@@ -7,18 +7,20 @@ pub(crate) type Result<T, E = CrunchyrollError> = core::result::Result<T, E>;
 
 #[derive(Debug)]
 pub enum CrunchyrollError {
+    InternalError(CrunchyrollErrorContext),
     RequestError(CrunchyrollErrorContext),
     DecodeError(CrunchyrollErrorContext),
 
-    LoginError(CrunchyrollErrorContext)
+    AuthenticationError(CrunchyrollErrorContext)
 }
 
 impl Display for CrunchyrollError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            CrunchyrollError::InternalError(context) => write!(f, "{}", context.message),
             CrunchyrollError::RequestError(context) => write!(f, "{}", context.message),
             CrunchyrollError::DecodeError(context) => write!(f, "{}", context.message),
-            CrunchyrollError::LoginError(context) => write!(f, "{}", context.message)
+            CrunchyrollError::AuthenticationError(context) => write!(f, "{}", context.message)
         }
     }
 }
