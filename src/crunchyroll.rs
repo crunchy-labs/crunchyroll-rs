@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
@@ -51,25 +51,21 @@ impl Default for Locale {
     }
 }
 
-impl TryFrom<String> for Locale {
-    type Error = CrunchyrollError;
-
-    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+impl From<String> for Locale {
+    fn from(value: String) -> Self {
         match value.as_str() {
-            "ja-JP" => Ok(Locale::JP),
-            "en-US" => Ok(Locale::US),
-            "es-419" => Ok(Locale::LA),
-            "es-ES" => Ok(Locale::ES),
-            "fr-FR" => Ok(Locale::FR),
-            "pt-PT" => Ok(Locale::PT),
-            "pr-BR"=> Ok(Locale::BR),
-            "it-IT" => Ok(Locale::IT),
-            "de-DE" => Ok(Locale::DE),
-            "ru-RU" => Ok(Locale::RU),
-            "ar-SA" => Ok(Locale::AR),
-            _ => Err(CrunchyrollError::DecodeError(
-                CrunchyrollErrorContext{ message: format!("`{}` is not a valid locale", value) }
-            ))
+            "ja-JP" => Locale::JP,
+            "en-US" => Locale::US,
+            "es-419" => Locale::LA,
+            "es-ES" => Locale::ES,
+            "fr-FR" => Locale::FR,
+            "pt-PT" => Locale::PT,
+            "pr-BR"=> Locale::BR,
+            "it-IT" => Locale::IT,
+            "de-DE" => Locale::DE,
+            "ru-RU" => Locale::RU,
+            "ar-SA" => Locale::AR,
+            _ => Locale::Custom(value)
         }
     }
 }
@@ -79,6 +75,12 @@ impl<'de> Deserialize<'de> for Locale {
         where D: Deserializer<'de>
     {
         crate::internal::serde::string_to_enum(deserializer)
+    }
+}
+
+impl Serialize for Locale {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
+        serializer.serialize_str(self.to_string().as_str())
     }
 }
 
