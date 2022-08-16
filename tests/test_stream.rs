@@ -1,13 +1,13 @@
 use rand::seq::SliceRandom;
-use crunchyroll_rs::{FromId, VideoVariants, Stream, VariantData, VariantSegment};
+use crunchyroll_rs::{FromId, VariantData, VariantSegment, VideoStream, DefaultStreams};
 use crate::utils::SESSION;
 use crate::utils::Store;
 
 mod utils;
 
-static STREAM: Store<Stream<VideoVariants>> = Store::new(|| Box::pin(async {
+static STREAM: Store<VideoStream> = Store::new(|| Box::pin(async {
     let crunchy = SESSION.get().await?;
-    let stream = Stream::<VideoVariants>::from_id(crunchy, "G4GFQP0WM".to_string())
+    let stream = VideoStream::from_id(crunchy, "G4GFQP0WM".to_string())
         .await?;
     Ok(stream)
 }));

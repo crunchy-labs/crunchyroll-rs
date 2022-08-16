@@ -1,10 +1,9 @@
 use std::sync::Arc;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use crate::{Crunchyroll, Stream, VideoVariants};
+use crate::{Crunchyroll, PlaybackStream, VideoStream};
 use crate::crunchyroll::Executor;
 use crate::error::Result;
-use crate::stream::PlaybackVariants;
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
@@ -59,10 +58,10 @@ pub trait FromId {
 
 #[async_trait::async_trait]
 pub trait Playback {
-    async fn playback(&self) -> Result<Stream<PlaybackVariants>>;
+    async fn playback(&self) -> Result<PlaybackStream>;
 }
 
 #[async_trait::async_trait]
 pub trait Streams {
-    async fn streams(&self) -> Result<Stream<VideoVariants>>;
+    async fn streams(&self) -> Result<VideoStream>;
 }

@@ -29,9 +29,16 @@ pub use media::Episode;
 pub use media::Movie;
 
 pub use stream::{
-    Stream,
+    VideoStream,
     VideoVariants,
+    VideoVariant,
+    PlaybackStream,
     PlaybackVariants,
+    PlaybackVariant
+};
+#[cfg(feature = "streaming")]
+pub use stream::{
+    DefaultStreams,
     VariantData,
     VariantSegment
 };

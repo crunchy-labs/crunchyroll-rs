@@ -4,10 +4,9 @@ use chrono::{DateTime, Duration, Utc};
 use serde::de::Error;
 use serde::Deserialize;
 
-use crate::{Crunchyroll, Executor, FromId, Locale, Stream, VideoVariants};
+use crate::{Crunchyroll, Executor, FromId, Locale, PlaybackStream, VideoStream};
 use crate::common::{Image, Playback, Request, Streams};
 use crate::error::Result;
-use crate::stream::PlaybackVariants;
 
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -145,14 +144,14 @@ impl FromId for Episode {
 
 #[async_trait::async_trait]
 impl Playback for Episode {
-    async fn playback(&self) -> Result<Stream<PlaybackVariants>> {
+    async fn playback(&self) -> Result<PlaybackStream> {
         self.executor.request(self.executor.client.get(self.playback_id.clone())).await
     }
 }
 
 #[async_trait::async_trait]
 impl Streams for Episode {
-    async fn streams(&self) -> Result<Stream<VideoVariants>> {
+    async fn streams(&self) -> Result<VideoStream> {
         let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.config.bucket, self.stream_id);
         let builder = self.executor.client
             .get(endpoint)
@@ -242,14 +241,14 @@ impl FromId for Movie {
 
 #[async_trait::async_trait]
 impl Playback for Movie {
-    async fn playback(&self) -> Result<Stream<PlaybackVariants>> {
+    async fn playback(&self) -> Result<PlaybackStream> {
         self.executor.request(self.executor.client.get(self.playback_id.clone())).await
     }
 }
 
 #[async_trait::async_trait]
 impl Streams for Movie {
-    async fn streams(&self) -> Result<Stream<VideoVariants>> {
+    async fn streams(&self) -> Result<VideoStream> {
         let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.config.bucket, self.id);
         let builder = self.executor.client
             .get(endpoint)

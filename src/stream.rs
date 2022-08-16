@@ -4,22 +4,50 @@ use std::io::Write;
 use std::sync::Arc;
 use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 use crate::{Crunchyroll, Executor, FromId, Locale};
 use crate::common::Request;
 use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
 
-/// Represents a video stream
+trait FixStream: DeserializeOwned + Serialize {
+    type Variant: DeserializeOwned + Serialize;
+}
+
+fn deserialize_streams<'de, D: Deserializer<'de>, T: FixStream>(deserializer: D) -> Result<HashMap<Locale, T>, D::Error> {
+    let as_map: HashMap<String, HashMap<Locale, Value>> = HashMap::deserialize(deserializer)?;
+
+    let mut raw: HashMap<Locale, HashMap<String, T::Variant>> = HashMap::new();
+    for (key, value) in as_map {
+        for (mut locale, data) in value {
+            if locale == Locale::Custom(":".to_string()) {
+                locale = Locale::Custom("".to_string());
+            }
+            let t_data = T::Variant::deserialize(data)
+                .map_err(|e| Error::custom(e.to_string()))?;
+            if let Some(entry) = raw.get_mut(&locale) {
+                entry.insert(key.clone(), t_data);
+            } else {
+                raw.insert(locale, HashMap::from([(key.clone(), t_data)]));
+            }
+        }
+    }
+
+    let as_value = serde_json::to_value(raw).map_err(|e| Error::custom(e.to_string()))?;
+    serde_json::from_value(as_value).map_err(|e| Error::custom(e.to_string()))
+}
+
+/// A video stream.
 #[derive(Clone, Debug, Deserialize)]
-#[serde(bound = "T: Clone + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
-pub struct Stream<T: Clone + DeserializeOwned> {
+pub struct VideoStream {
     #[serde(skip)]
     executor: Arc<Executor>,
 
+    pub media_id: String,
     /// Audio locale of the stream.
     pub audio_locale: Locale,
-    /// All subtitles
+    /// All subtitles.
     pub subtitles: HashMap<Locale, StreamSubtitle>,
 
     /// All stream variants.
@@ -31,45 +59,19 @@ pub struct Stream<T: Clone + DeserializeOwned> {
     /// are "burned" into the video) and the value all stream variants.
     /// If you want no hardsub at all, use the `Locale::Custom("".into())` map entry.
     #[serde(rename = "streams")]
-    #[serde(deserialize_with = "deserialize_raw")]
+    #[serde(deserialize_with = "deserialize_streams")]
     #[cfg_attr(not(feature = "__test_strict"), default(HashMap::new()))]
-    pub variants: HashMap<Locale, T>,
+    pub variants: HashMap<Locale, VideoVariants>,
 
-    #[cfg(feature = "__test_strict")]
-    media_id: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     captions: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     bifs: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    versions: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    #[serde(rename = "QoS")]
-    qos: crate::StrictValue
+    versions: crate::StrictValue
 }
 
-fn deserialize_raw<'de, D: Deserializer<'de>, T: DeserializeOwned>(deserializer: D) -> Result<T, D::Error> {
-    let as_map: HashMap<String, HashMap<Locale, StreamVariant>> = HashMap::deserialize(deserializer)?;
-
-    let mut raw: HashMap<Locale, HashMap<String, StreamVariant>> = HashMap::new();
-    for (key, value) in as_map {
-        for (mut locale, data) in value {
-            if locale == Locale::Custom(":".to_string()) {
-                locale = Locale::Custom("".to_string());
-            }
-            if let Some(entry) = raw.get_mut(&locale) {
-                entry.insert(key.clone(), data);
-            } else {
-                raw.insert(locale, HashMap::from([(key.clone(), data)]));
-            }
-        }
-    }
-
-    let as_value = serde_json::to_value(raw).map_err(|e| Error::custom(e.to_string()))?;
-    serde_json::from_value(as_value).map_err(|e| Error::custom(e.to_string()))
-}
-
-impl<T: Clone + DeserializeOwned> Request for Stream<T> {
+impl Request for VideoStream {
     fn set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor.clone();
 
@@ -80,8 +82,8 @@ impl<T: Clone + DeserializeOwned> Request for Stream<T> {
 }
 
 #[async_trait::async_trait]
-impl<T: Clone + DeserializeOwned> FromId for Stream<T> {
-    async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Stream<T>> {
+impl FromId for VideoStream {
+    async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
         let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", executor.config.bucket, id);
@@ -90,6 +92,35 @@ impl<T: Clone + DeserializeOwned> FromId for Stream<T> {
             .query(&executor.media_query());
 
         executor.request(builder).await
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+pub struct PlaybackStream {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    audio_locale: Locale,
+    subtitles: HashMap<Locale, StreamSubtitle>,
+    #[serde(rename = "streams")]
+    #[serde(deserialize_with = "deserialize_streams")]
+    #[cfg_attr(not(feature = "__test_strict"), default(HashMap::new()))]
+    pub variants: HashMap<Locale, PlaybackVariants>,
+
+    #[cfg(feature = "__test_strict")]
+    #[serde(rename = "QoS")]
+    qos: crate::StrictValue
+}
+
+impl Request for PlaybackStream {
+    fn set_executor(&mut self, executor: Arc<Executor>) {
+        self.executor = executor.clone();
+
+        for value in self.subtitles.values_mut() {
+            value.executor = executor.clone();
+        }
     }
 }
 
@@ -130,7 +161,19 @@ impl StreamSubtitle {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
-pub struct StreamVariant {
+pub struct VideoVariant {
+    /// Language of this variant.
+    pub hardsub_locale: Locale,
+    /// Url to the actual stream.
+    /// Usually a [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming)
+    /// or [MPEG-DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP) stream.
+    pub url: String
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+pub struct PlaybackVariant {
     /// Language of this variant.
     pub hardsub_locale: Locale,
     /// Url to the actual stream.
@@ -138,49 +181,57 @@ pub struct StreamVariant {
     /// or [MPEG-DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP) stream.
     pub url: String,
 
-    #[cfg(feature = "__test_strict")]
-    vcodec: crate::StrictValue
+    /// Video codec of the variant. Usually h264
+    pub vcodec: String
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct VideoVariants {
-    pub adaptive_dash: Option<StreamVariant>,
-    pub adaptive_hls: Option<StreamVariant>,
-    pub download_dash: Option<StreamVariant>,
-    pub download_hls: Option<StreamVariant>,
-    pub drm_adaptive_dash: Option<StreamVariant>,
-    pub drm_adaptive_hls: Option<StreamVariant>,
-    pub drm_download_dash: Option<StreamVariant>,
-    pub drm_download_hls: Option<StreamVariant>,
-    pub drm_multitrack_adaptive_hls_v2: Option<StreamVariant>,
-    pub multitrack_adaptive_hls_v2: Option<StreamVariant>,
-    pub vo_adaptive_dash: Option<StreamVariant>,
-    pub vo_adaptive_hls: Option<StreamVariant>,
-    pub vo_drm_adaptive_dash: Option<StreamVariant>,
-    pub vo_drm_adaptive_hls: Option<StreamVariant>,
+    pub adaptive_dash: Option<VideoVariant>,
+    pub adaptive_hls: Option<VideoVariant>,
+    pub download_dash: Option<VideoVariant>,
+    pub download_hls: Option<VideoVariant>,
+    pub drm_adaptive_dash: Option<VideoVariant>,
+    pub drm_adaptive_hls: Option<VideoVariant>,
+    pub drm_download_dash: Option<VideoVariant>,
+    pub drm_download_hls: Option<VideoVariant>,
+    pub drm_multitrack_adaptive_hls_v2: Option<VideoVariant>,
+    pub multitrack_adaptive_hls_v2: Option<VideoVariant>,
+    pub vo_adaptive_dash: Option<VideoVariant>,
+    pub vo_adaptive_hls: Option<VideoVariant>,
+    pub vo_drm_adaptive_dash: Option<VideoVariant>,
+    pub vo_drm_adaptive_hls: Option<VideoVariant>,
 
     #[cfg(feature = "__test_strict")]
-    urls: crate::StrictValue
+    urls: Option<crate::StrictValue>
 }
 
-#[derive(Clone, Debug, Deserialize)]
+impl FixStream for VideoVariants {
+    type Variant = VideoVariant;
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct PlaybackVariants {
-    pub adaptive_dash: Option<StreamVariant>,
-    pub adaptive_hls: Option<StreamVariant>,
-    pub download_hls: Option<StreamVariant>,
-    pub drm_adaptive_dash: Option<StreamVariant>,
-    pub drm_adaptive_hls: Option<StreamVariant>,
-    pub drm_download_hls: Option<StreamVariant>,
-    pub trailer_dash: Option<StreamVariant>,
-    pub trailer_hls: Option<StreamVariant>,
-    pub vo_adaptive_dash: Option<StreamVariant>,
-    pub vo_adaptive_hls: Option<StreamVariant>,
-    pub vo_drm_adaptive_dash: Option<StreamVariant>,
-    pub vo_drm_adaptive_hls: Option<StreamVariant>
+    pub adaptive_dash: Option<PlaybackVariant>,
+    pub adaptive_hls: Option<PlaybackVariant>,
+    pub download_hls: Option<PlaybackVariant>,
+    pub drm_adaptive_dash: Option<PlaybackVariant>,
+    pub drm_adaptive_hls: Option<PlaybackVariant>,
+    pub drm_download_hls: Option<PlaybackVariant>,
+    pub trailer_dash: Option<PlaybackVariant>,
+    pub trailer_hls: Option<PlaybackVariant>,
+    pub vo_adaptive_dash: Option<PlaybackVariant>,
+    pub vo_adaptive_hls: Option<PlaybackVariant>,
+    pub vo_drm_adaptive_dash: Option<PlaybackVariant>,
+    pub vo_drm_adaptive_hls: Option<PlaybackVariant>
+}
+
+impl FixStream for PlaybackVariants {
+    type Variant = PlaybackVariant;
 }
 
 #[cfg(feature = "streaming")]
@@ -190,36 +241,39 @@ mod streaming {
     use std::sync::Arc;
     use std::time::Duration;
     use aes::cipher::{BlockDecryptMut, KeyIvInit};
-    use serde::de::DeserializeOwned;
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
-    use crate::{Executor, Locale, PlaybackVariants, VideoVariants, Stream};
-    use crate::stream::StreamVariant;
+    use crate::{Executor, Locale};
+    use crate::stream::{PlaybackStream, VideoStream};
 
     pub type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
 
-    #[doc(hidden)]
-    pub trait PreferredStream {
-        fn preferred_stream(&self) -> StreamVariant;
+    #[async_trait::async_trait]
+    pub trait DefaultStreams {
+        async fn default_streams(&self) -> Result<Vec<VariantData>>;
     }
 
-    impl PreferredStream for VideoVariants {
-        fn preferred_stream(&self) -> StreamVariant {
-            self.adaptive_hls.clone().unwrap()
-        }
-    }
-
-    impl PreferredStream for PlaybackVariants {
-        fn preferred_stream(&self) -> StreamVariant {
-            self.adaptive_hls.clone().unwrap()
-        }
-    }
-
-    impl<T: Clone + DeserializeOwned + PreferredStream> Stream<T> {
-        pub async fn default_streams(&self) -> Result<Vec<VariantData>> {
+    #[async_trait::async_trait]
+    impl DefaultStreams for VideoStream {
+        async fn default_streams(&self) -> Result<Vec<VariantData>> {
             if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
-                VariantData::from_hls_master(self.executor.clone(), raw_streams.preferred_stream().url).await
+                VariantData::from_hls_master(self.executor.clone(), raw_streams.adaptive_hls.as_ref().unwrap().url.clone()).await
             } else if let Some(raw_streams) = self.variants.get(&Locale::Custom(":".into())) {
-                VariantData::from_hls_master(self.executor.clone(), raw_streams.preferred_stream().url).await
+                VariantData::from_hls_master(self.executor.clone(), raw_streams.adaptive_hls.as_ref().unwrap().url.clone()).await
+            } else {
+                Err(CrunchyrollError::InternalError(
+                    CrunchyrollErrorContext{ message: "could not find default stream".into() }
+                ))
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl DefaultStreams for PlaybackStream {
+        async fn default_streams(&self) -> Result<Vec<VariantData>> {
+            if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
+                VariantData::from_hls_master(self.executor.clone(), raw_streams.adaptive_hls.as_ref().unwrap().url.clone()).await
+            } else if let Some(raw_streams) = self.variants.get(&Locale::Custom(":".into())) {
+                VariantData::from_hls_master(self.executor.clone(), raw_streams.adaptive_hls.as_ref().unwrap().url.clone()).await
             } else {
                 Err(CrunchyrollError::InternalError(
                     CrunchyrollErrorContext{ message: "could not find default stream".into() }
