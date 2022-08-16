@@ -5,7 +5,6 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use reqwest::RequestBuilder;
 use reqwest::header::HeaderMap;
-use serde::de::DeserializeOwned;
 use crate::common::Request;
 use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
 
@@ -334,6 +333,7 @@ impl CrunchyrollBuilder {
             #[cfg(feature = "__test_strict")]
             cms_beta: crate::StrictValue
         }
+        impl Request for IndexResp {}
         let index_req = self.client
             .get(index_endpoint)
             .headers(headers.to_owned());
@@ -350,6 +350,7 @@ impl CrunchyrollBuilder {
             email_verified: bool,
             external_id: String
         }
+        impl Request for MeResp {}
         let me_req = self.client
             .get(me_endpoint)
             .headers(headers.to_owned());
@@ -386,7 +387,7 @@ impl CrunchyrollBuilder {
     }
 }
 
-async fn request<T: DeserializeOwned>(builder: RequestBuilder) -> Result<T> {
+async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
     let resp = builder
         .send()
         .await
@@ -402,7 +403,7 @@ async fn request<T: DeserializeOwned>(builder: RequestBuilder) -> Result<T> {
     return Ok(result);
     #[cfg(feature = "__test_strict")]
     {
-        let cleaned = clean_request(result);
+        let cleaned = clean_request(result, T::not_clean_fields());
         return T::deserialize(serde::de::value::MapDeserializer::new(cleaned.into_iter())).map_err(|e| CrunchyrollError::DecodeError(
             CrunchyrollErrorContext { message: e.to_string() }
         ));
@@ -410,12 +411,12 @@ async fn request<T: DeserializeOwned>(builder: RequestBuilder) -> Result<T> {
 }
 
 #[cfg(feature = "__test_strict")]
-fn clean_request(mut map: serde_json::Map<String, serde_json::Value>) -> serde_json::Map<String, serde_json::Value> {
+fn clean_request(mut map: serde_json::Map<String, serde_json::Value>, not_clean_fields: Vec<String>) -> serde_json::Map<String, serde_json::Value> {
     for (key, value) in map.clone() {
-        if key.starts_with("__") && key.ends_with("__") {
+        if key.starts_with("__") && key.ends_with("__") && !not_clean_fields.contains(&key) {
             map.remove(key.as_str());
         } else if let Some(object) = value.as_object() {
-            map.insert(key, serde_json::to_value(clean_request(object.clone())).unwrap());
+            map.insert(key, serde_json::to_value(clean_request(object.clone(), not_clean_fields.clone())).unwrap());
         }
     }
     map

@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
+use serde::de::Error;
 use serde::Deserialize;
 
-use crate::{Crunchyroll, Executor, FromId, Locale};
-use crate::common::{Image, Request};
+use crate::{Crunchyroll, Executor, FromId, Locale, Stream, VideoVariants};
+use crate::common::{Image, Playback, Request, Streams};
 use crate::error::Result;
+use crate::stream::PlaybackVariants;
 
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -22,6 +24,11 @@ pub struct Episode {
     executor: Arc<Executor>,
 
     pub id: String,
+    #[serde(rename = "__links__")]
+    #[serde(deserialize_with = "stream_id")]
+    pub stream_id: String,
+    #[serde(rename = "playback")]
+    pub playback_id: String,
     pub channel_id: String,
     // whatever this is
     pub production_episode_id: String,
@@ -81,7 +88,6 @@ pub struct Episode {
     pub season_tags: Vec<String>,
 
     pub images: EpisodeImages,
-    pub playback: String,
 
     pub hd_flag: bool,
     pub is_clip: bool,
@@ -114,6 +120,13 @@ impl Request for Episode {
     fn set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }
+
+    #[cfg(feature = "__test_strict")]
+    fn not_clean_fields() -> Vec<String> {
+        vec![
+            "__links__".into()
+        ]
+    }
 }
 
 #[async_trait::async_trait]
@@ -130,14 +143,24 @@ impl FromId for Episode {
     }
 }
 
-/*#[async_trait::async_trait]
+#[async_trait::async_trait]
 impl Playback for Episode {
-    async fn playback(&self) -> Result<Stream> {
-        Stream::from_url(self.get_crunchyroll(), self.playback.clone()).await
+    async fn playback(&self) -> Result<Stream<PlaybackVariants>> {
+        self.executor.request(self.executor.client.get(self.playback_id.clone())).await
     }
 }
 
- */
+#[async_trait::async_trait]
+impl Streams for Episode {
+    async fn streams(&self) -> Result<Stream<VideoVariants>> {
+        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.config.bucket, self.stream_id);
+        let builder = self.executor.client
+            .get(endpoint)
+            .query(&self.executor.media_query());
+
+        self.executor.request(builder).await
+    }
+}
 
 type MovieImages = EpisodeImages;
 
@@ -149,6 +172,8 @@ pub struct Movie {
     executor: Arc<Executor>,
 
     pub id: String,
+    #[serde(rename = "playback")]
+    pub playback_id: String,
     pub channel_id: String,
     // id of corresponding movie_listing object
     pub listing_id: String,
@@ -174,7 +199,6 @@ pub struct Movie {
     pub closed_captions_available: bool,
 
     pub images: MovieImages,
-    pub playback: String,
 
     pub is_premium_only: bool,
 
@@ -215,12 +239,44 @@ impl FromId for Movie {
     }
 }
 
-/*
+
 #[async_trait::async_trait]
 impl Playback for Movie {
-    async fn playback(&self) -> Result<Stream> {
-        Stream::from_url(self.get_crunchyroll(), self.playback.clone()).await
+    async fn playback(&self) -> Result<Stream<PlaybackVariants>> {
+        self.executor.request(self.executor.client.get(self.playback_id.clone())).await
     }
 }
 
- */
+#[async_trait::async_trait]
+impl Streams for Movie {
+    async fn streams(&self) -> Result<Stream<VideoVariants>> {
+        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.config.bucket, self.id);
+        let builder = self.executor.client
+            .get(endpoint)
+            .query(&self.executor.media_query());
+
+        self.executor.request(builder).await
+    }
+}
+
+fn stream_id<'de, D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<String, D::Error> {
+    #[derive(Deserialize)]
+    struct StreamHref {
+        href: String
+    }
+    #[derive(Deserialize)]
+    struct Streams {
+        streams: StreamHref
+    }
+
+    let streams: Streams = serde_json::from_value(serde_json::Value::deserialize(deserializer)?)
+        .map_err(|e| Error::custom(e.to_string()))?;
+
+    let mut split_streams = streams.streams.href.split("/").map(|s| s.to_string()).collect::<Vec<String>>();
+    split_streams.reverse();
+    if let Some(stream_id) = split_streams.get(1) {
+        Ok(stream_id.clone())
+    } else {
+        Err(Error::custom("cannot extract stream id"))
+    }
+}

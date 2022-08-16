@@ -1,9 +1,10 @@
 use std::sync::Arc;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use crate::Crunchyroll;
+use crate::{Crunchyroll, Stream, VideoVariants};
 use crate::crunchyroll::Executor;
 use crate::error::Result;
+use crate::stream::PlaybackVariants;
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
@@ -29,6 +30,15 @@ pub struct Image {
 pub(crate) trait Request: DeserializeOwned {
     /// Set a usable [`Executor`] instance to the struct if required
     fn set_executor(&mut self, _: Arc<Executor>) {}
+
+    /// When using the `__test_strict` feature, all fields starting and ending with `__` are removed
+    /// from the json before converting it into a struct. These fields are usually not required. But
+    /// if they're needed to be accessed, return the names of these fields with this method and they
+    /// won't get touched.
+    #[cfg(feature = "__test_strict")]
+    fn not_clean_fields() -> Vec<String> {
+        vec![]
+    }
 }
 
 impl Request for () {}
@@ -47,9 +57,12 @@ pub trait FromId {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> where Self: Sized;
 }
 
-/*#[async_trait::async_trait]
+#[async_trait::async_trait]
 pub trait Playback {
-    async fn playback(&self) -> Result<Stream>;
+    async fn playback(&self) -> Result<Stream<PlaybackVariants>>;
 }
 
- */
+#[async_trait::async_trait]
+pub trait Streams {
+    async fn streams(&self) -> Result<Stream<VideoVariants>>;
+}
