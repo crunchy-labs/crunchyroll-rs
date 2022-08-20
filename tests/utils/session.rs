@@ -9,7 +9,7 @@ pub static SESSION: Store<Crunchyroll> = Store::new(|| Box::pin(async {
     Ok(crunchy)
 }));
 
-pub fn set_session(crunchy: Crunchyroll) -> Result<(), Box<dyn Error>> {
+pub fn set_session(crunchy: Crunchyroll) -> anyhow::Result<()> {
     Ok(set_store("session".into(), crunchy.config().refresh_token)?)
 }
 
