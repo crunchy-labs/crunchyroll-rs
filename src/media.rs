@@ -15,6 +15,7 @@ pub struct EpisodeImages {
     pub thumbnail: Vec<Vec<Image>>
 }
 
+/// This struct represents a Crunchyroll episode.
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
@@ -163,6 +164,7 @@ impl Streams for Episode {
 
 type MovieImages = EpisodeImages;
 
+/// This struct represents a Crunchyroll movie.
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]

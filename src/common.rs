@@ -40,6 +40,8 @@ pub(crate) trait Request: DeserializeOwned {
     }
 }
 
+/// Implement [`Request`] for cases where only the request must be done without needing an
+/// explicit result.
 impl Request for () {}
 
 /// Check if further actions with the struct which implements this are available.
@@ -48,7 +50,7 @@ pub trait Available {
     fn available(&self) -> bool;
 }
 
-/// Every instance of the struct which this implements can be constructed by an id
+/// Every instance of the struct which implements this can be constructed by an id
 #[async_trait::async_trait]
 pub trait FromId {
     /// Creates a new [`Self`] by the provided id or returns an [`CrunchyrollError`] if something
@@ -56,12 +58,18 @@ pub trait FromId {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> where Self: Sized;
 }
 
+/// Provides playback streams for episodes or movies. Playback streams are mostly used to provide
+/// trailers for an episode / movie.
 #[async_trait::async_trait]
 pub trait Playback {
+    /// Returns the playback streams.
     async fn playback(&self) -> Result<PlaybackStream>;
 }
 
+/// Provides video streams for episodes or movies. This streams are what the end user sees when
+/// watching a video on Crunchyroll.
 #[async_trait::async_trait]
 pub trait Streams {
+    /// Returns the streams.
     async fn streams(&self) -> Result<VideoStream>;
 }

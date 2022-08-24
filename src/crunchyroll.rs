@@ -83,6 +83,7 @@ impl Serialize for Locale {
     }
 }
 
+/// Internal struct to execute all request with.
 #[derive(Debug)]
 pub(crate) struct Executor {
     pub(crate) client: reqwest::Client,
@@ -136,11 +137,13 @@ impl Default for Executor {
     }
 }
 
+/// Starting point of this whole library.
 #[derive(Debug, Clone)]
 pub struct Crunchyroll {
     pub(crate) executor: Arc<Executor>
 }
 
+/// Configuration struct where required information for requests are stored in.
 #[derive(Debug, Clone)]
 pub struct CrunchyrollConfig {
     pub token_type: String,
@@ -193,6 +196,7 @@ impl Crunchyroll {
     }
 }
 
+/// A builder to construct a new [`Crunchyroll`] instance. To create it, call [`Crunchyroll::new`].
 pub struct CrunchyrollBuilder {
     client: reqwest::Client,
     locale: Locale
@@ -387,6 +391,7 @@ impl CrunchyrollBuilder {
     }
 }
 
+/// Make a request from the provided builder.
 async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
     let resp = builder
         .send()
@@ -410,6 +415,9 @@ async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
     }
 }
 
+/// Removes all fields which are starting and ending with `__` from a map (which is usually the
+/// response of a request). Some fields can be excluded from this process by providing the field
+/// names in `not_clean_fields`.
 #[cfg(feature = "__test_strict")]
 fn clean_request(mut map: serde_json::Map<String, serde_json::Value>, not_clean_fields: Vec<String>) -> serde_json::Map<String, serde_json::Value> {
     for (key, value) in map.clone() {
