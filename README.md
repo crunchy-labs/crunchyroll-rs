@@ -12,6 +12,9 @@
   <a href="https://discord.gg/PXGPGpQxgk">
     <img src="https://img.shields.io/discord/994882878125121596?logo=discord&logoColor=ffffff" alt="Discord">
   </a>
+  <a href="https://github.com/crunchy-labs/crunchyroll-rs/actions">
+    <img src="https://github.com/crunchy-labs/crunchyroll-rs/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
 </p>
 
 
