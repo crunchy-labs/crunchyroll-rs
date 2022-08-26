@@ -102,8 +102,8 @@ pub struct PlaybackStream {
     #[serde(skip)]
     executor: Arc<Executor>,
 
-    audio_locale: Locale,
-    subtitles: HashMap<Locale, StreamSubtitle>,
+    pub audio_locale: Locale,
+    pub subtitles: HashMap<Locale, StreamSubtitle>,
     #[serde(rename = "streams")]
     #[serde(deserialize_with = "deserialize_streams")]
     #[cfg_attr(not(feature = "__test_strict"), default(HashMap::new()))]
