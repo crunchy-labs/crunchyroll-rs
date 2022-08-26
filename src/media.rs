@@ -275,7 +275,7 @@ fn stream_id<'de, D: serde::Deserializer<'de>>(deserializer: D) -> std::result::
     let streams: Streams = serde_json::from_value(serde_json::Value::deserialize(deserializer)?)
         .map_err(|e| Error::custom(e.to_string()))?;
 
-    let mut split_streams = streams.streams.href.split("/").map(|s| s.to_string()).collect::<Vec<String>>();
+    let mut split_streams = streams.streams.href.split('/').map(|s| s.to_string()).collect::<Vec<String>>();
     split_streams.reverse();
     if let Some(stream_id) = split_streams.get(1) {
         Ok(stream_id.clone())

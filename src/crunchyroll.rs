@@ -179,6 +179,7 @@ struct LoginResponse {
 /// This impl is only for the native login methods. Compiling to with wasm fails if every function
 /// is in here because it don't know how to behave with `reqwest::Client`.
 impl Crunchyroll {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> CrunchyrollBuilder {
         CrunchyrollBuilder {
             client: reqwest::Client::new(),
@@ -230,14 +231,14 @@ impl CrunchyrollBuilder {
             ).unwrap())
             .send()
             .await
-            .map_err(|e| CrunchyrollError::RequestError(
+            .map_err(|e| CrunchyrollError::Request(
                 CrunchyrollErrorContext{ message: e.to_string() }
             ))?;
 
         let resp_value = resp
             .json()
             .await
-            .map_err(|e| CrunchyrollError::DecodeError(
+            .map_err(|e| CrunchyrollError::Decode(
                 CrunchyrollErrorContext{ message: e.to_string() }
             ))?;
 
@@ -263,14 +264,14 @@ impl CrunchyrollBuilder {
             ).unwrap())
             .send()
             .await
-            .map_err(|e| CrunchyrollError::RequestError(
+            .map_err(|e| CrunchyrollError::Request(
                 CrunchyrollErrorContext{ message: e.to_string() }
             ))?;
 
         let resp_value = resp
             .json()
             .await
-            .map_err(|e| CrunchyrollError::DecodeError(
+            .map_err(|e| CrunchyrollError::Decode(
                 CrunchyrollErrorContext{ message: e.to_string() }
             ))?;
 
@@ -288,7 +289,7 @@ impl CrunchyrollBuilder {
             .get(endpoint)
             .send()
             .await
-            .map_err(|e| CrunchyrollError::RequestError(
+            .map_err(|e| CrunchyrollError::Request(
                 CrunchyrollErrorContext{ message: e.to_string() }
             ))?;
 
@@ -302,7 +303,7 @@ impl CrunchyrollBuilder {
         if let Some(cookie) = etp_rt {
             self.login_with_etp_rt(cookie).await
         } else {
-            Err(CrunchyrollError::AuthenticationError(
+            Err(CrunchyrollError::Authentication(
                 CrunchyrollErrorContext{ message: "invalid session id".into() }
             ))
         }
@@ -369,7 +370,7 @@ impl CrunchyrollBuilder {
 
             // '/' is trimmed so that urls which require it must be in .../{bucket}/... like format.
             // this just looks cleaner
-            bucket: index.cms.bucket.strip_prefix("/").unwrap_or(index.cms.bucket.as_str()).to_string(),
+            bucket: index.cms.bucket.strip_prefix('/').unwrap_or(index.cms.bucket.as_str()).to_string(),
 
             country_code: login_response.country,
             premium: index.cms.bucket.ends_with("crunchyroll"),
@@ -398,11 +399,11 @@ async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
     let resp = builder
         .send()
         .await
-        .map_err(|e| CrunchyrollError::RequestError(
+        .map_err(|e| CrunchyrollError::Request(
             CrunchyrollErrorContext{ message: e.to_string() }
         ))?;
 
-    let result = check_request_error(resp.json().await.map_err(|e| CrunchyrollError::DecodeError(
+    let result = check_request_error(resp.json().await.map_err(|e| CrunchyrollError::Decode(
         CrunchyrollErrorContext{ message: e.to_string() }
     ))?)?;
 
@@ -411,7 +412,7 @@ async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
     #[cfg(feature = "__test_strict")]
     {
         let cleaned = clean_request(result, T::not_clean_fields());
-        return T::deserialize(serde::de::value::MapDeserializer::new(cleaned.into_iter())).map_err(|e| CrunchyrollError::DecodeError(
+        return T::deserialize(serde::de::value::MapDeserializer::new(cleaned.into_iter())).map_err(|e| CrunchyrollError::Decode(
             CrunchyrollErrorContext { message: e.to_string() }
         ));
     }

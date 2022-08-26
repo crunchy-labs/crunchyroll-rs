@@ -144,16 +144,16 @@ impl StreamSubtitle {
             .get(self.url)
             .send()
             .await
-            .map_err(|e| CrunchyrollError::RequestError(
+            .map_err(|e| CrunchyrollError::Request(
                 CrunchyrollErrorContext { message: e.to_string() }
             ))?;
         let body = resp.bytes()
             .await
-            .map_err(|e| CrunchyrollError::RequestError(
+            .map_err(|e| CrunchyrollError::Request(
                 CrunchyrollErrorContext { message: e.to_string() }
             ))?;
         w.write_all(body.as_ref())
-            .map_err(|e| CrunchyrollError::RequestError(
+            .map_err(|e| CrunchyrollError::Request(
                 CrunchyrollErrorContext { message: e.to_string() }
             ))?;
         Ok(())
@@ -262,7 +262,7 @@ mod streaming {
             } else if let Some(raw_streams) = self.variants.get(&Locale::Custom(":".into())) {
                 VariantData::from_hls_master(self.executor.clone(), raw_streams.adaptive_hls.as_ref().unwrap().url.clone()).await
             } else {
-                Err(CrunchyrollError::InternalError(
+                Err(CrunchyrollError::Internal(
                     CrunchyrollErrorContext{ message: "could not find default stream".into() }
                 ))
             }
@@ -277,7 +277,7 @@ mod streaming {
             } else if let Some(raw_streams) = self.variants.get(&Locale::Custom(":".into())) {
                 VariantData::from_hls_master(self.executor.clone(), raw_streams.adaptive_hls.as_ref().unwrap().url.clone()).await
             } else {
-                Err(CrunchyrollError::InternalError(
+                Err(CrunchyrollError::Internal(
                     CrunchyrollErrorContext{ message: "could not find default stream".into() }
                 ))
             }
@@ -320,17 +320,17 @@ mod streaming {
                 .get(url)
                 .send()
                 .await
-                .map_err(|e| CrunchyrollError::RequestError(
+                .map_err(|e| CrunchyrollError::Request(
                     CrunchyrollErrorContext{ message: e.to_string() }
                 ))?;
             let raw_master_playlist = resp.text()
                 .await
-                .map_err(|e| CrunchyrollError::RequestError(
+                .map_err(|e| CrunchyrollError::Request(
                     CrunchyrollErrorContext{ message: e.to_string() }
                 ))?;
 
             let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_bytes())
-                .map_err(|e| CrunchyrollError::DecodeError(
+                .map_err(|e| CrunchyrollError::Decode(
                     CrunchyrollErrorContext{ message: e.to_string() }
                 ))?;
 
@@ -358,7 +358,7 @@ mod streaming {
                     resolution: variant.resolution.unwrap_or(m3u8_rs::Resolution{ height: 0, width: 0 }).into(),
                     bandwidth: variant.bandwidth,
                     fps: variant.frame_rate.unwrap_or(0 as f64),
-                    codecs: variant.codecs.unwrap_or("".into()),
+                    codecs: variant.codecs.unwrap_or_else(|| "".into()),
 
                     url: variant.uri,
                     key: None,
@@ -378,16 +378,16 @@ mod streaming {
                     .get(self.url.clone())
                     .send()
                     .await
-                    .map_err(|e| CrunchyrollError::RequestError(
+                    .map_err(|e| CrunchyrollError::Request(
                         CrunchyrollErrorContext{ message: e.to_string() }
                     ))?;
                 let raw_media_playlist = resp.text()
                     .await
-                    .map_err(|e| CrunchyrollError::RequestError(
+                    .map_err(|e| CrunchyrollError::Request(
                         CrunchyrollErrorContext{ message: e.to_string() }
                     ))?;
                 let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_bytes())
-                    .map_err(|e| CrunchyrollError::DecodeError(
+                    .map_err(|e| CrunchyrollError::Decode(
                         CrunchyrollErrorContext{ message: e.to_string() }
                     ))?;
 
@@ -399,16 +399,16 @@ mod streaming {
                                 .get(url)
                                 .send()
                                 .await
-                                .map_err(|e| CrunchyrollError::DecodeError(
+                                .map_err(|e| CrunchyrollError::Decode(
                                     CrunchyrollErrorContext{ message: e.to_string() }
                                 ))?;
                             let raw_key = resp.bytes()
                                 .await
-                                .map_err(|e| CrunchyrollError::RequestError(
+                                .map_err(|e| CrunchyrollError::Request(
                                     CrunchyrollErrorContext{ message: e.to_string() }
                                 ))?;
 
-                            let temp_iv = key.iv.unwrap_or("".to_string());
+                            let temp_iv = key.iv.unwrap_or_else(|| "".to_string());
                             let iv = if !temp_iv.is_empty() {
                                 temp_iv.as_bytes()
                             } else {
@@ -460,28 +460,28 @@ mod streaming {
                 .get(self.url)
                 .send()
                 .await
-                .map_err(|e| CrunchyrollError::RequestError(
+                .map_err(|e| CrunchyrollError::Request(
                     CrunchyrollErrorContext { message: e.to_string() }
                 ))?;
             let segment = resp.bytes()
                 .await
-                .map_err(|e| CrunchyrollError::RequestError(
+                .map_err(|e| CrunchyrollError::Request(
                     CrunchyrollErrorContext { message: e.to_string() }
                 ))?;
 
             if let Some(key) = self.key {
                 let mut temp_encrypted = segment.to_vec();
                 let decrypted = key.decrypt_padded_mut::<aes::cipher::block_padding::Pkcs7>(temp_encrypted.borrow_mut())
-                    .map_err(|e| CrunchyrollError::DecodeError(
+                    .map_err(|e| CrunchyrollError::Decode(
                         CrunchyrollErrorContext{ message: e.to_string() }
                     ))?;
                 w.write(decrypted)
-                    .map_err(|e| CrunchyrollError::RequestError(
+                    .map_err(|e| CrunchyrollError::Request(
                         CrunchyrollErrorContext { message: e.to_string() }
                     ))?;
             } else {
                 w.write(segment.as_ref())
-                    .map_err(|e| CrunchyrollError::RequestError(
+                    .map_err(|e| CrunchyrollError::Request(
                         CrunchyrollErrorContext { message: e.to_string() }
                     ))?;
             }

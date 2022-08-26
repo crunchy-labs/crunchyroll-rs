@@ -216,7 +216,7 @@ impl Playback for Collection {
         if let Some(playback_id) = self.playback_id.clone() {
             self.executor.request(self.executor.client.get(playback_id)).await
         } else {
-            Err(CrunchyrollError::RequestError(
+            Err(CrunchyrollError::Request(
                 CrunchyrollErrorContext{ message: "no playback id available".into() }
             ))
         }

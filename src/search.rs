@@ -52,7 +52,7 @@ impl TryFrom<SearchResultsBulkResult> for SearchResults {
                 "series" => series = Some(result),
                 "movie_listing" => movie_listing = Some(result),
                 "episode" => episode = Some(result),
-                _ => return Err(CrunchyrollError::DecodeError(
+                _ => return Err(CrunchyrollError::Decode(
                     CrunchyrollErrorContext{ message: format!("invalid result type found: '{}'", item.result_type) }
                 ))
             };
@@ -60,16 +60,16 @@ impl TryFrom<SearchResultsBulkResult> for SearchResults {
 
         Ok(Self {
             executor: Default::default(),
-            top_results: top_results.ok_or_else(|| CrunchyrollError::DecodeError(
+            top_results: top_results.ok_or_else(|| CrunchyrollError::Decode(
                 CrunchyrollErrorContext{ message: "could not find 'top_result' type".into() }
             ))?,
-            series: series.ok_or_else(|| CrunchyrollError::DecodeError(
+            series: series.ok_or_else(|| CrunchyrollError::Decode(
                 CrunchyrollErrorContext{ message: "could not find 'series' type".into() }
             ))?,
-            movie_listing: movie_listing.ok_or_else(|| CrunchyrollError::DecodeError(
+            movie_listing: movie_listing.ok_or_else(|| CrunchyrollError::Decode(
                 CrunchyrollErrorContext{ message: "could not find 'movie_listing' type".into() }
             ))?,
-            episode: episode.ok_or_else(|| CrunchyrollError::DecodeError(
+            episode: episode.ok_or_else(|| CrunchyrollError::Decode(
                 CrunchyrollErrorContext{ message: "could not find 'episode' type".into() }
             ))?
         })
