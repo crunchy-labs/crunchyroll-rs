@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_must_use, clippy::complexity)]
+
 use std::{env, fs};
 use std::future::Future;
 use std::pin::Pin;
@@ -18,7 +20,7 @@ impl<T> Store<T> {
     }
 
     pub async fn get(&self) -> anyhow::Result<&T> {
-        if let None = self.value.get() {
+        if self.value.get().is_none() {
             let function = self.get_fn.clone();
             let value = function().await;
             self.value.set(value);

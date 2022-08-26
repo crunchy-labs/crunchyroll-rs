@@ -1,4 +1,5 @@
-use std::error::Error;
+#![allow(dead_code)]
+
 use crunchyroll_rs::Crunchyroll;
 use crate::utils::store::{get_store, has_store, set_store, Store};
 

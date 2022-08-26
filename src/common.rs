@@ -23,6 +23,7 @@ pub struct SearchMetadata {
     pub score: f64
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
@@ -52,6 +53,7 @@ pub struct SeriesMetadata {
     tenant_categories: Option<crate::StrictValue>
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
@@ -85,6 +87,7 @@ pub struct MovieListingMetadata {
     premium_date: crate::StrictValue
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
@@ -162,6 +165,7 @@ pub struct CollectionImages {
     pub poster_wide: Option<Vec<Vec<Image>>>
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]

@@ -37,6 +37,7 @@ fn deserialize_streams<'de, D: Deserializer<'de>, T: FixStream>(deserializer: D)
 }
 
 /// A video stream.
+#[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
@@ -95,6 +96,7 @@ impl FromId for VideoStream {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]

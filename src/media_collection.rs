@@ -31,6 +31,7 @@ pub struct MovieListingImages {
 }
 
 /// This struct represents a movie collection.
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
@@ -113,6 +114,7 @@ impl FromId for MovieListing {
 type SeriesImages = MovieListingImages;
 
 /// This struct represents a crunchyroll series.
+#[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
