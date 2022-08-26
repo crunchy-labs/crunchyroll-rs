@@ -7,20 +7,20 @@ pub(crate) type Result<T, E = CrunchyrollError> = core::result::Result<T, E>;
 
 #[derive(Debug)]
 pub enum CrunchyrollError {
-    InternalError(CrunchyrollErrorContext),
-    RequestError(CrunchyrollErrorContext),
-    DecodeError(CrunchyrollErrorContext),
+    Internal(CrunchyrollErrorContext),
+    Request(CrunchyrollErrorContext),
+    Decode(CrunchyrollErrorContext),
 
-    AuthenticationError(CrunchyrollErrorContext)
+    Authentication(CrunchyrollErrorContext)
 }
 
 impl Display for CrunchyrollError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CrunchyrollError::InternalError(context) => write!(f, "{}", context.message),
-            CrunchyrollError::RequestError(context) => write!(f, "{}", context.message),
-            CrunchyrollError::DecodeError(context) => write!(f, "{}", context.message),
-            CrunchyrollError::AuthenticationError(context) => write!(f, "{}", context.message)
+            CrunchyrollError::Internal(context) => write!(f, "{}", context.message),
+            CrunchyrollError::Request(context) => write!(f, "{}", context.message),
+            CrunchyrollError::Decode(context) => write!(f, "{}", context.message),
+            CrunchyrollError::Authentication(context) => write!(f, "{}", context.message)
         }
     }
 }
@@ -61,11 +61,11 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
             details.push(format!("{}: {}", item.field, item.code))
         }
 
-        return Err(CrunchyrollError::RequestError(
+        return Err(CrunchyrollError::Request(
             CrunchyrollErrorContext{ message: format!("{} ({}) - {}", err.error, err.code, details.join(", ")) }
         ));
     } else if let Ok(err) = serde_json::from_value::<CodeContextError2>(value) {
-        return Err(CrunchyrollError::RequestError(
+        return Err(CrunchyrollError::Request(
             CrunchyrollErrorContext{ message: format!("{} ({})", err.message, err.code) }
         ))
     }
@@ -74,7 +74,7 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
 
 pub(crate) fn check_request_error<T: DeserializeOwned>(value: serde_json::Value) -> Result<T> {
     is_request_error(value.to_owned())?;
-    serde_json::from_value::<T>(value).map_err(|e| CrunchyrollError::DecodeError(
+    serde_json::from_value::<T>(value).map_err(|e| CrunchyrollError::Decode(
         CrunchyrollErrorContext{ message: e.to_string() }
     ))
 }
