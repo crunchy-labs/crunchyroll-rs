@@ -7,6 +7,7 @@ mod media_collection;
 mod common;
 mod media;
 mod stream;
+mod search;
 
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;
@@ -17,6 +18,7 @@ pub use crunchyroll::Crunchyroll;
 pub use crunchyroll::Locale;
 
 pub use common::{
+    Collection,
     FromId,
     Playback,
     Streams
