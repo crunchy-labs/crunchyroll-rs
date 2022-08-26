@@ -427,7 +427,21 @@ fn clean_request(mut map: serde_json::Map<String, serde_json::Value>, not_clean_
             map.remove(key.as_str());
         } else if let Some(object) = value.as_object() {
             map.insert(key, serde_json::to_value(clean_request(object.clone(), not_clean_fields.clone())).unwrap());
+        } else if let Some(array) = value.as_array() {
+            map.insert(key, serde_json::to_value(clean_request_array(array.clone(), not_clean_fields.clone())).unwrap());
         }
     }
     map
+}
+
+#[cfg(feature = "__test_strict")]
+fn clean_request_array(mut arr: Vec<serde_json::Value>, not_clean_fields: Vec<String>) -> Vec<serde_json::Value> {
+    for (i, item) in arr.clone().iter().enumerate() {
+        if let Some(object) = item.as_object() {
+            arr[i] = serde_json::to_value(clean_request(object.clone(), not_clean_fields.clone())).unwrap();
+        } else if let Some(array) = item.as_array() {
+            arr[i] = serde_json::to_value(clean_request_array(array.clone(), not_clean_fields.clone())).unwrap();
+        }
+    }
+    arr
 }
