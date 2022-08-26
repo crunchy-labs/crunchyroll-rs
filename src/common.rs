@@ -153,7 +153,9 @@ pub struct EpisodeMetadata {
     #[cfg(feature = "__test_strict")]
     versions: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    identifier: crate::StrictValue
+    identifier: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    tenant_categories: Option<crate::StrictValue>
 }
 
 #[derive(Debug, Deserialize)]
