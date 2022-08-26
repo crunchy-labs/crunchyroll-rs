@@ -335,7 +335,9 @@ impl CrunchyrollBuilder {
             service_available: bool,
 
             #[cfg(feature = "__test_strict")]
-            cms_beta: crate::StrictValue
+            cms_beta: crate::StrictValue,
+            #[cfg(feature = "__test_strict")]
+            cms_web: crate::StrictValue
         }
         impl Request for IndexResp {}
         let index_req = self.client
