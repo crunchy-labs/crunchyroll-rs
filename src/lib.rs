@@ -7,7 +7,8 @@ mod media_collection;
 mod common;
 mod media;
 mod stream;
-mod search;
+
+pub mod search;
 
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;
