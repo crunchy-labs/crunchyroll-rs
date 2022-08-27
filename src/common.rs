@@ -30,7 +30,7 @@ pub struct SearchMetadata {
 pub struct SeriesMetadata {
     pub extended_description: String,
 
-    pub series_launch_year: u32,
+    pub series_launch_year: Option<u32>,
 
     pub episode_count: u32,
     pub season_count: u32,
