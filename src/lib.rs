@@ -7,6 +7,7 @@ mod media_collection;
 mod common;
 mod media;
 mod stream;
+mod macros;
 
 pub mod search;
 

@@ -2,7 +2,7 @@ pub mod query {
     use std::collections::HashMap;
     use std::sync::Arc;
     use serde::Deserialize;
-    use crate::{Collection, Crunchyroll, Executor};
+    use crate::{Collection, Crunchyroll, enum_values, Executor};
     use crate::common::{BulkResult, Request};
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
 
@@ -85,11 +85,12 @@ pub mod query {
         total: u32
     }
 
-    #[derive(Clone, Debug)]
-    pub enum QueryType {
-        Series,
-        MovieListing,
-        Episode
+    enum_values!{
+        QueryType,
+        #[derive(Debug)],
+        Series = "series",
+        MovieListing = "movie_listing",
+        Episode = "episode"
     }
 
     #[derive(derive_setters::Setters, smart_default::SmartDefault)]
@@ -109,7 +110,7 @@ pub mod query {
                 .query(&HashMap::from([
                     ("q", query),
                     ("n", options.limit.to_string()),
-                    ("type", options.result_type.map_or_else(|| "".to_string(), |f| format!("{:?}", f).to_string()).to_lowercase()),
+                    ("type", options.result_type.map_or_else(|| "".to_string(), |f| format!("{:?}", f)).to_lowercase()),
                     ("locale", self.executor.locale.to_string())
                 ]));
 

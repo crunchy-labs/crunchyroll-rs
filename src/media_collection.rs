@@ -1,25 +1,15 @@
-use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+use serde::Deserialize;
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use crate::common::{Available, FromId, Image, Request};
-use crate::{Crunchyroll, Executor, Locale};
+use crate::{Crunchyroll, enum_values, Executor, Locale};
 use crate::error::Result;
 
-#[derive(Clone, Serialize)]
-#[allow(dead_code)]
-pub enum MediaType {
-    Series, Movie
-}
-
-impl Display for MediaType {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let media_type = match self {
-            MediaType::Series => "series",
-            MediaType::Movie => "movie_listing"
-        };
-        write!(f, "{}", media_type)
-    }
+enum_values!{
+    MediaType,
+    #[derive(Debug, Deserialize)],
+    Series = "series",
+    Movie = "movie_listing"
 }
 
 #[derive(Debug, Deserialize)]

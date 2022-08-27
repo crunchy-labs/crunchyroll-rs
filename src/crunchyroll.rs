@@ -1,72 +1,26 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use reqwest::RequestBuilder;
 use reqwest::header::HeaderMap;
 use crate::common::Request;
+use crate::enum_values;
 use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub enum Locale {
-    JP,
-    US,
-    LA,
-    ES,
-    FR,
-    PT,
-    BR,
-    IT,
-    DE,
-    RU,
-    AR,
-    Custom(String)
-}
-
-impl Display for Locale {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let locale = match self {
-            Locale::JP => "ja-JP",
-            Locale::US => "en-US",
-            Locale::LA => "es-419",
-            Locale::ES => "es-ES",
-            Locale::FR => "fr-FR",
-            Locale::PT => "pt-PT",
-            Locale::BR => "pt-BR",
-            Locale::IT => "it-IT",
-            Locale::DE => "de-DE",
-            Locale::RU => "ru-RU",
-            Locale::AR => "ar-SA",
-            Locale::Custom(raw) => raw
-        };
-        write!(f, "{}", locale)
-    }
-}
-
-impl Default for Locale {
-    fn default() -> Self {
-        Locale::Custom("".to_string())
-    }
-}
-
-impl From<String> for Locale {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "ja-JP" => Locale::JP,
-            "en-US" => Locale::US,
-            "es-419" => Locale::LA,
-            "es-ES" => Locale::ES,
-            "fr-FR" => Locale::FR,
-            "pt-PT" => Locale::PT,
-            "pr-BR"=> Locale::BR,
-            "it-IT" => Locale::IT,
-            "de-DE" => Locale::DE,
-            "ru-RU" => Locale::RU,
-            "ar-SA" => Locale::AR,
-            _ => Locale::Custom(value)
-        }
-    }
+enum_values!{
+    Locale,
+    #[derive(Clone, Debug, Hash, Eq, PartialEq)],
+    JP = "ja-JP",
+    US = "en-US",
+    LA = "es-419",
+    ES = "es-ES",
+    FR = "fr-FR",
+    BR = "pt-BR",
+    IT = "it-IT",
+    DE = "de-DE",
+    RU = "ru-RU",
+    AR = "ar-SA"
 }
 
 impl<'de> Deserialize<'de> for Locale {
