@@ -7,40 +7,48 @@ pub mod query {
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
 
     #[derive(Deserialize, Debug)]
-    #[serde(try_from = "QueryResultsBulkResult")]
+    #[serde(try_from = "BulkResult<QueryBulkResult>")]
     pub struct QueryResults {
         #[serde(skip)]
         executor: Arc<Executor>,
 
-        pub top_results: BulkResult<Collection>,
-        pub series: BulkResult<Collection>,
-        pub movie_listing: BulkResult<Collection>,
-        pub episode: BulkResult<Collection>
+        pub top_results: Option<BulkResult<Collection>>,
+        pub series: Option<BulkResult<Collection>>,
+        pub movie_listing: Option<BulkResult<Collection>>,
+        pub episode: Option<BulkResult<Collection>>
     }
 
     impl Request for QueryResults {
         fn set_executor(&mut self, executor: Arc<Executor>) {
             self.executor = executor.clone();
 
-            for collection in self.top_results.items.iter_mut() {
-                collection.set_executor(executor.clone());
+            if let Some(top_results) = &mut self.top_results {
+                for collection in top_results.items.iter_mut() {
+                    collection.set_executor(executor.clone());
+                }
             }
-            for collection in self.series.items.iter_mut() {
-                collection.set_executor(executor.clone());
+            if let Some(series) = &mut self.series {
+                for collection in series.items.iter_mut() {
+                    collection.set_executor(executor.clone());
+                }
             }
-            for collection in self.movie_listing.items.iter_mut() {
-                collection.set_executor(executor.clone());
+            if let Some(movie_listing) = &mut self.movie_listing {
+                for collection in movie_listing.items.iter_mut() {
+                    collection.set_executor(executor.clone());
+                }
             }
-            for collection in self.episode.items.iter_mut() {
-                collection.set_executor(executor.clone());
+            if let Some(episode) = &mut self.episode {
+                for collection in episode.items.iter_mut() {
+                    collection.set_executor(executor.clone());
+                }
             }
         }
     }
 
-    impl TryFrom<QueryResultsBulkResult> for QueryResults {
+    impl TryFrom<BulkResult<QueryBulkResult>> for QueryResults {
         type Error = CrunchyrollError;
 
-        fn try_from(value: QueryResultsBulkResult) -> std::result::Result<Self, Self::Error> {
+        fn try_from(value: BulkResult<QueryBulkResult>) -> std::result::Result<Self, Self::Error> {
             let mut top_results: Option<BulkResult<Collection>> = None;
             let mut series: Option<BulkResult<Collection>> = None;
             let mut movie_listing: Option<BulkResult<Collection>> = None;
@@ -61,28 +69,15 @@ pub mod query {
 
             Ok(Self {
                 executor: Default::default(),
-                top_results: top_results.ok_or_else(|| CrunchyrollError::Decode(
-                    CrunchyrollErrorContext{ message: "could not find 'top_result' type".into() }
-                ))?,
-                series: series.ok_or_else(|| CrunchyrollError::Decode(
-                    CrunchyrollErrorContext{ message: "could not find 'series' type".into() }
-                ))?,
-                movie_listing: movie_listing.ok_or_else(|| CrunchyrollError::Decode(
-                    CrunchyrollErrorContext{ message: "could not find 'movie_listing' type".into() }
-                ))?,
-                episode: episode.ok_or_else(|| CrunchyrollError::Decode(
-                    CrunchyrollErrorContext{ message: "could not find 'episode' type".into() }
-                ))?
+                top_results,
+                series,
+                movie_listing,
+                episode
             })
         }
     }
 
-    #[derive(Deserialize)]
-    struct QueryResultsBulkResult {
-        items: [QueryBulkResult; 4]
-    }
-
-    #[derive(Deserialize)]
+    #[derive(Deserialize, Default)]
     struct QueryBulkResult {
         #[serde(rename = "type")]
         result_type: String,
