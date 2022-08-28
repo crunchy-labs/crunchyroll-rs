@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
@@ -58,14 +57,25 @@ impl Executor {
         Ok(resp)
     }
 
-    pub(crate) fn media_query(&self) -> HashMap<String, String> {
-        let mut query = HashMap::new();
-        query.insert("locale".to_string(), self.locale.to_string());
-        query.insert("Signature".to_string(), self.config.signature.clone());
-        query.insert("Policy".to_string(), self.config.policy.clone());
-        query.insert("Key-Pair-Id".to_string(), self.config.key_pair_id.clone());
+    pub(crate) fn media_query(&self) -> Vec<(String, String)> {
+        vec![
+            ("locale".to_string(), self.locale.to_string()),
+            ("Signature".to_string(), self.config.signature.clone()),
+            ("Policy".to_string(), self.config.policy.clone()),
+            ("Key-Pair-Id".to_string(), self.config.key_pair_id.clone())
+        ]
+    }
 
-        query
+    pub(crate) fn struct_to_query<T: Serialize>(&self, s: T) -> Result<Vec<(String, String)>> {
+        let mut query: Vec<(String, String)> = vec![];
+
+        if let Some(object) = serde_json::to_value(s)?.as_object_mut() {
+            for (key, value) in object {
+                query.push((key.clone(), value.to_string()));
+            }
+        }
+
+        Ok(query)
     }
 }
 
@@ -176,12 +186,12 @@ impl CrunchyrollBuilder {
             .header("Authorization", "Basic aHJobzlxM2F3dnNrMjJ1LXRzNWE6cHROOURteXRBU2Z6QjZvbXVsSzh6cUxzYTczVE1TY1k=")
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(serde_urlencoded::to_string(
-                HashMap::from([
+                &[
                     ("username", user.as_str()),
                     ("password", password.as_str()),
                     ("grant_type", "password"),
                     ("scope", "offline_access")
-                ])
+                ]
             ).unwrap())
             .send()
             .await
@@ -211,10 +221,10 @@ impl CrunchyrollBuilder {
             .header("Content-Type", "application/x-www-form-urlencoded")
             .header("Cookie", format!("etp_rt={}", etp_rt))
             .body(serde_urlencoded::to_string(
-                HashMap::from([
+                &[
                     ("grant_type", "etp_rt_cookie"),
                     ("scope", "offline_access")
-                ])
+                ]
             ).unwrap())
             .send()
             .await

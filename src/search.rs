@@ -1,5 +1,4 @@
 pub mod query {
-    use std::collections::HashMap;
     use std::sync::Arc;
     use serde::Deserialize;
     use crate::{Collection, Crunchyroll, enum_values, Executor};
@@ -107,12 +106,12 @@ pub mod query {
             let endpoint = "https://beta.crunchyroll.com/content/v1/search";
             let builder = executor.client
                 .get(endpoint)
-                .query(&HashMap::from([
+                .query(&[
                     ("q", query),
                     ("n", options.limit.to_string()),
                     ("type", options.result_type.map_or_else(|| "".to_string(), |f| format!("{:?}", f)).to_lowercase()),
                     ("locale", self.executor.locale.to_string())
-                ]));
+                ]);
 
             executor.request(builder).await
         }
