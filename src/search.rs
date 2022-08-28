@@ -1,3 +1,53 @@
+pub mod browse {
+    use crate::{Crunchyroll, enum_values, options};
+    use crate::common::{BulkResult, Panel};
+    use crate::media_collection::MediaType;
+    use crate::error::{Result};
+
+    enum_values!{
+        BrowseSortType,
+        #[derive(Debug)],
+        Popularity = "popularity",
+        NewlyAdded = "newly_added",
+        Alphabetical = "alphabetical"
+    }
+
+    options!{
+        BrowseOptions,
+        categories(Vec<String>, "categories") = None,
+        // Specifies whether the entries should be dubbed.
+        is_dubbed(bool, "is_dubbed") = None,
+        // Specifies whether the entries should be subbed.
+        is_subbed(bool, "is_subbed") = None,
+        // Specifies a particular simulcast season by id in which the entries have been aired.
+        simulcast(String, "season_tag") = None,
+        // Specifies how the entries should be sorted.
+        sort(BrowseSortType, "sort") = Some(BrowseSortType::NewlyAdded),
+        // Specifies the media type of the entries.
+        media_type(MediaType, "type") = None,
+
+        // Limit of results to return.
+        limit(u32, "n") = Some(20),
+        // Specifies the index from which the entries should be returned.
+        start(u32, "start") = None
+    }
+
+    impl Crunchyroll {
+        pub async fn browse(&self, options: BrowseOptions) -> Result<BulkResult<Panel>> {
+            let executor = self.executor.clone();
+
+            let endpoint = "https://beta.crunchyroll.com/content/v1/browse";
+            let builder = executor.client
+                .get(endpoint)
+                .query(&options.to_query(&[
+                    ("locale".to_string(), self.executor.locale.to_string())
+                ]));
+
+            executor.request(builder).await
+        }
+    }
+}
+
 pub mod query {
     use std::sync::Arc;
     use serde::Deserialize;
@@ -18,27 +68,27 @@ pub mod query {
     }
 
     impl Request for QueryResults {
-        fn set_executor(&mut self, executor: Arc<Executor>) {
+        fn __set_executor(&mut self, executor: Arc<Executor>) {
             self.executor = executor.clone();
 
             if let Some(top_results) = &mut self.top_results {
                 for collection in top_results.items.iter_mut() {
-                    collection.set_executor(executor.clone());
+                    collection.__set_executor(executor.clone());
                 }
             }
             if let Some(series) = &mut self.series {
                 for collection in series.items.iter_mut() {
-                    collection.set_executor(executor.clone());
+                    collection.__set_executor(executor.clone());
                 }
             }
             if let Some(movie_listing) = &mut self.movie_listing {
                 for collection in movie_listing.items.iter_mut() {
-                    collection.set_executor(executor.clone());
+                    collection.__set_executor(executor.clone());
                 }
             }
             if let Some(episode) = &mut self.episode {
                 for collection in episode.items.iter_mut() {
-                    collection.set_executor(executor.clone());
+                    collection.__set_executor(executor.clone());
                 }
             }
         }
@@ -84,8 +134,11 @@ pub mod query {
         total: u32
     }
 
+    impl Request for QueryBulkResult {}
+
     enum_values!{
         QueryType,
+        #[derive(Debug)],
         Series = "series",
         MovieListing = "movie_listing",
         Episode = "episode"
@@ -105,7 +158,7 @@ pub mod query {
             let builder = executor.client
                 .get(endpoint)
                 .query(&options.to_query(&[
-                    ("q".to_string(), query),
+                    ("q".to_string(), query.clone()),
                     ("locale".to_string(), self.executor.locale.to_string())
                 ]));
 

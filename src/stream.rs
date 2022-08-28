@@ -73,7 +73,7 @@ pub struct VideoStream {
 }
 
 impl Request for VideoStream {
-    fn set_executor(&mut self, executor: Arc<Executor>) {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor.clone();
 
         for value in self.subtitles.values_mut() {
@@ -117,7 +117,7 @@ pub struct PlaybackStream {
 }
 
 impl Request for PlaybackStream {
-    fn set_executor(&mut self, executor: Arc<Executor>) {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor.clone();
 
         for value in self.subtitles.values_mut() {

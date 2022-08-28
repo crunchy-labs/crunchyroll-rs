@@ -21,6 +21,7 @@ pub use crunchyroll::Locale;
 
 pub use common::{
     Collection,
+    Panel,
     FromId,
     Playback,
     Streams

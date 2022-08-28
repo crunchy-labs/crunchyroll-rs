@@ -9,11 +9,21 @@ use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
 #[derive(Deserialize, Debug)]
+#[serde(bound = "T: Request")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
-pub struct BulkResult<T> {
+#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+pub struct BulkResult<T: Request> {
+    #[cfg_attr(not(feature = "__test_strict"), default(Vec::new()))]
     pub items: Vec<T>,
     pub total: u32
+}
+
+impl<T: Request> Request for BulkResult<T> {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
+        for item in self.items.iter_mut() {
+            item.__set_executor(executor.clone())
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -207,7 +217,7 @@ pub struct Collection {
 }
 
 impl Request for Collection {
-    fn set_executor(&mut self, executor: Arc<Executor>) {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }
 }
@@ -225,6 +235,52 @@ impl Playback for Collection {
     }
 }
 
+type PanelImages = CollectionImages;
+
+#[allow(dead_code)]
+#[derive(Debug, Deserialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+pub struct Panel {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    pub id: String,
+    pub external_id: String,
+    pub channel_id: String,
+
+    pub slug: String,
+    pub title: String,
+    pub slug_title: String,
+    pub promo_title: String,
+    pub description: String,
+    pub promo_description: String,
+
+    pub new: bool,
+    pub new_content: bool,
+
+    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    pub last_public: DateTime<Utc>,
+
+    pub series_metadata: Option<SeriesMetadata>,
+    pub movie_listing_metadata: Option<MovieListingMetadata>,
+    pub episode_metadata: Option<EpisodeMetadata>,
+
+    pub images: Option<PanelImages>,
+
+    #[serde(alias = "type")]
+    #[cfg(feature = "__test_strict")]
+    collection_type: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    linked_resource_key: crate::StrictValue
+}
+
+impl Request for Panel {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
+        self.executor = executor
+    }
+}
+
 /// The standard representation of images how the api returns them.
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -239,16 +295,16 @@ pub struct Image {
 
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
-pub(crate) trait Request: DeserializeOwned {
+pub trait Request: DeserializeOwned {
     /// Set a usable [`Executor`] instance to the struct if required
-    fn set_executor(&mut self, _: Arc<Executor>) {}
+    fn __set_executor(&mut self, _: Arc<Executor>) {}
 
     /// When using the `__test_strict` feature, all fields starting and ending with `__` are removed
     /// from the json before converting it into a struct. These fields are usually not required. But
     /// if they're needed to be accessed, return the names of these fields with this method and they
     /// won't get touched.
     #[cfg(feature = "__test_strict")]
-    fn not_clean_fields() -> Vec<String> {
+    fn __not_clean_fields() -> Vec<String> {
         vec![]
     }
 }

@@ -118,12 +118,12 @@ pub struct Episode {
 }
 
 impl Request for Episode {
-    fn set_executor(&mut self, executor: Arc<Executor>) {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }
 
     #[cfg(feature = "__test_strict")]
-    fn not_clean_fields() -> Vec<String> {
+    fn __not_clean_fields() -> Vec<String> {
         vec![
             "__links__".into()
         ]
@@ -223,7 +223,7 @@ pub struct Movie {
 }
 
 impl Request for Movie {
-    fn set_executor(&mut self, executor: Arc<Executor>) {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }
 }

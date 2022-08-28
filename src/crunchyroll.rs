@@ -24,7 +24,7 @@ enum_values!{
 
 /// Internal struct to execute all request with.
 #[derive(Debug)]
-pub(crate) struct Executor {
+pub struct Executor {
     pub(crate) client: reqwest::Client,
     pub(crate) locale: Locale,
 
@@ -38,7 +38,7 @@ impl Executor {
 
         let mut resp: T = request(builder).await?;
 
-        resp.set_executor(self.clone());
+        resp.__set_executor(self.clone());
 
         Ok(resp)
     }
@@ -349,7 +349,7 @@ async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
     return Ok(result);
     #[cfg(feature = "__test_strict")]
     {
-        let cleaned = clean_request(result, T::not_clean_fields());
+        let cleaned = clean_request(result, T::__not_clean_fields());
         return Ok(T::deserialize(serde::de::value::MapDeserializer::new(cleaned.into_iter()))?);
     }
 }

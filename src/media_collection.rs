@@ -7,6 +7,7 @@ use crate::error::Result;
 
 enum_values!{
     MediaType,
+    #[derive(Debug)],
     Series = "series",
     Movie = "movie_listing"
 }
@@ -75,7 +76,7 @@ pub struct MovieListing {
 }
 
 impl Request for MovieListing {
-    fn set_executor(&mut self, executor: Arc<Executor>) {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }
 }
@@ -151,7 +152,7 @@ pub struct Series {
 }
 
 impl Request for Series {
-    fn set_executor(&mut self, executor: Arc<Executor>) {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor
     }
 }
