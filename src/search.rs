@@ -1,7 +1,7 @@
 pub mod query {
     use std::sync::Arc;
     use serde::Deserialize;
-    use crate::{Collection, Crunchyroll, enum_values, Executor};
+    use crate::{Collection, Crunchyroll, enum_values, Executor, options};
     use crate::common::{BulkResult, Request};
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
 
@@ -86,17 +86,15 @@ pub mod query {
 
     enum_values!{
         QueryType,
-        #[derive(Debug)],
         Series = "series",
         MovieListing = "movie_listing",
         Episode = "episode"
     }
 
-    #[derive(derive_setters::Setters, smart_default::SmartDefault)]
-    pub struct QueryOptions {
-        #[default = 20]
-        pub limit: u32,
-        pub result_type: Option<QueryType>
+    options!{
+        QueryOptions,
+        limit(u32, "n") = Some(20),
+        result_type(QueryType, "type") = None
     }
 
     impl Crunchyroll {
@@ -106,12 +104,10 @@ pub mod query {
             let endpoint = "https://beta.crunchyroll.com/content/v1/search";
             let builder = executor.client
                 .get(endpoint)
-                .query(&[
-                    ("q", query),
-                    ("n", options.limit.to_string()),
-                    ("type", options.result_type.map_or_else(|| "".to_string(), |f| format!("{:?}", f)).to_lowercase()),
-                    ("locale", self.executor.locale.to_string())
-                ]);
+                .query(&options.to_query(&[
+                    ("q".to_string(), query),
+                    ("locale".to_string(), self.executor.locale.to_string())
+                ]));
 
             executor.request(builder).await
         }

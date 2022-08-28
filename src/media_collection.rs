@@ -7,7 +7,6 @@ use crate::error::Result;
 
 enum_values!{
     MediaType,
-    #[derive(Debug, Deserialize)],
     Series = "series",
     Movie = "movie_listing"
 }

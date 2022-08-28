@@ -1,4 +1,4 @@
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::Deserialize;
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use reqwest::RequestBuilder;
@@ -20,20 +20,6 @@ enum_values!{
     DE = "de-DE",
     RU = "ru-RU",
     AR = "ar-SA"
-}
-
-impl<'de> Deserialize<'de> for Locale {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-        where D: Deserializer<'de>
-    {
-        crate::internal::serde::string_to_enum(deserializer)
-    }
-}
-
-impl Serialize for Locale {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_str(self.to_string().as_str())
-    }
 }
 
 /// Internal struct to execute all request with.
@@ -64,18 +50,6 @@ impl Executor {
             ("Policy".to_string(), self.config.policy.clone()),
             ("Key-Pair-Id".to_string(), self.config.key_pair_id.clone())
         ]
-    }
-
-    pub(crate) fn struct_to_query<T: Serialize>(&self, s: T) -> Result<Vec<(String, String)>> {
-        let mut query: Vec<(String, String)> = vec![];
-
-        if let Some(object) = serde_json::to_value(s)?.as_object_mut() {
-            for (key, value) in object {
-                query.push((key.clone(), value.to_string()));
-            }
-        }
-
-        Ok(query)
     }
 }
 
