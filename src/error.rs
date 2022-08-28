@@ -27,6 +27,30 @@ impl Display for CrunchyrollError {
 
 impl Error for CrunchyrollError {}
 
+impl From<serde_json::Error> for CrunchyrollError {
+    fn from(err: serde_json::Error) -> Self {
+        Self::Decode(
+            CrunchyrollErrorContext{ message: err.to_string() }
+        )
+    }
+}
+
+impl From<serde_urlencoded::de::Error> for CrunchyrollError {
+    fn from(err: serde_urlencoded::de::Error) -> Self {
+        Self::Decode(
+            CrunchyrollErrorContext{ message: err.to_string() }
+        )
+    }
+}
+
+impl From<serde_urlencoded::ser::Error> for CrunchyrollError {
+    fn from(err: serde_urlencoded::ser::Error) -> Self {
+        Self::Decode(
+            CrunchyrollErrorContext{ message: err.to_string() }
+        )
+    }
+}
+
 #[derive(Debug)]
 pub struct CrunchyrollErrorContext {
     pub message: String

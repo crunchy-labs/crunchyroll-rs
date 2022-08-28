@@ -366,9 +366,7 @@ async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
     #[cfg(feature = "__test_strict")]
     {
         let cleaned = clean_request(result, T::not_clean_fields());
-        return T::deserialize(serde::de::value::MapDeserializer::new(cleaned.into_iter())).map_err(|e| CrunchyrollError::Decode(
-            CrunchyrollErrorContext { message: e.to_string() }
-        ));
+        return Ok(T::deserialize(serde::de::value::MapDeserializer::new(cleaned.into_iter()))?);
     }
 }
 
