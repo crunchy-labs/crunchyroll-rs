@@ -103,7 +103,7 @@ pub mod query {
             let mut movie_listing: Option<BulkResult<Collection>> = None;
             let mut episode: Option<BulkResult<Collection>> = None;
 
-            for item in value.items {
+            for item in value.items.clone() {
                 let result = BulkResult{ items: item.items, total: item.total };
                 match item.result_type.as_str() {
                     "top_results" => top_results = Some(result),
@@ -111,7 +111,8 @@ pub mod query {
                     "movie_listing" => movie_listing = Some(result),
                     "episode" => episode = Some(result),
                     _ => return Err(CrunchyrollError::Decode(
-                        CrunchyrollErrorContext{ message: format!("invalid result type found: '{}'", item.result_type) }
+                        CrunchyrollErrorContext::new(format!("invalid result type found: '{}'", item.result_type))
+                            .with_value(format!("{:?}", value).as_bytes())
                     ))
                 };
             }
@@ -126,7 +127,7 @@ pub mod query {
         }
     }
 
-    #[derive(Deserialize, Default)]
+    #[derive(Clone, Debug, Default, Deserialize)]
     struct QueryBulkResult {
         #[serde(rename = "type")]
         result_type: String,

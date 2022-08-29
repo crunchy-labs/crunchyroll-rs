@@ -8,17 +8,17 @@ use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
-#[derive(Deserialize, Debug)]
-#[serde(bound = "T: Request")]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(bound = "T: Request + Clone")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
-pub struct BulkResult<T: Request> {
+pub struct BulkResult<T: Request + Clone> {
     #[cfg_attr(not(feature = "__test_strict"), default(Vec::new()))]
     pub items: Vec<T>,
     pub total: u32
 }
 
-impl<T: Request> Request for BulkResult<T> {
+impl<T: Request + Clone> Request for BulkResult<T> {
     fn __set_executor(&mut self, executor: Arc<Executor>) {
         for item in self.items.iter_mut() {
             item.__set_executor(executor.clone())
@@ -26,7 +26,7 @@ impl<T: Request> Request for BulkResult<T> {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct SearchMetadata {
@@ -34,7 +34,7 @@ pub struct SearchMetadata {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct SeriesMetadata {
@@ -64,7 +64,7 @@ pub struct SeriesMetadata {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
 pub struct MovieListingMetadata {
@@ -98,7 +98,7 @@ pub struct MovieListingMetadata {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
 pub struct EpisodeMetadata {
@@ -168,7 +168,7 @@ pub struct EpisodeMetadata {
     tenant_categories: Option<crate::StrictValue>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct CollectionImages {
@@ -178,7 +178,7 @@ pub struct CollectionImages {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct Collection {
@@ -229,7 +229,7 @@ impl Playback for Collection {
             self.executor.request(self.executor.client.get(playback_id)).await
         } else {
             Err(CrunchyrollError::Request(
-                CrunchyrollErrorContext{ message: "no playback id available".into() }
+                CrunchyrollErrorContext::new("no playback id available".into())
             ))
         }
     }
@@ -238,7 +238,7 @@ impl Playback for Collection {
 type PanelImages = CollectionImages;
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
 pub struct Panel {
@@ -282,7 +282,7 @@ impl Request for Panel {
 }
 
 /// The standard representation of images how the api returns them.
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct Image {

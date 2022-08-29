@@ -170,17 +170,17 @@ impl CrunchyrollBuilder {
             .send()
             .await
             .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext{ message: e.to_string() }
+                CrunchyrollErrorContext::new(e.to_string())
             ))?;
 
         let resp_value = resp
-            .json()
+            .bytes()
             .await
             .map_err(|e| CrunchyrollError::Decode(
-                CrunchyrollErrorContext{ message: e.to_string() }
+                CrunchyrollErrorContext::new(e.to_string())
             ))?;
 
-        self.post_login(check_request_error(resp_value)?).await
+        self.post_login(check_request_error(resp_value.as_ref())?).await
     }
 
     /// Logs in with a etp rt cookie and returns a new `Crunchyroll` instance.
@@ -203,17 +203,17 @@ impl CrunchyrollBuilder {
             .send()
             .await
             .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext{ message: e.to_string() }
+                CrunchyrollErrorContext::new(e.to_string())
             ))?;
 
         let resp_value = resp
-            .json()
+            .bytes()
             .await
             .map_err(|e| CrunchyrollError::Decode(
-                CrunchyrollErrorContext{ message: e.to_string() }
+                CrunchyrollErrorContext::new(e.to_string())
             ))?;
 
-        self.post_login(check_request_error(resp_value)?).await
+        self.post_login(check_request_error(resp_value.as_ref())?).await
     }
 
     /// Logs in with a session id and returns a new `Crunchyroll` instance.
@@ -228,7 +228,7 @@ impl CrunchyrollBuilder {
             .send()
             .await
             .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext{ message: e.to_string() }
+                CrunchyrollErrorContext::new(e.to_string())
             ))?;
 
         let mut etp_rt = None;
@@ -242,7 +242,7 @@ impl CrunchyrollBuilder {
             self.login_with_etp_rt(cookie).await
         } else {
             Err(CrunchyrollError::Authentication(
-                CrunchyrollErrorContext{ message: "invalid session id".into() }
+                CrunchyrollErrorContext::new("invalid session id".into())
             ))
         }
     }
@@ -338,12 +338,12 @@ async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
         .send()
         .await
         .map_err(|e| CrunchyrollError::Request(
-            CrunchyrollErrorContext{ message: e.to_string() }
+            CrunchyrollErrorContext::new(e.to_string())
         ))?;
 
-    let result = check_request_error(resp.json().await.map_err(|e| CrunchyrollError::Decode(
-        CrunchyrollErrorContext{ message: e.to_string() }
-    ))?)?;
+    let result = check_request_error(resp.bytes().await.map_err(|e| CrunchyrollError::Decode(
+        CrunchyrollErrorContext::new(e.to_string())
+    ))?.as_ref())?;
 
     #[cfg(not(feature = "__test_strict"))]
     return Ok(result);

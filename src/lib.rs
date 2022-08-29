@@ -1,5 +1,3 @@
-extern crate core;
-
 mod crunchyroll;
 mod error;
 mod internal;

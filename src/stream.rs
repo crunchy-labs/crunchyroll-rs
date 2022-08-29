@@ -145,16 +145,16 @@ impl StreamSubtitle {
             .send()
             .await
             .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext { message: e.to_string() }
+                CrunchyrollErrorContext::new(e.to_string())
             ))?;
         let body = resp.bytes()
             .await
             .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext { message: e.to_string() }
+                CrunchyrollErrorContext::new(e.to_string())
             ))?;
         w.write_all(body.as_ref())
             .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext { message: e.to_string() }
+                CrunchyrollErrorContext::new(e.to_string())
             ))?;
         Ok(())
     }
@@ -263,7 +263,7 @@ mod streaming {
                 VariantData::from_hls_master(self.executor.clone(), raw_streams.adaptive_hls.as_ref().unwrap().url.clone()).await
             } else {
                 Err(CrunchyrollError::Internal(
-                    CrunchyrollErrorContext{ message: "could not find default stream".into() }
+                    CrunchyrollErrorContext::new("could not find default stream".into())
                 ))
             }
         }
@@ -278,7 +278,7 @@ mod streaming {
                 VariantData::from_hls_master(self.executor.clone(), raw_streams.adaptive_hls.as_ref().unwrap().url.clone()).await
             } else {
                 Err(CrunchyrollError::Internal(
-                    CrunchyrollErrorContext{ message: "could not find default stream".into() }
+                    CrunchyrollErrorContext::new("could not find default stream".into())
                 ))
             }
         }
@@ -321,17 +321,17 @@ mod streaming {
                 .send()
                 .await
                 .map_err(|e| CrunchyrollError::Request(
-                    CrunchyrollErrorContext{ message: e.to_string() }
+                    CrunchyrollErrorContext::new(e.to_string())
                 ))?;
             let raw_master_playlist = resp.text()
                 .await
                 .map_err(|e| CrunchyrollError::Request(
-                    CrunchyrollErrorContext{ message: e.to_string() }
+                    CrunchyrollErrorContext::new(e.to_string())
                 ))?;
 
             let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_bytes())
                 .map_err(|e| CrunchyrollError::Decode(
-                    CrunchyrollErrorContext{ message: e.to_string() }
+                    CrunchyrollErrorContext::new(e.to_string())
                 ))?;
 
             let mut stream_data: Vec<VariantData> = vec![];
@@ -379,16 +379,16 @@ mod streaming {
                     .send()
                     .await
                     .map_err(|e| CrunchyrollError::Request(
-                        CrunchyrollErrorContext{ message: e.to_string() }
+                        CrunchyrollErrorContext::new(e.to_string())
                     ))?;
                 let raw_media_playlist = resp.text()
                     .await
                     .map_err(|e| CrunchyrollError::Request(
-                        CrunchyrollErrorContext{ message: e.to_string() }
+                        CrunchyrollErrorContext::new(e.to_string())
                     ))?;
                 let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_bytes())
                     .map_err(|e| CrunchyrollError::Decode(
-                        CrunchyrollErrorContext{ message: e.to_string() }
+                        CrunchyrollErrorContext::new(e.to_string())
                     ))?;
 
                 let mut segments: Vec<VariantSegment> = vec![];
@@ -400,12 +400,12 @@ mod streaming {
                                 .send()
                                 .await
                                 .map_err(|e| CrunchyrollError::Decode(
-                                    CrunchyrollErrorContext{ message: e.to_string() }
+                                    CrunchyrollErrorContext::new(e.to_string())
                                 ))?;
                             let raw_key = resp.bytes()
                                 .await
                                 .map_err(|e| CrunchyrollError::Request(
-                                    CrunchyrollErrorContext{ message: e.to_string() }
+                                    CrunchyrollErrorContext::new(e.to_string())
                                 ))?;
 
                             let temp_iv = key.iv.unwrap_or_else(|| "".to_string());
@@ -461,28 +461,28 @@ mod streaming {
                 .send()
                 .await
                 .map_err(|e| CrunchyrollError::Request(
-                    CrunchyrollErrorContext { message: e.to_string() }
+                    CrunchyrollErrorContext::new(e.to_string())
                 ))?;
             let segment = resp.bytes()
                 .await
                 .map_err(|e| CrunchyrollError::Request(
-                    CrunchyrollErrorContext { message: e.to_string() }
+                    CrunchyrollErrorContext::new(e.to_string())
                 ))?;
 
             if let Some(key) = self.key {
                 let mut temp_encrypted = segment.to_vec();
                 let decrypted = key.decrypt_padded_mut::<aes::cipher::block_padding::Pkcs7>(temp_encrypted.borrow_mut())
                     .map_err(|e| CrunchyrollError::Decode(
-                        CrunchyrollErrorContext{ message: e.to_string() }
+                        CrunchyrollErrorContext::new(e.to_string())
                     ))?;
                 w.write(decrypted)
                     .map_err(|e| CrunchyrollError::Request(
-                        CrunchyrollErrorContext { message: e.to_string() }
+                        CrunchyrollErrorContext::new(e.to_string())
                     ))?;
             } else {
                 w.write(segment.as_ref())
                     .map_err(|e| CrunchyrollError::Request(
-                        CrunchyrollErrorContext { message: e.to_string() }
+                        CrunchyrollErrorContext::new(e.to_string())
                     ))?;
             }
             Ok(())
