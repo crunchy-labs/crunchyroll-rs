@@ -112,23 +112,13 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
         }
 
         return Err(CrunchyrollError::Request(
-            if let Ok(v) = serde_json::to_string_pretty(&value) {
-                CrunchyrollErrorContext::new(format!("{} ({}) - {}", err.error, err.code, details.join(", ")))
-                    .with_value(v.as_bytes())
-            } else {
-                CrunchyrollErrorContext::new(format!("{} ({}) - {}", err.error, err.code, details.join(", ")))
-                    .with_value(value.to_string().as_bytes())
-            }
+            CrunchyrollErrorContext::new(format!("{} ({}) - {}", err.error, err.code, details.join(", ")))
+                .with_value(value.to_string().as_bytes())
         ));
     } else if let Ok(err) = serde_json::from_value::<CodeContextError2>(value.clone()) {
         return Err(CrunchyrollError::Request(
-            if let Ok(v) = serde_json::to_string_pretty(&value) {
-                CrunchyrollErrorContext::new(format!("{} ({})", err.message, err.code))
-                    .with_value(v.as_bytes())
-            } else {
-                CrunchyrollErrorContext::new(format!("{} ({})", err.message, err.code))
-                    .with_value(value.to_string().as_bytes())
-            }
+            CrunchyrollErrorContext::new(format!("{} ({})", err.message, err.code))
+                .with_value(value.to_string().as_bytes())
         ))
     }
     Ok(())
@@ -140,13 +130,8 @@ pub(crate) fn check_request_error<T: DeserializeOwned>(raw: &[u8]) -> Result<T> 
             .with_value(raw)
     ))?;
     is_request_error(value.clone())?;
-    serde_json::from_value::<T>(value.clone()).map_err(|e| CrunchyrollError::Decode(
-        if let Ok(v) = serde_json::to_string_pretty(&value) {
-            CrunchyrollErrorContext::new(e.to_string())
-                .with_value(v.as_bytes())
-        } else {
-            CrunchyrollErrorContext::new(e.to_string())
-                .with_value(raw)
-        }
+    serde_json::from_value::<T>(value).map_err(|e| CrunchyrollError::Decode(
+        CrunchyrollErrorContext::new(e.to_string())
+            .with_value(raw)
     ))
 }
