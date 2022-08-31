@@ -346,11 +346,14 @@ async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
     ))?.as_ref())?;
 
     #[cfg(not(feature = "__test_strict"))]
-    return Ok(result);
+    {
+        Ok(result)
+    }
     #[cfg(feature = "__test_strict")]
     {
         let cleaned = clean_request(result, T::__not_clean_fields());
-        return Ok(T::deserialize(serde::de::value::MapDeserializer::new(cleaned.into_iter()))?);
+        let value = serde_json::Value::deserialize(serde::de::value::MapDeserializer::new(cleaned.into_iter()))?;
+        check_request_error(value.to_string().as_bytes())
     }
 }
 
