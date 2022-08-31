@@ -17,10 +17,10 @@ pub enum CrunchyrollError {
 impl Display for CrunchyrollError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CrunchyrollError::Internal(context) => write!(f, "{}", context.message),
-            CrunchyrollError::Request(context) => write!(f, "{}", context.message),
-            CrunchyrollError::Decode(context) => write!(f, "{}", context.message),
-            CrunchyrollError::Authentication(context) => write!(f, "{}", context.message)
+            CrunchyrollError::Internal(context) => write!(f, "{}", context),
+            CrunchyrollError::Request(context) => write!(f, "{}", context),
+            CrunchyrollError::Decode(context) => write!(f, "{}", context),
+            CrunchyrollError::Authentication(context) => write!(f, "{}", context)
         }
     }
 }
