@@ -60,7 +60,7 @@ pub struct CrunchyrollErrorContext {
 impl Display for CrunchyrollErrorContext {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if let Some(value) = &self.value {
-            write!(f, "{}: {}", self.message, std::str::from_utf8(value.as_slice()).unwrap_or_else(|_| "-- not displayable --"))
+            write!(f, "{}: {}", self.message, std::str::from_utf8(value.as_slice()).unwrap_or("-- not displayable --"))
         } else {
             write!(f, "{}", self.message)
         }
@@ -112,11 +112,23 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
         }
 
         return Err(CrunchyrollError::Request(
-            CrunchyrollErrorContext::new(format!("{} ({}) - {}", err.error, err.code, details.join(", ")))
+            if let Ok(v) = serde_json::to_string_pretty(&value) {
+                CrunchyrollErrorContext::new(format!("{} ({}) - {}", err.error, err.code, details.join(", ")))
+                    .with_value(v.as_bytes())
+            } else {
+                CrunchyrollErrorContext::new(format!("{} ({}) - {}", err.error, err.code, details.join(", ")))
+                    .with_value(value.to_string().as_bytes())
+            }
         ));
-    } else if let Ok(err) = serde_json::from_value::<CodeContextError2>(value) {
+    } else if let Ok(err) = serde_json::from_value::<CodeContextError2>(value.clone()) {
         return Err(CrunchyrollError::Request(
-            CrunchyrollErrorContext::new(format!("{} ({})", err.message, err.code))
+            if let Ok(v) = serde_json::to_string_pretty(&value) {
+                CrunchyrollErrorContext::new(format!("{} ({})", err.message, err.code))
+                    .with_value(v.as_bytes())
+            } else {
+                CrunchyrollErrorContext::new(format!("{} ({})", err.message, err.code))
+                    .with_value(value.to_string().as_bytes())
+            }
         ))
     }
     Ok(())
