@@ -15,7 +15,7 @@ __test_strict = []
 [dependencies]
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-reqwest = { version = "0.11", features = ["cookies", "json", "serde_json"] }
+reqwest = { version = "0.11", features = ["cookies", "json", "gzip"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
