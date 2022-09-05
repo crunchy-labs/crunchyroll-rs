@@ -71,6 +71,8 @@ pub struct MovieListingMetadata {
     // wtf is this again
     pub first_movie_id: String,
 
+    pub extended_description: String,
+
     pub movie_release_year: u32,
 
     #[serde(alias = "duration_ms")]
@@ -96,6 +98,8 @@ pub struct MovieListingMetadata {
     pub available_offline: bool,
     pub availability_notes: String,
 
+    #[cfg(feature = "__test_strict")]
+    extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     available_date: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
