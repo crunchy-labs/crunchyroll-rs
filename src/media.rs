@@ -135,7 +135,7 @@ impl FromId for Episode {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/episodes/{}", executor.config.bucket, id);
+        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/episodes/{}", executor.details.bucket, id);
         let builder = executor.client
             .get(endpoint)
             .query(&executor.media_query());
@@ -154,7 +154,7 @@ impl Playback for Episode {
 #[async_trait::async_trait]
 impl Streams for Episode {
     async fn streams(&self) -> Result<VideoStream> {
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.config.bucket, self.stream_id);
+        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.details.bucket, self.stream_id);
         let builder = self.executor.client
             .get(endpoint)
             .query(&self.executor.media_query());
@@ -233,7 +233,7 @@ impl FromId for Movie {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/movies/{}", executor.config.bucket, id);
+        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/movies/{}", executor.details.bucket, id);
         let builder = executor.client
             .get(endpoint)
             .query(&executor.media_query());
@@ -253,7 +253,7 @@ impl Playback for Movie {
 #[async_trait::async_trait]
 impl Streams for Movie {
     async fn streams(&self) -> Result<VideoStream> {
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.config.bucket, self.id);
+        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.details.bucket, self.id);
         let builder = self.executor.client
             .get(endpoint)
             .query(&self.executor.media_query());

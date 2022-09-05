@@ -3,7 +3,7 @@ use chrono::{DateTime, Duration, Utc};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use crate::{Crunchyroll, Locale, PlaybackStream, VideoStream};
-use crate::crunchyroll::Executor;
+use crate::Executor;
 use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
 
 /// Contains a variable amount of items and the maximum / total of item which are available.

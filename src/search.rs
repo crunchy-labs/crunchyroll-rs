@@ -40,7 +40,7 @@ pub mod browse {
             let builder = executor.client
                 .get(endpoint)
                 .query(&options.to_query(&[
-                    ("locale".to_string(), self.executor.locale.to_string())
+                    ("locale".to_string(), self.executor.details.locale.to_string())
                 ]));
 
             executor.request(builder).await
@@ -160,7 +160,7 @@ pub mod query {
                 .get(endpoint)
                 .query(&options.to_query(&[
                     ("q".to_string(), query.clone()),
-                    ("locale".to_string(), self.executor.locale.to_string())
+                    ("locale".to_string(), self.executor.details.locale.to_string())
                 ]));
 
             executor.request(builder).await

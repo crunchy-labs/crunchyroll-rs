@@ -83,7 +83,7 @@ impl Request for MovieListing {
 
 impl Available for MovieListing {
     fn available(&self) -> bool {
-        !self.is_premium_only || self.executor.config.clone().premium
+        !self.is_premium_only || self.executor.details.premium
     }
 }
 
@@ -92,7 +92,7 @@ impl FromId for MovieListing {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/movie_listings/{}", executor.config.bucket, id);
+        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/movie_listings/{}", executor.details.bucket, id);
         let builder = executor.client
             .get(endpoint)
             .query(&executor.media_query());
@@ -159,7 +159,7 @@ impl Request for Series {
 
 impl Available for Series {
     fn available(&self) -> bool {
-        self.channel_id.is_empty() || self.executor.config.premium
+        self.channel_id.is_empty() || self.executor.details.premium
     }
 }
 
@@ -168,7 +168,7 @@ impl FromId for Series {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/series/{}", executor.config.bucket, id);
+        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/series/{}", executor.details.bucket, id);
         let builder = executor.client
             .get(endpoint)
             .query(&executor.media_query());

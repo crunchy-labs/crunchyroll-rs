@@ -17,22 +17,7 @@ async fn login_with_credentials() {
     assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
 
     if !utils::session::has_session() {
-        utils::session::set_session(crunchy.unwrap()).unwrap()
-    }
-}
-
-#[tokio::test]
-async fn login_with_access_token() {
-    let access_token = env::var("ACCESS_TOKEN").expect("'ACCESS_TOKEN' environment variable not found");
-
-    let crunchy = Crunchyroll::new()
-        .login_with_access_token(access_token)
-        .await;
-
-    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
-
-    if !utils::session::has_session() {
-        utils::session::set_session(crunchy.unwrap()).unwrap()
+        utils::session::set_session(crunchy.unwrap()).await.unwrap()
     }
 }
 
@@ -47,7 +32,7 @@ async fn login_with_refresh_token() {
     assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
 
     if !utils::session::has_session() {
-        utils::session::set_session(crunchy.unwrap()).unwrap()
+        utils::session::set_session(crunchy.unwrap()).await.unwrap()
     }
 }
 
@@ -62,7 +47,7 @@ async fn login_with_etp_rt() {
     assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
 
     if !utils::session::has_session() {
-        utils::session::set_session(crunchy.unwrap()).unwrap()
+        utils::session::set_session(crunchy.unwrap()).await.unwrap()
     }
 }
 
@@ -77,6 +62,6 @@ async fn login_with_session_id() {
     assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
 
     if !utils::session::has_session() {
-        utils::session::set_session(crunchy.unwrap()).unwrap()
+        utils::session::set_session(crunchy.unwrap()).await.unwrap()
     }
 }

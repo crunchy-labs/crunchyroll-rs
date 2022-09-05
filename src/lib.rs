@@ -1,3 +1,4 @@
+mod auth;
 mod crunchyroll;
 mod error;
 mod internal;
@@ -12,10 +13,17 @@ pub mod search;
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;
 
-use crunchyroll::Executor;
+use auth::Executor;
 
-pub use crunchyroll::Crunchyroll;
-pub use crunchyroll::Locale;
+pub use auth::{
+    CrunchyrollBuilder,
+    SessionToken
+};
+
+pub use crunchyroll::{
+    Crunchyroll,
+    Locale
+};
 
 pub use common::{
     Collection,

@@ -87,7 +87,7 @@ impl FromId for VideoStream {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", executor.config.bucket, id);
+        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", executor.details.bucket, id);
         let builder = executor.client
             .get(endpoint)
             .query(&executor.media_query());
