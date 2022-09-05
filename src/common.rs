@@ -256,6 +256,8 @@ pub struct Panel {
     executor: Arc<Executor>,
 
     pub id: String,
+    #[serde(rename = "playback")]
+    pub playback_id: Option<String>,
     pub external_id: String,
     pub channel_id: String,
 
