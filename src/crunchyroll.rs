@@ -10,16 +10,18 @@ use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContex
 enum_values!{
     Locale,
     #[derive(Clone, Debug, Hash, Eq, PartialEq)],
-    JP = "ja-JP",
-    US = "en-US",
-    LA = "es-419",
-    ES = "es-ES",
-    FR = "fr-FR",
-    BR = "pt-BR",
-    IT = "it-IT",
-    DE = "de-DE",
-    RU = "ru-RU",
-    AR = "ar-SA"
+    ar_ME = "ar-ME",
+    ar_SA = "ar-SA",
+    de_DE = "de-DE",
+    en_US = "en-US",
+    es_419 = "es-419",
+    es_ES = "es-ES",
+    es_LA = "es-LA",
+    fr_FR = "fr-FR",
+    it_IT = "it-IT",
+    ja_JP = "ja-JP",
+    pt_BR = "pt-BR",
+    ru_RU = "ru-RU"
 }
 
 /// Internal struct to execute all request with.
@@ -57,7 +59,7 @@ impl Default for Executor {
     fn default() -> Self {
         Self {
             client: Default::default(),
-            locale: Locale::JP,
+            locale: Locale::en_US,
             config: CrunchyrollConfig {
                 token_type: "".to_string(),
                 access_token: "".to_string(),
@@ -121,7 +123,7 @@ impl Crunchyroll {
     pub fn new() -> CrunchyrollBuilder {
         CrunchyrollBuilder {
             client: reqwest::Client::new(),
-            locale: Locale::US
+            locale: Locale::en_US
         }
     }
 

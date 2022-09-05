@@ -10,6 +10,7 @@ macro_rules! enum_values {
         }
     };
     ($name:ident, #[derive($($derives:tt),*)], $($field:tt = $value:expr),*) => {
+        #[allow(non_camel_case_types)]
         #[derive($($derives),*)]
         pub enum $name {
             $(
