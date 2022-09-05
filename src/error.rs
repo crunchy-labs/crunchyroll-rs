@@ -90,6 +90,12 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
     }
 
     #[derive(Debug, Deserialize)]
+    struct MessageType {
+        message: String,
+        #[serde(rename = "type")]
+        error_type: String
+    }
+    #[derive(Debug, Deserialize)]
     struct CodeContextError {
         code: String,
         context: Vec<CodeFieldContext>,
@@ -104,7 +110,11 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
         message: String
     }
 
-    if let Ok(err) = serde_json::from_value::<CodeContextError>(value.clone()) {
+    if let Ok(err) = serde_json::from_value::<MessageType>(value.clone()) {
+        return Err(CrunchyrollError::Request(
+            CrunchyrollErrorContext::new(format!("{} - {}", err.error_type, err.message))
+        ))
+    } else if let Ok(err) = serde_json::from_value::<CodeContextError>(value.clone()) {
         let mut details: Vec<String> = vec![];
 
         for item in err.context.iter() {
@@ -113,12 +123,10 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
 
         return Err(CrunchyrollError::Request(
             CrunchyrollErrorContext::new(format!("{} ({}) - {}", err.error, err.code, details.join(", ")))
-                .with_value(value.to_string().as_bytes())
         ));
     } else if let Ok(err) = serde_json::from_value::<CodeContextError2>(value.clone()) {
         return Err(CrunchyrollError::Request(
             CrunchyrollErrorContext::new(format!("{} ({})", err.message, err.code))
-                .with_value(value.to_string().as_bytes())
         ))
     }
     Ok(())
