@@ -73,6 +73,11 @@ pub struct MovieListingMetadata {
 
     pub movie_release_year: u32,
 
+    #[serde(alias = "duration_ms")]
+    #[serde(deserialize_with = "crate::internal::serde::millis_to_duration")]
+    #[cfg_attr(not(feature = "__test_strict"), default(Duration::milliseconds(0)))]
+    pub duration: Duration,
+
     pub is_subbed: bool,
     pub is_dubbed: bool,
     pub subtitle_locales: Vec<Locale>,
