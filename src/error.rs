@@ -134,12 +134,12 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
 
 pub(crate) fn check_request_error<T: DeserializeOwned>(raw: &[u8]) -> Result<T> {
     let value: serde_json::Value = serde_json::from_slice(raw).map_err(|e| CrunchyrollError::Decode(
-        CrunchyrollErrorContext::new(e.to_string())
+        CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
             .with_value(raw)
     ))?;
     is_request_error(value.clone())?;
     serde_json::from_value::<T>(value).map_err(|e| CrunchyrollError::Decode(
-        CrunchyrollErrorContext::new(e.to_string())
+        CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
             .with_value(raw)
     ))
 }
