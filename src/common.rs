@@ -118,6 +118,7 @@ pub struct EpisodeMetadata {
 
     // usually the same as episode_number, just as string
     pub episode: String,
+    #[serde(deserialize_with = "crate::internal::serde::maybe_null_to_default")]
     pub episode_number: u32,
     // usually also the same as episode_number, I don't know the purpose of this
     pub sequence_number: u32,
