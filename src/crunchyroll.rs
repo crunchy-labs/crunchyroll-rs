@@ -63,14 +63,11 @@ impl Default for Executor {
             config: CrunchyrollConfig {
                 token_type: "".to_string(),
                 access_token: "".to_string(),
-                refresh_token: "".to_string(),
                 bucket: "".to_string(),
-                country_code: "".to_string(),
                 premium: false,
                 signature: "".to_string(),
                 policy: "".to_string(),
                 key_pair_id: "".to_string(),
-                account_id: "".to_string(),
                 external_id: "".to_string()
             }
         }
@@ -88,16 +85,13 @@ pub struct Crunchyroll {
 pub struct CrunchyrollConfig {
     pub token_type: String,
     pub access_token: String,
-    pub refresh_token: String,
 
     pub bucket: String,
 
-    pub country_code: String,
     pub premium: bool,
     pub signature: String,
     pub policy: String,
     pub key_pair_id: String,
-    pub account_id: String,
     pub external_id: String,
 }
 
@@ -154,7 +148,8 @@ impl CrunchyrollBuilder {
         self
     }
 
-    /// Logs in with credentials (username or email and password) and returns a new `Crunchyroll` instance.
+    /// Logs in with credentials (username or email and password) and returns a new `Crunchyroll`
+    /// instance.
     pub async fn login_with_credentials(self, user: String, password: String) -> Result<Crunchyroll> {
         let endpoint = "https://beta-api.crunchyroll.com/auth/v1/token";
         let resp = self.client
@@ -181,8 +176,49 @@ impl CrunchyrollBuilder {
             .map_err(|e| CrunchyrollError::Decode(
                 CrunchyrollErrorContext::new(e.to_string())
             ))?;
+        let login_response: LoginResponse = check_request_error(resp_value.as_ref())?;
 
-        self.post_login(check_request_error(resp_value.as_ref())?).await
+        self.post_login(login_response.token_type, login_response.access_token).await
+    }
+
+    /// Logs in with a access token. The access token can be access via
+    /// `CrunchyrollConfig.access_token`.
+    pub async fn login_with_access_token(self, access_token: String) -> Result<Crunchyroll> {
+        self.post_login("Bearer".to_string(), access_token).await
+    }
+
+    /// Logs in with a refresh token. Currently there is no library functionality to gain a refresh
+    /// token, nor can it be received via the Crunchyroll website. It is only generated when calling
+    /// [`Crunchyroll::login_with_credentials`] but has no further use in there. There may be a way
+    /// to get refresh tokens in the future more easily, so this function can be used.
+    pub async fn login_with_refresh_token(self, refresh_token: String) -> Result<Crunchyroll> {
+        let endpoint = "https://beta-api.crunchyroll.com/auth/v1/token";
+        let resp = self.client
+            .post(endpoint)
+            .header("Authorization", "Basic aHJobzlxM2F3dnNrMjJ1LXRzNWE6cHROOURteXRBU2Z6QjZvbXVsSzh6cUxzYTczVE1TY1k=")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(serde_urlencoded::to_string(
+                &[
+                    ("refresh_token", refresh_token.as_str()),
+                    ("grant_type", "refresh_token"),
+                    ("scope", "offline_access")
+                ]
+            ).unwrap())
+            .send()
+            .await
+            .map_err(|e| CrunchyrollError::Request(
+                CrunchyrollErrorContext::new(e.to_string())
+            ))?;
+
+        let resp_value = resp
+            .bytes()
+            .await
+            .map_err(|e| CrunchyrollError::Decode(
+                CrunchyrollErrorContext::new(e.to_string())
+            ))?;
+        let login_response: LoginResponse = check_request_error(resp_value.as_ref())?;
+
+        self.post_login(login_response.token_type, login_response.access_token).await
     }
 
     /// Logs in with a etp rt cookie and returns a new `Crunchyroll` instance.
@@ -214,13 +250,14 @@ impl CrunchyrollBuilder {
             .map_err(|e| CrunchyrollError::Decode(
                 CrunchyrollErrorContext::new(e.to_string())
             ))?;
+        let login_response: LoginResponse = check_request_error(resp_value.as_ref())?;
 
-        self.post_login(check_request_error(resp_value.as_ref())?).await
+        self.post_login(login_response.token_type, login_response.access_token).await
     }
 
     /// Logs in with a session id and returns a new `Crunchyroll` instance.
-    /// The session id can be extracted if you log in to the crunchyroll website and copy the `session_id`
-    /// cookie from your browser.
+    /// The session id can be extracted if you log in to the crunchyroll website and copy the
+    /// `session_id` cookie from your browser.
     /// This login method made some trouble in the past (login failed even though the session id was
     /// valid and the user logged in) and is therefore not very reliable.
     pub async fn login_with_session_id(self, session_id: String) -> Result<Crunchyroll> {
@@ -249,9 +286,9 @@ impl CrunchyrollBuilder {
         }
     }
 
-    async fn post_login(self, login_response: LoginResponse) -> Result<Crunchyroll> {
+    async fn post_login(self, token_type: String, access_token: String) -> Result<Crunchyroll> {
         let mut headers = HeaderMap::new();
-        headers.append("Authorization", format!("{} {}", login_response.token_type, login_response.access_token).parse().unwrap());
+        headers.append("Authorization", format!("{} {}", token_type, access_token).parse().unwrap());
 
         let index_endpoint = "https://beta-api.crunchyroll.com/index/v2";
         #[derive(Deserialize)]
@@ -304,20 +341,17 @@ impl CrunchyrollBuilder {
         let me = request::<MeResp>(me_req).await?;
 
         let config = CrunchyrollConfig{
-            token_type: login_response.token_type,
-            access_token: login_response.access_token,
-            refresh_token: login_response.refresh_token,
+            token_type,
+            access_token,
 
             // '/' is trimmed so that urls which require it must be in .../{bucket}/... like format.
             // this just looks cleaner
             bucket: index.cms.bucket.strip_prefix('/').unwrap_or(index.cms.bucket.as_str()).to_string(),
 
-            country_code: login_response.country,
             premium: index.cms.bucket.ends_with("crunchyroll"),
             signature: index.cms.signature,
             policy: index.cms.policy,
             key_pair_id: index.cms.key_pair_id,
-            account_id: login_response.account_id,
             external_id: me.external_id,
         };
 
