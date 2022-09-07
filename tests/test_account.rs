@@ -11,9 +11,7 @@ static ACCOUNT: Store<Account> = Store::new(|| Box::pin(async {
 
 #[tokio::test]
 async fn account() {
-    let account = ACCOUNT.get().await;
-
-    assert!(account.is_ok(), "{}", account.unwrap_err())
+    assert_result!(ACCOUNT.get().await)
 }
 
 // More account testing is currently not possible because `ACCOUNT` must be mutable which is not
@@ -22,7 +20,6 @@ async fn account() {
 #[tokio::test]
 async fn all_wallpapers() {
     let crunchy = SESSION.get().await.unwrap();
-    let wallpapers = Wallpaper::all_wallpapers(crunchy).await;
 
-    assert!(wallpapers.is_ok(), "{}", wallpapers.unwrap_err())
+    assert_result!(Wallpaper::all_wallpapers(crunchy).await)
 }

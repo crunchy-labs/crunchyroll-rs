@@ -13,25 +13,19 @@ static MOVIE: Store<Movie> = Store::new(|| Box::pin(async {
 
 #[tokio::test]
 async fn movie_from_id() {
-    let movie = MOVIE.get().await;
-
-    assert!(movie.is_ok(), "{}", movie.unwrap_err().to_string())
+    assert_result!(MOVIE.get().await)
 }
 
 #[tokio::test]
 async fn movie_playback() {
     let movie = MOVIE.get().await.unwrap();
 
-    let playback = movie.playback().await;
-
-    assert!(playback.is_ok(), "{}", playback.unwrap_err())
+    assert_result!(movie.playback().await)
 }
 
 #[tokio::test]
 async fn movie_streams() {
     let movie = MOVIE.get().await.unwrap();
 
-    let streams = movie.streams().await;
-
-    assert!(streams.is_ok(), "{}", streams.unwrap_err())
+    assert_result!(movie.streams().await)
 }

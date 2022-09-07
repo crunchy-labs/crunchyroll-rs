@@ -29,23 +29,17 @@ static STREAM_SEGMENTS: Store<Vec<VariantSegment>> = Store::new(|| Box::pin(asyn
 
 #[tokio::test]
 async fn stream_from_id() {
-    let stream = STREAM.get().await;
-
-    assert!(stream.is_ok(), "{}", stream.unwrap_err())
+    assert_result!(STREAM.get().await)
 }
 
 #[tokio::test]
 async fn stream_data() {
-    let stream_data = STREAM_DATA.get().await;
-
-    assert!(stream_data.is_ok(), "{}", stream_data.unwrap_err())
+    assert_result!(STREAM_DATA.get().await)
 }
 
 #[tokio::test]
 async fn stream_segments() {
-    let segments = STREAM_SEGMENTS.get().await;
-
-    assert!(segments.is_ok(), "{}", segments.unwrap_err());
+    assert_result!(STREAM_SEGMENTS.get().await)
 }
 
 #[tokio::test]
@@ -58,11 +52,10 @@ async fn stream_process_segments() {
     // if the test passes, it's unlikely that some error will occur when streaming all segments (
     // and if it does, hopefully someone using this in production will report it)
     for _ in 0..10 {
-        let finished_segment = segments.choose(&mut rand::thread_rng())
+        assert_result!(segments.choose(&mut rand::thread_rng())
             .unwrap()
             .clone()
             .write_to(sink)
-            .await;
-        assert!(finished_segment.is_ok(), "{}", finished_segment.unwrap_err());
+            .await);
     }
 }

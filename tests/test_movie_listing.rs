@@ -13,7 +13,5 @@ static MOVIE_LISTING: Store<MovieListing> = Store::new(|| Box::pin(async {
 
 #[tokio::test]
 async fn movie_listing_from_id() {
-    let movie_listing = MOVIE_LISTING.get().await;
-
-    assert!(movie_listing.is_ok(), "{}", movie_listing.unwrap_err().to_string())
+    assert_result!(MOVIE_LISTING.get().await)
 }

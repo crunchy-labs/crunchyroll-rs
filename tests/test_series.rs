@@ -13,7 +13,5 @@ static SERIES: Store<Series> = Store::new(|| Box::pin(async {
 
 #[tokio::test]
 async fn series_from_id() {
-    let series = SERIES.get().await;
-
-    assert!(series.is_ok(), "{}", series.unwrap_err().to_string())
+    assert_result!(SERIES.get().await)
 }

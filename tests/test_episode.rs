@@ -13,25 +13,19 @@ static EPISODE: Store<Episode> = Store::new(|| Box::pin(async {
 
 #[tokio::test]
 async fn episode_from_id() {
-    let episode = EPISODE.get().await;
-
-    assert!(episode.is_ok(), "{}", episode.unwrap_err())
+    assert_result!(EPISODE.get().await)
 }
 
 #[tokio::test]
 async fn episode_playback() {
     let episode = EPISODE.get().await.unwrap();
 
-    let playback = episode.playback().await;
-
-    assert!(playback.is_ok(), "{}", playback.unwrap_err())
+    assert_result!(episode.playback().await)
 }
 
 #[tokio::test]
 async fn episode_streams() {
     let episode = EPISODE.get().await.unwrap();
 
-    let streams = episode.streams().await;
-
-    assert!(streams.is_ok(), "{}", streams.unwrap_err())
+    assert_result!(episode.streams().await)
 }
