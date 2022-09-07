@@ -143,17 +143,11 @@ impl StreamSubtitle {
         let resp = self.executor.client
             .get(self.url)
             .send()
-            .await
-            .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext::new(e.to_string())
-            ))?;
+            .await?;
         let body = resp.bytes()
-            .await
-            .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext::new(e.to_string())
-            ))?;
+            .await?;
         w.write_all(body.as_ref())
-            .map_err(|e| CrunchyrollError::Request(
+            .map_err(|e| CrunchyrollError::External(
                 CrunchyrollErrorContext::new(e.to_string())
             ))?;
         Ok(())
@@ -319,15 +313,9 @@ mod streaming {
                 .client
                 .get(url)
                 .send()
-                .await
-                .map_err(|e| CrunchyrollError::Request(
-                    CrunchyrollErrorContext::new(e.to_string())
-                ))?;
+                .await?;
             let raw_master_playlist = resp.text()
-                .await
-                .map_err(|e| CrunchyrollError::Request(
-                    CrunchyrollErrorContext::new(e.to_string())
-                ))?;
+                .await?;
 
             let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_bytes())
                 .map_err(|e| CrunchyrollError::Decode(
@@ -377,15 +365,9 @@ mod streaming {
                 let resp = self.executor.client
                     .get(self.url.clone())
                     .send()
-                    .await
-                    .map_err(|e| CrunchyrollError::Request(
-                        CrunchyrollErrorContext::new(e.to_string())
-                    ))?;
+                    .await?;
                 let raw_media_playlist = resp.text()
-                    .await
-                    .map_err(|e| CrunchyrollError::Request(
-                        CrunchyrollErrorContext::new(e.to_string())
-                    ))?;
+                    .await?;
                 let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_bytes())
                     .map_err(|e| CrunchyrollError::Decode(
                         CrunchyrollErrorContext::new(e.to_string())
@@ -398,15 +380,9 @@ mod streaming {
                             let resp = self.executor.client
                                 .get(url)
                                 .send()
-                                .await
-                                .map_err(|e| CrunchyrollError::Decode(
-                                    CrunchyrollErrorContext::new(e.to_string())
-                                ))?;
+                                .await?;
                             let raw_key = resp.bytes()
-                                .await
-                                .map_err(|e| CrunchyrollError::Request(
-                                    CrunchyrollErrorContext::new(e.to_string())
-                                ))?;
+                                .await?;
 
                             let temp_iv = key.iv.unwrap_or_else(|| "".to_string());
                             let iv = if !temp_iv.is_empty() {
@@ -459,15 +435,9 @@ mod streaming {
             let resp = self.executor.client
                 .get(self.url)
                 .send()
-                .await
-                .map_err(|e| CrunchyrollError::Request(
-                    CrunchyrollErrorContext::new(e.to_string())
-                ))?;
+                .await?;
             let segment = resp.bytes()
-                .await
-                .map_err(|e| CrunchyrollError::Request(
-                    CrunchyrollErrorContext::new(e.to_string())
-                ))?;
+                .await?;
 
             if let Some(key) = self.key {
                 let mut temp_encrypted = segment.to_vec();
@@ -476,12 +446,12 @@ mod streaming {
                         CrunchyrollErrorContext::new(e.to_string())
                     ))?;
                 w.write(decrypted)
-                    .map_err(|e| CrunchyrollError::Request(
+                    .map_err(|e| CrunchyrollError::External(
                         CrunchyrollErrorContext::new(e.to_string())
                     ))?;
             } else {
                 w.write(segment.as_ref())
-                    .map_err(|e| CrunchyrollError::Request(
+                    .map_err(|e| CrunchyrollError::External(
                         CrunchyrollErrorContext::new(e.to_string())
                     ))?;
             }

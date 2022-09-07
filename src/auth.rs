@@ -118,17 +118,11 @@ impl Executor {
                 ]
             ).unwrap())
             .send()
-            .await
-            .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext::new(e.to_string())
-            ))?;
+            .await?;
 
         let resp_value = resp
             .bytes()
-            .await
-            .map_err(|e| CrunchyrollError::Decode(
-                CrunchyrollErrorContext::new(e.to_string())
-            ))?;
+            .await?;
         check_request_error(resp_value.as_ref())
     }
 
@@ -146,17 +140,11 @@ impl Executor {
                 ]
             ).unwrap())
             .send()
-            .await
-            .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext::new(e.to_string())
-            ))?;
+            .await?;
 
         let resp_value = resp
             .bytes()
-            .await
-            .map_err(|e| CrunchyrollError::Decode(
-                CrunchyrollErrorContext::new(e.to_string())
-            ))?;
+            .await?;
         check_request_error(resp_value.as_ref())
     }
 }
@@ -220,17 +208,11 @@ impl CrunchyrollBuilder {
                 ]
             ).unwrap())
             .send()
-            .await
-            .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext::new(e.to_string())
-            ))?;
+            .await?;
 
         let resp_value = resp
             .bytes()
-            .await
-            .map_err(|e| CrunchyrollError::Decode(
-                CrunchyrollErrorContext::new(e.to_string())
-            ))?;
+            .await?;
         let login_response: AuthResponse = check_request_error(resp_value.as_ref())?;
         let session_token = SessionToken::RefreshToken(login_response.refresh_token.clone());
 
@@ -266,10 +248,7 @@ impl CrunchyrollBuilder {
         let resp = self.client
             .get(endpoint)
             .send()
-            .await
-            .map_err(|e| CrunchyrollError::Request(
-                CrunchyrollErrorContext::new(e.to_string())
-            ))?;
+            .await?;
 
         let mut etp_rt = None;
         for cookie in resp.cookies() {
@@ -358,14 +337,9 @@ impl CrunchyrollBuilder {
 async fn request<T: Request + DeserializeOwned>(builder: RequestBuilder) -> Result<T> {
     let resp = builder
         .send()
-        .await
-        .map_err(|e| CrunchyrollError::Request(
-            CrunchyrollErrorContext::new(e.to_string())
-        ))?;
+        .await?;
 
-    let result = check_request_error(resp.bytes().await.map_err(|e| CrunchyrollError::Decode(
-        CrunchyrollErrorContext::new(e.to_string())
-    ))?.as_ref())?;
+    let result = check_request_error(resp.bytes().await?.as_ref())?;
 
     #[cfg(not(feature = "__test_strict"))]
     {
