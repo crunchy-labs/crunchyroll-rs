@@ -9,14 +9,17 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      env: 
-        ETP_RT: ${{ secrets.ETP_RT }}
-      run: cargo test --verbose --features __test_strict --no-fail-fast -- --test-threads=1 --skip login_with_credentials --skip login_with_access_token --skip login_with_refresh_token --skip login_with_session_id
+      - name: Checkout
+      - uses: actions/checkout@v3
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Run tests
+        env:
+          ETP_RT: ${{ secrets.ETP_RT }}
+        run: cargo test --verbose --features __test_strict --no-fail-fast -- --test-threads=1 --skip login_with_credentials --skip login_with_access_token --skip login_with_refresh_token --skip login_with_session_id

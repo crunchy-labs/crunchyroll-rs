@@ -1,0 +1,14 @@
+name: fmt
+
+on: [ push, pull_request ]
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+      - uses: actions/checkout@v3
+
+      - name: Check code fmt
+        run: cargo fmt --check

@@ -20,6 +20,8 @@ Our commit messages are following a simple scheme: Present tense and a (first le
 `Add feature ...`, `Fix ... (#69)`, `Remove deprectaed field from ...`, ... .
 You can always look at the [commit history](https://github.com/crunchy-labs/crunchyroll-rs/commits) to see all commit message if you're unsure how to write it.
 
+Before pushing, run `cargo clippy` to lint and `cargo fmt` to format the new code.
+
 ### Struct
 
 _**This section is only necessary for structs which get used to scan crunchyroll api results in.**_
