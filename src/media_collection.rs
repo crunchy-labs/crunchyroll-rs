@@ -106,6 +106,92 @@ impl FromId for MovieListing {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Deserialize, Debug)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+pub struct Season {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    pub id: String,
+    pub series_id: String,
+    pub channel_id: String,
+
+    pub title: String,
+    pub slug_title: String,
+    pub seo_title: String,
+    pub description: String,
+    pub seo_description: String,
+
+    pub season_number: u32,
+
+    pub is_complete: bool,
+
+    pub keywords: Vec<String>,
+    pub season_tags: Vec<String>,
+
+    pub is_subbed: bool,
+    pub is_dubbed: bool,
+    pub is_simulcast: bool,
+    // always empty (currently)
+    pub audio_locales: Vec<Locale>,
+    // always empty (currently)
+    pub subtitle_locales: Vec<Locale>,
+    // i have no idea what the difference between `audio_locales` and `audio_locale` should be.
+    // they're both empty
+    pub audio_locale: String,
+
+    pub maturity_ratings: Vec<String>,
+    pub is_mature: bool,
+    pub mature_blocked: bool,
+
+    pub availability_notes: String,
+
+    #[cfg(feature = "__test_strict")]
+    // currently empty (on all of my tests) but its might be filled in the future
+    images: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    season_display_number: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    season_sequence_number: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    extended_maturity_rating: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    versions: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    identifier: crate::StrictValue,
+}
+
+impl Request for Season {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
+        self.executor = executor
+    }
+}
+
+impl Available for Season {
+    fn available(&self) -> bool {
+        self.channel_id.is_empty() || self.executor.details.premium
+    }
+}
+
+#[async_trait::async_trait]
+impl FromId for Season {
+    async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
+        let endpoint = format!(
+            "https://beta-api.crunchyroll.com/cms/v2/{}/seasons/{}",
+            crunchy.executor.details.bucket, id
+        );
+        let builder = crunchy
+            .executor
+            .client
+            .get(endpoint)
+            .query(&crunchy.executor.media_query());
+
+        crunchy.executor.request(builder).await
+    }
+}
+
 type SeriesImages = MovieListingImages;
 
 /// This struct represents a crunchyroll series.

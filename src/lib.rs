@@ -17,7 +17,7 @@ use auth::Executor;
 pub use common::{BulkResult, Collection, FromId, Playback, Streams};
 pub use crunchyroll::{Crunchyroll, Locale};
 pub use media::{Episode, Movie};
-pub use media_collection::{MovieListing, Series};
+pub use media_collection::{MovieListing, Season, Series};
 #[cfg(feature = "streaming")]
 pub use stream::{DefaultStreams, VariantData, VariantSegment};
 pub use stream::{PlaybackStream, VideoStream};
