@@ -1,3 +1,4 @@
+mod account;
 mod auth;
 mod crunchyroll;
 mod error;
@@ -15,6 +16,11 @@ use internal::strict::StrictValue;
 
 use auth::Executor;
 
+pub use account::{
+    Account,
+    Wallpaper
+};
+
 pub use auth::{
     CrunchyrollBuilder,
     SessionToken
@@ -22,7 +28,8 @@ pub use auth::{
 
 pub use crunchyroll::{
     Crunchyroll,
-    Locale
+    Locale,
+    MaturityRating
 };
 
 pub use common::{

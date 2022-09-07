@@ -3,6 +3,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration, Utc};
 use reqwest::header::HeaderMap;
 use reqwest::RequestBuilder;
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use tokio::sync::Mutex;
 use crate::common::Request;
@@ -57,12 +58,14 @@ pub(crate) struct ExecutorDetails {
 pub struct Executor {
     pub(crate) client: reqwest::Client,
 
+    // this must be a mutex because `Executor` is always passed inside of `Arc` which does not allow
+    // direct changes to the struct
     pub(crate) config: Mutex<ExecutorConfig>,
     pub(crate) details: ExecutorDetails
 }
 
 impl Executor {
-    pub(crate) async fn request<T: Request>(self: &Arc<Self>, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
+    pub(crate) async fn request<T: Request + DeserializeOwned>(self: &Arc<Self>, mut builder: RequestBuilder) -> Result<T, CrunchyrollError> {
         let mut config = self.config.lock().await;
         if config.session_expire <= Utc::now() {
             let login_response = match config.session_token.clone() {
@@ -352,7 +355,7 @@ impl CrunchyrollBuilder {
 }
 
 /// Make a request from the provided builder.
-async fn request<T: Request>(builder: RequestBuilder) -> Result<T> {
+async fn request<T: Request + DeserializeOwned>(builder: RequestBuilder) -> Result<T> {
     let resp = builder
         .send()
         .await

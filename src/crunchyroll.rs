@@ -20,6 +20,13 @@ enum_values!{
     ru_RU = "ru-RU"
 }
 
+enum_values!{
+    MaturityRating,
+    #[derive(Clone, Debug)],
+    NotMature = "M2",
+    Mature = "M3"
+}
+
 /// Starting point of this whole library.
 #[derive(Debug, Clone)]
 pub struct Crunchyroll {

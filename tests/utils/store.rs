@@ -32,6 +32,20 @@ impl<T> Store<T> {
             Err(err) => bail!(err.to_string())
         }
     }
+    
+    pub async fn get_mut(&mut self) -> anyhow::Result<&mut T> {
+        if self.value.get().is_none() {
+            let function = self.get_fn.clone();
+            let value = function().await;
+            self.value.set(value);
+        }
+
+        let value = self.value.get_mut().unwrap();
+        match value {
+            Ok(t) => Ok(t),
+            Err(err) => bail!(err.to_string())
+        }
+    }
 }
 
 pub fn get_store(key: String) -> Result<String, std::io::Error> {

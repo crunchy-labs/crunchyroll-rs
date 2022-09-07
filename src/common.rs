@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use chrono::{DateTime, Duration, Utc};
 use serde::de::DeserializeOwned;
@@ -9,16 +10,16 @@ use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
 #[derive(Clone, Debug, Deserialize)]
-#[serde(bound = "T: Request + Clone")]
+#[serde(bound = "T: Request + DeserializeOwned + Clone")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
-pub struct BulkResult<T: Request + Clone> {
+pub struct BulkResult<T: Request + DeserializeOwned + Clone> {
     #[cfg_attr(not(feature = "__test_strict"), default(Vec::new()))]
     pub items: Vec<T>,
     pub total: u32
 }
 
-impl<T: Request + Clone> Request for BulkResult<T> {
+impl<T: Request + DeserializeOwned + Clone> Request for BulkResult<T> {
     fn __set_executor(&mut self, executor: Arc<Executor>) {
         for item in self.items.iter_mut() {
             item.__set_executor(executor.clone())
@@ -307,7 +308,7 @@ pub struct Image {
 
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
-pub trait Request: DeserializeOwned {
+pub trait Request {
     /// Set a usable [`Executor`] instance to the struct if required
     fn __set_executor(&mut self, _: Arc<Executor>) {}
 
@@ -324,6 +325,8 @@ pub trait Request: DeserializeOwned {
 /// Implement [`Request`] for cases where only the request must be done without needing an
 /// explicit result.
 impl Request for () {}
+
+impl<K, V> Request for HashMap<K, V> {}
 
 /// Check if further actions with the struct which implements this are available.
 pub trait Available {
