@@ -1,5 +1,6 @@
 pub mod account;
 pub mod auth;
+pub mod categories;
 pub mod common;
 pub mod crunchyroll;
 pub mod error;
