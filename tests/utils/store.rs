@@ -1,21 +1,23 @@
 #![allow(dead_code, unused_must_use, clippy::complexity)]
 
-use std::{env, fs};
-use std::future::Future;
-use std::pin::Pin;
 use anyhow::bail;
 use once_cell::sync::OnceCell;
+use std::future::Future;
+use std::pin::Pin;
+use std::{env, fs};
 
 pub struct Store<T> {
     get_fn: fn() -> Pin<Box<dyn Future<Output = anyhow::Result<T>>>>,
-    value: OnceCell<anyhow::Result<T>>
+    value: OnceCell<anyhow::Result<T>>,
 }
 
 impl<T> Store<T> {
-    pub const fn new(function: fn() -> Pin<Box<dyn Future<Output = anyhow::Result<T>>>>) -> Store<T> {
+    pub const fn new(
+        function: fn() -> Pin<Box<dyn Future<Output = anyhow::Result<T>>>>,
+    ) -> Store<T> {
         Store {
             get_fn: function,
-            value: OnceCell::new()
+            value: OnceCell::new(),
         }
     }
 
@@ -29,10 +31,10 @@ impl<T> Store<T> {
         let value = self.value.get().unwrap();
         match value {
             Ok(t) => Ok(t),
-            Err(err) => bail!(err.to_string())
+            Err(err) => bail!(err.to_string()),
         }
     }
-    
+
     pub async fn get_mut(&mut self) -> anyhow::Result<&mut T> {
         if self.value.get().is_none() {
             let function = self.get_fn.clone();
@@ -43,7 +45,7 @@ impl<T> Store<T> {
         let value = self.value.get_mut().unwrap();
         match value {
             Ok(t) => Ok(t),
-            Err(err) => bail!(err.to_string())
+            Err(err) => bail!(err.to_string()),
         }
     }
 }
@@ -60,5 +62,7 @@ pub fn set_store(key: String, value: String) -> Result<(), std::io::Error> {
 }
 
 pub fn has_store(key: String) -> bool {
-    env::temp_dir().join(format!(".crunchyroll-rs.{}", key)).exists()
+    env::temp_dir()
+        .join(format!(".crunchyroll-rs.{}", key))
+        .exists()
 }

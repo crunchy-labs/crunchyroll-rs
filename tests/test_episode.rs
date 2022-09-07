@@ -1,15 +1,16 @@
-use crunchyroll_rs::{Episode, FromId, Playback, Streams};
-use crate::utils::SESSION;
 use crate::utils::Store;
+use crate::utils::SESSION;
+use crunchyroll_rs::{Episode, FromId, Playback, Streams};
 
 mod utils;
 
-static EPISODE: Store<Episode> = Store::new(|| Box::pin(async {
-    let crunchy = SESSION.get().await?;
-    let episode = Episode::from_id(crunchy, "GRDKJZ81Y".to_string())
-        .await?;
-    Ok(episode)
-}));
+static EPISODE: Store<Episode> = Store::new(|| {
+    Box::pin(async {
+        let crunchy = SESSION.get().await?;
+        let episode = Episode::from_id(crunchy, "GRDKJZ81Y".to_string()).await?;
+        Ok(episode)
+    })
+});
 
 #[tokio::test]
 async fn episode_from_id() {

@@ -1,16 +1,20 @@
-use std::collections::HashMap;
-use std::sync::Arc;
+use crate::common::Request;
+use crate::error::Result;
+use crate::{Crunchyroll, Executor, Locale};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::Value;
-use crate::error::Result;
-use crate::{Crunchyroll, Executor, Locale, MaturityRating};
-use crate::common::Request;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct Account {
     #[serde(skip)]
     executor: Arc<Executor>,
@@ -52,7 +56,7 @@ pub struct Account {
     pub email_verified: bool,
 
     #[cfg(feature = "__test_strict")]
-    crleg_email_verified: crate::StrictValue
+    crleg_email_verified: crate::StrictValue,
 }
 
 impl Request for Account {
@@ -66,81 +70,96 @@ impl Request for Account {
 impl Account {
     /// Updates the language in which emails are sent to your account.
     pub async fn update_email_language(&mut self, locale: Locale) -> Result<()> {
-        self.update_preferences("preferred_communication_language".into(), locale.to_string()).await?;
+        self.update_preferences(
+            "preferred_communication_language".into(),
+            locale.to_string(),
+        )
+        .await?;
         self.email_language = locale;
         Ok(())
     }
 
     /// Updates the language in which subtitles should be shown if available.
     pub async fn update_preferred_subtitle_language(&mut self, locale: Locale) -> Result<()> {
-        self.update_preferences("preferred_content_subtitle_language".into(), locale.to_string()).await?;
+        self.update_preferences(
+            "preferred_content_subtitle_language".into(),
+            locale.to_string(),
+        )
+        .await?;
         self.preferred_subtitle_language = locale;
         Ok(())
     }
 
     /// Updates if / how mature video content should be shown / be available. I do not know the use
     /// case of this tbh.
-    pub async fn update_mature_video_content(&mut self, maturity_rating: MaturityRating) -> Result<()> {
-        self.update_preferences("maturity_rating".into(), maturity_rating.to_string()).await?;
+    pub async fn update_mature_video_content(
+        &mut self,
+        maturity_rating: MaturityRating,
+    ) -> Result<()> {
+        self.update_preferences("maturity_rating".into(), maturity_rating.to_string())
+            .await?;
         self.video_maturity_rating = maturity_rating;
         Ok(())
     }
 
     /// Updates if / how mature manga content should be shown / be available. I do not know the use
     /// case of this tbh.
-    pub async fn update_mature_manga_content(&mut self, maturity_rating: MaturityRating) -> Result<()> {
-        self.update_preferences("mature_content_flag_manga".into(), match &maturity_rating {
-            MaturityRating::NotMature => "0".to_string(),
-            MaturityRating::Mature => "1".to_string(),
-            MaturityRating::Custom(custom) => custom.clone()
-        }).await?;
+    pub async fn update_mature_manga_content(
+        &mut self,
+        maturity_rating: MaturityRating,
+    ) -> Result<()> {
+        self.update_preferences(
+            "mature_content_flag_manga".into(),
+            match &maturity_rating {
+                MaturityRating::NotMature => "0".to_string(),
+                MaturityRating::Mature => "1".to_string(),
+                MaturityRating::Custom(custom) => custom.clone(),
+            },
+        )
+        .await?;
         self.manga_maturity_rating = maturity_rating;
         Ok(())
     }
 
     async fn update_preferences(&self, name: String, value: String) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
-        let builder = self.executor.client
-            .patch(endpoint)
-            .json(&[
-                (name, value)
-            ]);
+        let builder = self.executor.client.patch(endpoint).json(&[(name, value)]);
         self.executor.request(builder).await
     }
 
     /// Changes the current account password.
-    pub async fn change_password(&self, current_password: String, new_password: String) -> Result<()> {
+    pub async fn change_password(
+        &self,
+        current_password: String,
+        new_password: String,
+    ) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/credentials";
-        let builder = self.executor.client
-            .patch(endpoint)
-            .json(&[
-                ("accountId", self.account_id.clone()),
-                ("current_password", current_password),
-                ("new_password", new_password)
-            ]);
+        let builder = self.executor.client.patch(endpoint).json(&[
+            ("accountId", self.account_id.clone()),
+            ("current_password", current_password),
+            ("new_password", new_password),
+        ]);
         self.executor.request(builder).await
     }
 
     /// Changes the current account email.
     pub async fn change_email(&self, current_password: String, new_email: String) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/credentials";
-        let builder = self.executor.client
-            .patch(endpoint)
-            .json(&[
-                ("current_password", current_password),
-                ("new_email", new_email)
-            ]);
+        let builder = self.executor.client.patch(endpoint).json(&[
+            ("current_password", current_password),
+            ("new_email", new_email),
+        ]);
         self.executor.request(builder).await
     }
 
     /// Changes the current profile wallpaper.
     pub async fn change_wallpaper(&mut self, wallpaper: Wallpaper) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
-        let builder = self.executor.client
+        let builder = self
+            .executor
+            .client
             .patch(endpoint)
-            .json(&[
-                ("wallpaper", &wallpaper.name)
-            ]);
+            .json(&[("wallpaper", &wallpaper.name)]);
         self.executor.request(builder).await?;
         self.wallpaper = wallpaper;
         Ok(())
@@ -152,56 +171,62 @@ impl Crunchyroll {
         let mut result: HashMap<String, Value> = HashMap::new();
 
         let me_endpoint = "https://beta.crunchyroll.com/accounts/v1/me";
-        let me_builder = self.executor.client
-            .get(me_endpoint);
-        result.extend(self.executor.request::<HashMap<String, Value>>(me_builder).await?);
+        let me_builder = self.executor.client.get(me_endpoint);
+        result.extend(
+            self.executor
+                .request::<HashMap<String, Value>>(me_builder)
+                .await?,
+        );
 
         let profile_endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
-        let profile_builder = self.executor.client
-            .get(profile_endpoint);
-        result.extend(self.executor.request::<HashMap<String, Value>>(profile_builder).await?);
+        let profile_builder = self.executor.client.get(profile_endpoint);
+        result.extend(
+            self.executor
+                .request::<HashMap<String, Value>>(profile_builder)
+                .await?,
+        );
 
         Ok(serde_json::from_value(serde_json::to_value(result)?)?)
     }
 }
 
-fn mature_content_flag_manga<'de, D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<MaturityRating, D::Error> {
+fn mature_content_flag_manga<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<MaturityRating, D::Error> {
     let as_string = String::deserialize(deserializer)?;
 
     Ok(match as_string.as_str() {
         "0" => MaturityRating::NotMature,
         "1" => MaturityRating::Mature,
-        _ => MaturityRating::Custom(as_string)
+        _ => MaturityRating::Custom(as_string),
     })
 }
 
 mod wallpaper {
-    use serde::Deserialize;
     use crate::common::Request;
     use crate::error::Result;
     use crate::Crunchyroll;
+    use serde::Deserialize;
 
     #[derive(Debug, Deserialize)]
     #[serde(from = "String")]
     #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
     pub struct Wallpaper {
-        pub name: String
+        pub name: String,
     }
 
     #[derive(Debug, Deserialize)]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
     struct AllWallpapers {
-        items: Vec<Wallpaper>
+        items: Vec<Wallpaper>,
     }
 
     impl Request for AllWallpapers {}
 
     impl From<String> for Wallpaper {
         fn from(s: String) -> Self {
-            Self {
-                name: s
-            }
+            Self { name: s }
         }
     }
 
@@ -209,8 +234,7 @@ mod wallpaper {
         /// Returns all available wallpapers
         pub async fn all_wallpapers(crunchyroll: &Crunchyroll) -> Result<Vec<Wallpaper>> {
             let endpoint = "https://beta.crunchyroll.com/assets/v1/wallpaper";
-            let builder = crunchyroll.executor.client
-                .get(endpoint);
+            let builder = crunchyroll.executor.client.get(endpoint);
             let all_wallpapers: AllWallpapers = crunchyroll.executor.request(builder).await?;
 
             Ok(all_wallpapers.items)
@@ -218,14 +242,21 @@ mod wallpaper {
 
         /// Link to a low resolution image of the wallpaper.
         pub fn tiny_url(&self) -> String {
-            format!("https://static.crunchyroll.com/assets/wallpaper/360x115/{}", self.name)
+            format!(
+                "https://static.crunchyroll.com/assets/wallpaper/360x115/{}",
+                self.name
+            )
         }
 
         /// Link to a high resolution image of the wallpaper.
         pub fn big_url(&self) -> String {
-            format!("https://static.crunchyroll.com/assets/wallpaper/1920x400/{}", self.name)
+            format!(
+                "https://static.crunchyroll.com/assets/wallpaper/1920x400/{}",
+                self.name
+            )
         }
     }
 }
 
+use crate::crunchyroll::MaturityRating;
 pub use wallpaper::*;

@@ -1,2 +1,2 @@
-pub(crate) mod strict;
 pub(crate) mod serde;
+pub(crate) mod strict;

@@ -4,22 +4,32 @@ use chrono::{DateTime, Duration, Utc};
 use serde::de::Error;
 use serde::Deserialize;
 
-use crate::{Crunchyroll, Executor, FromId, Locale, PlaybackStream, VideoStream};
-use crate::common::{Image, Playback, Request, Streams};
+use crate::common::{Image, Request};
 use crate::error::Result;
+use crate::{
+    Crunchyroll, Executor, FromId, Locale, Playback, PlaybackStream, Streams, VideoStream,
+};
 
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct EpisodeImages {
-    pub thumbnail: Vec<Vec<Image>>
+    pub thumbnail: Vec<Vec<Image>>,
 }
 
 /// This struct represents a Crunchyroll episode.
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct Episode {
     #[serde(skip)]
     executor: Arc<Executor>,
@@ -124,9 +134,7 @@ impl Request for Episode {
 
     #[cfg(feature = "__test_strict")]
     fn __not_clean_fields() -> Vec<String> {
-        vec![
-            "__links__".into()
-        ]
+        vec!["__links__".into()]
     }
 }
 
@@ -135,10 +143,11 @@ impl FromId for Episode {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/episodes/{}", executor.details.bucket, id);
-        let builder = executor.client
-            .get(endpoint)
-            .query(&executor.media_query());
+        let endpoint = format!(
+            "https://beta-api.crunchyroll.com/cms/v2/{}/episodes/{}",
+            executor.details.bucket, id
+        );
+        let builder = executor.client.get(endpoint).query(&executor.media_query());
 
         executor.request(builder).await
     }
@@ -147,15 +156,22 @@ impl FromId for Episode {
 #[async_trait::async_trait]
 impl Playback for Episode {
     async fn playback(&self) -> Result<PlaybackStream> {
-        self.executor.request(self.executor.client.get(self.playback_id.clone())).await
+        self.executor
+            .request(self.executor.client.get(self.playback_id.clone()))
+            .await
     }
 }
 
 #[async_trait::async_trait]
 impl Streams for Episode {
     async fn streams(&self) -> Result<VideoStream> {
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.details.bucket, self.stream_id);
-        let builder = self.executor.client
+        let endpoint = format!(
+            "https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams",
+            self.executor.details.bucket, self.stream_id
+        );
+        let builder = self
+            .executor
+            .client
             .get(endpoint)
             .query(&self.executor.media_query());
 
@@ -169,7 +185,11 @@ type MovieImages = EpisodeImages;
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct Movie {
     #[serde(skip)]
     executor: Arc<Executor>,
@@ -233,28 +253,35 @@ impl FromId for Movie {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/movies/{}", executor.details.bucket, id);
-        let builder = executor.client
-            .get(endpoint)
-            .query(&executor.media_query());
+        let endpoint = format!(
+            "https://beta-api.crunchyroll.com/cms/v2/{}/movies/{}",
+            executor.details.bucket, id
+        );
+        let builder = executor.client.get(endpoint).query(&executor.media_query());
 
         executor.request(builder).await
     }
 }
 
-
 #[async_trait::async_trait]
 impl Playback for Movie {
     async fn playback(&self) -> Result<PlaybackStream> {
-        self.executor.request(self.executor.client.get(self.playback_id.clone())).await
+        self.executor
+            .request(self.executor.client.get(self.playback_id.clone()))
+            .await
     }
 }
 
 #[async_trait::async_trait]
 impl Streams for Movie {
     async fn streams(&self) -> Result<VideoStream> {
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams", self.executor.details.bucket, self.id);
-        let builder = self.executor.client
+        let endpoint = format!(
+            "https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams",
+            self.executor.details.bucket, self.id
+        );
+        let builder = self
+            .executor
+            .client
             .get(endpoint)
             .query(&self.executor.media_query());
 
@@ -262,20 +289,27 @@ impl Streams for Movie {
     }
 }
 
-fn stream_id<'de, D: serde::Deserializer<'de>>(deserializer: D) -> std::result::Result<String, D::Error> {
+fn stream_id<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<String, D::Error> {
     #[derive(Deserialize)]
     struct StreamHref {
-        href: String
+        href: String,
     }
     #[derive(Deserialize)]
     struct Streams {
-        streams: StreamHref
+        streams: StreamHref,
     }
 
     let streams: Streams = serde_json::from_value(serde_json::Value::deserialize(deserializer)?)
         .map_err(|e| Error::custom(e.to_string()))?;
 
-    let mut split_streams = streams.streams.href.split('/').map(|s| s.to_string()).collect::<Vec<String>>();
+    let mut split_streams = streams
+        .streams
+        .href
+        .split('/')
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
     split_streams.reverse();
     if let Some(stream_id) = split_streams.get(1) {
         Ok(stream_id.clone())

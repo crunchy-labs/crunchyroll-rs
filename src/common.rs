@@ -1,22 +1,26 @@
-use std::collections::HashMap;
-use std::sync::Arc;
+use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
+use crate::Executor;
+use crate::{Crunchyroll, Locale, PlaybackStream, VideoStream};
 use chrono::{DateTime, Duration, Utc};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use crate::{Crunchyroll, Locale, PlaybackStream, VideoStream};
-use crate::Executor;
-use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(bound = "T: Request + DeserializeOwned + Clone")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct BulkResult<T: Request + DeserializeOwned + Clone> {
     #[cfg_attr(not(feature = "__test_strict"), default(Vec::new()))]
     pub items: Vec<T>,
-    pub total: u32
+    pub total: u32,
 }
 
 impl<T: Request + DeserializeOwned + Clone> Request for BulkResult<T> {
@@ -31,7 +35,7 @@ impl<T: Request + DeserializeOwned + Clone> Request for BulkResult<T> {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct SearchMetadata {
-    pub score: f64
+    pub score: f64,
 }
 
 #[allow(dead_code)]
@@ -61,13 +65,17 @@ pub struct SeriesMetadata {
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    tenant_categories: Option<crate::StrictValue>
+    tenant_categories: Option<crate::StrictValue>,
 }
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct MovieListingMetadata {
     // wtf is this again
     pub first_movie_id: String,
@@ -104,13 +112,17 @@ pub struct MovieListingMetadata {
     #[cfg(feature = "__test_strict")]
     available_date: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    premium_date: crate::StrictValue
+    premium_date: crate::StrictValue,
 }
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct EpisodeMetadata {
     pub series_id: String,
     pub series_title: String,
@@ -176,7 +188,7 @@ pub struct EpisodeMetadata {
     #[cfg(feature = "__test_strict")]
     identifier: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    tenant_categories: Option<crate::StrictValue>
+    tenant_categories: Option<crate::StrictValue>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -185,7 +197,7 @@ pub struct EpisodeMetadata {
 pub struct CollectionImages {
     pub thumbnail: Option<Vec<Vec<Image>>>,
     pub poster_tall: Option<Vec<Vec<Image>>>,
-    pub poster_wide: Option<Vec<Vec<Image>>>
+    pub poster_wide: Option<Vec<Vec<Image>>>,
 }
 
 #[allow(dead_code)]
@@ -224,7 +236,7 @@ pub struct Collection {
     #[cfg(feature = "__test_strict")]
     collection_type: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    linked_resource_key: crate::StrictValue
+    linked_resource_key: crate::StrictValue,
 }
 
 impl Request for Collection {
@@ -237,11 +249,13 @@ impl Request for Collection {
 impl Playback for Collection {
     async fn playback(&self) -> Result<PlaybackStream> {
         if let Some(playback_id) = self.playback_id.clone() {
-            self.executor.request(self.executor.client.get(playback_id)).await
+            self.executor
+                .request(self.executor.client.get(playback_id))
+                .await
         } else {
-            Err(CrunchyrollError::Request(
-                CrunchyrollErrorContext::new("no playback id available".into())
-            ))
+            Err(CrunchyrollError::Request(CrunchyrollErrorContext::new(
+                "no playback id available".into(),
+            )))
         }
     }
 }
@@ -251,7 +265,11 @@ type PanelImages = CollectionImages;
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct Panel {
     #[serde(skip)]
     executor: Arc<Executor>,
@@ -285,7 +303,7 @@ pub struct Panel {
     #[cfg(feature = "__test_strict")]
     collection_type: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    linked_resource_key: crate::StrictValue
+    linked_resource_key: crate::StrictValue,
 }
 
 impl Request for Panel {
@@ -303,11 +321,12 @@ pub struct Image {
     #[serde(rename(deserialize = "type"))]
     pub image_type: String,
     pub height: u32,
-    pub width: u32
+    pub width: u32,
 }
 
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
+#[doc(hidden)]
 pub trait Request {
     /// Set a usable [`Executor`] instance to the struct if required
     fn __set_executor(&mut self, _: Arc<Executor>) {}
@@ -339,7 +358,9 @@ pub trait Available {
 pub trait FromId {
     /// Creates a new [`Self`] by the provided id or returns an [`CrunchyrollError`] if something
     /// caused an issue.
-    async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> where Self: Sized;
+    async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 /// Provides playback streams for episodes or movies. Playback streams are mostly used to provide

@@ -1,10 +1,10 @@
 pub mod browse {
-    use crate::{Crunchyroll, enum_values, options};
     use crate::common::{BulkResult, Panel};
+    use crate::error::Result;
     use crate::media_collection::MediaType;
-    use crate::error::{Result};
+    use crate::{enum_values, options, Crunchyroll};
 
-    enum_values!{
+    enum_values! {
         BrowseSortType,
         #[derive(Debug)],
         Popularity = "popularity",
@@ -12,7 +12,7 @@ pub mod browse {
         Alphabetical = "alphabetical"
     }
 
-    options!{
+    options! {
         BrowseOptions,
         categories(Vec<String>, "categories") = None,
         // Specifies whether the entries should be dubbed.
@@ -37,11 +37,10 @@ pub mod browse {
             let executor = self.executor.clone();
 
             let endpoint = "https://beta.crunchyroll.com/content/v1/browse";
-            let builder = executor.client
-                .get(endpoint)
-                .query(&options.to_query(&[
-                    ("locale".to_string(), self.executor.details.locale.to_string())
-                ]));
+            let builder = executor.client.get(endpoint).query(&options.to_query(&[(
+                "locale".to_string(),
+                self.executor.details.locale.to_string(),
+            )]));
 
             executor.request(builder).await
         }
@@ -49,11 +48,11 @@ pub mod browse {
 }
 
 pub mod query {
-    use std::sync::Arc;
-    use serde::Deserialize;
-    use crate::{Collection, Crunchyroll, enum_values, Executor, options};
-    use crate::common::{BulkResult, Request};
+    use crate::common::Request;
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
+    use crate::{enum_values, options, BulkResult, Collection, Crunchyroll, Executor};
+    use serde::Deserialize;
+    use std::sync::Arc;
 
     #[derive(Deserialize, Debug)]
     #[serde(try_from = "BulkResult<QueryBulkResult>")]
@@ -64,7 +63,7 @@ pub mod query {
         pub top_results: Option<BulkResult<Collection>>,
         pub series: Option<BulkResult<Collection>>,
         pub movie_listing: Option<BulkResult<Collection>>,
-        pub episode: Option<BulkResult<Collection>>
+        pub episode: Option<BulkResult<Collection>>,
     }
 
     impl Request for QueryResults {
@@ -104,16 +103,24 @@ pub mod query {
             let mut episode: Option<BulkResult<Collection>> = None;
 
             for item in value.items.clone() {
-                let result = BulkResult{ items: item.items, total: item.total };
+                let result = BulkResult {
+                    items: item.items,
+                    total: item.total,
+                };
                 match item.result_type.as_str() {
                     "top_results" => top_results = Some(result),
                     "series" => series = Some(result),
                     "movie_listing" => movie_listing = Some(result),
                     "episode" => episode = Some(result),
-                    _ => return Err(CrunchyrollError::Decode(
-                        CrunchyrollErrorContext::new(format!("invalid result type found: '{}'", item.result_type))
-                            .with_value(format!("{:?}", value).as_bytes())
-                    ))
+                    _ => {
+                        return Err(CrunchyrollError::Decode(
+                            CrunchyrollErrorContext::new(format!(
+                                "invalid result type found: '{}'",
+                                item.result_type
+                            ))
+                            .with_value(format!("{:?}", value).as_bytes()),
+                        ))
+                    }
                 };
             }
 
@@ -122,7 +129,7 @@ pub mod query {
                 top_results,
                 series,
                 movie_listing,
-                episode
+                episode,
             })
         }
     }
@@ -132,12 +139,12 @@ pub mod query {
         #[serde(rename = "type")]
         result_type: String,
         items: Vec<Collection>,
-        total: u32
+        total: u32,
     }
 
     impl Request for QueryBulkResult {}
 
-    enum_values!{
+    enum_values! {
         QueryType,
         #[derive(Debug)],
         Series = "series",
@@ -145,7 +152,7 @@ pub mod query {
         Episode = "episode"
     }
 
-    options!{
+    options! {
         QueryOptions,
         limit(u32, "n") = Some(20),
         result_type(QueryType, "type") = None
@@ -156,12 +163,13 @@ pub mod query {
             let executor = self.executor.clone();
 
             let endpoint = "https://beta.crunchyroll.com/content/v1/search";
-            let builder = executor.client
-                .get(endpoint)
-                .query(&options.to_query(&[
-                    ("q".to_string(), query.clone()),
-                    ("locale".to_string(), self.executor.details.locale.to_string())
-                ]));
+            let builder = executor.client.get(endpoint).query(&options.to_query(&[
+                ("q".to_string(), query.clone()),
+                (
+                    "locale".to_string(),
+                    self.executor.details.locale.to_string(),
+                ),
+            ]));
 
             executor.request(builder).await
         }

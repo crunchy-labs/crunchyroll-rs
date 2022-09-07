@@ -1,11 +1,11 @@
+use crate::common::{Available, FromId, Image, Request};
+use crate::error::Result;
+use crate::{enum_values, Crunchyroll, Executor, Locale};
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
-use chrono::{DateTime, Utc};
-use crate::common::{Available, FromId, Image, Request};
-use crate::{Crunchyroll, enum_values, Executor, Locale};
-use crate::error::Result;
 
-enum_values!{
+enum_values! {
     MediaType,
     #[derive(Debug)],
     Series = "series",
@@ -17,14 +17,18 @@ enum_values!{
 #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
 pub struct MovieListingImages {
     pub poster_tall: Vec<Vec<Image>>,
-    pub poster_wide: Vec<Vec<Image>>
+    pub poster_wide: Vec<Vec<Image>>,
 }
 
 /// This struct represents a movie collection.
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct MovieListing {
     #[serde(skip)]
     executor: Arc<Executor>,
@@ -72,7 +76,7 @@ pub struct MovieListing {
     #[cfg(feature = "__test_strict")]
     available_date: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    premium_date: crate::StrictValue
+    premium_date: crate::StrictValue,
 }
 
 impl Request for MovieListing {
@@ -92,10 +96,11 @@ impl FromId for MovieListing {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/movie_listings/{}", executor.details.bucket, id);
-        let builder = executor.client
-            .get(endpoint)
-            .query(&executor.media_query());
+        let endpoint = format!(
+            "https://beta-api.crunchyroll.com/cms/v2/{}/movie_listings/{}",
+            executor.details.bucket, id
+        );
+        let builder = executor.client.get(endpoint).query(&executor.media_query());
 
         executor.request(builder).await
     }
@@ -107,7 +112,11 @@ type SeriesImages = MovieListingImages;
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(smart_default::SmartDefault))]
+#[cfg_attr(
+    not(feature = "__test_strict"),
+    serde(default),
+    derive(smart_default::SmartDefault)
+)]
 pub struct Series {
     #[serde(skip)]
     executor: Arc<Executor>,
@@ -148,7 +157,7 @@ pub struct Series {
     pub availability_notes: String,
 
     #[cfg(feature = "__test_strict")]
-    extended_maturity_rating: crate::StrictValue
+    extended_maturity_rating: crate::StrictValue,
 }
 
 impl Request for Series {
@@ -168,10 +177,11 @@ impl FromId for Series {
     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let executor = crunchy.executor.clone();
 
-        let endpoint = format!("https://beta-api.crunchyroll.com/cms/v2/{}/series/{}", executor.details.bucket, id);
-        let builder = executor.client
-            .get(endpoint)
-            .query(&executor.media_query());
+        let endpoint = format!(
+            "https://beta-api.crunchyroll.com/cms/v2/{}/series/{}",
+            executor.details.bucket, id
+        );
+        let builder = executor.client.get(endpoint).query(&executor.media_query());
 
         executor.request(builder).await
     }

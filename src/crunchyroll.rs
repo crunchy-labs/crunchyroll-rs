@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use crate::auth::{CrunchyrollBuilder, Executor, SessionToken};
 use crate::enum_values;
 use crate::error::Result;
+use std::sync::Arc;
 
-enum_values!{
+enum_values! {
     Locale,
     #[derive(Clone, Debug, Hash, Eq, PartialEq)],
     ar_ME = "ar-ME",
@@ -20,7 +20,7 @@ enum_values!{
     ru_RU = "ru-RU"
 }
 
-enum_values!{
+enum_values! {
     MaturityRating,
     #[derive(Clone, Debug)],
     NotMature = "M2",
@@ -40,7 +40,7 @@ impl Crunchyroll {
     pub fn new() -> CrunchyrollBuilder {
         CrunchyrollBuilder {
             client: reqwest::Client::new(),
-            locale: Locale::en_US
+            locale: Locale::en_US,
         }
     }
 
@@ -54,6 +54,9 @@ impl Crunchyroll {
 
     pub async fn invalidate_session(self) -> Result<()> {
         let endpoint = "https://crunchyroll.com/logout";
-        self.executor.to_owned().request(self.executor.client.get(endpoint)).await
+        self.executor
+            .to_owned()
+            .request(self.executor.client.get(endpoint))
+            .await
     }
 }
