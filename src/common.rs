@@ -1,29 +1,31 @@
 use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
-use crate::Executor;
-use crate::{Crunchyroll, Locale, PlaybackStream, VideoStream};
+use crate::{Crunchyroll, Executor};
+use crate::{Locale, PlaybackStream, VideoStream};
 use chrono::{DateTime, Duration, Utc};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+pub(crate) use macros::{Available, FromId, Playback, Request};
+
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
-#[derive(Clone, Debug, Deserialize)]
-#[serde(bound = "T: Request + DeserializeOwned + Clone")]
+#[derive(Debug, Deserialize)]
+#[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(
     not(feature = "__test_strict"),
     serde(default),
     derive(smart_default::SmartDefault)
 )]
-pub struct BulkResult<T: Request + DeserializeOwned + Clone> {
+pub struct BulkResult<T: Request + DeserializeOwned> {
     #[cfg_attr(not(feature = "__test_strict"), default(Vec::new()))]
     pub items: Vec<T>,
     pub total: u32,
 }
 
-impl<T: Request + DeserializeOwned + Clone> Request for BulkResult<T> {
+impl<T: Request + DeserializeOwned> Request for BulkResult<T> {
     fn __set_executor(&mut self, executor: Arc<Executor>) {
         for item in self.items.iter_mut() {
             item.__set_executor(executor.clone())
@@ -31,17 +33,17 @@ impl<T: Request + DeserializeOwned + Clone> Request for BulkResult<T> {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SearchMetadata {
     pub score: f64,
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SeriesMetadata {
     pub extended_description: String,
 
@@ -69,13 +71,9 @@ pub struct SeriesMetadata {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(
-    not(feature = "__test_strict"),
-    serde(default),
-    derive(smart_default::SmartDefault)
-)]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct MovieListingMetadata {
     // wtf is this again
     pub first_movie_id: String,
@@ -85,8 +83,12 @@ pub struct MovieListingMetadata {
     pub movie_release_year: u32,
 
     #[serde(alias = "duration_ms")]
-    #[serde(deserialize_with = "crate::internal::serde::millis_to_duration")]
-    #[cfg_attr(not(feature = "__test_strict"), default(Duration::milliseconds(0)))]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[cfg_attr(
+        feature = "__test_strict",
+        serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")
+    )]
+    #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
     pub is_subbed: bool,
@@ -99,9 +101,9 @@ pub struct MovieListingMetadata {
     pub is_mature: bool,
     pub mature_blocked: bool,
 
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub free_available_date: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub premium_available_date: DateTime<Utc>,
 
     pub available_offline: bool,
@@ -116,13 +118,9 @@ pub struct MovieListingMetadata {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(
-    not(feature = "__test_strict"),
-    serde(default),
-    derive(smart_default::SmartDefault)
-)]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct EpisodeMetadata {
     pub series_id: String,
     pub series_title: String,
@@ -135,27 +133,31 @@ pub struct EpisodeMetadata {
 
     // usually the same as episode_number, just as string
     pub episode: String,
-    #[serde(deserialize_with = "crate::internal::serde::maybe_null_to_default")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     pub episode_number: u32,
     // usually also the same as episode_number, I don't know the purpose of this
     pub sequence_number: u32,
     #[serde(alias = "duration_ms")]
-    #[serde(deserialize_with = "crate::internal::serde::millis_to_duration")]
-    #[cfg_attr(not(feature = "__test_strict"), default(Duration::milliseconds(0)))]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[cfg_attr(
+        feature = "__test_strict",
+        serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")
+    )]
+    #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub episode_air_date: DateTime<Utc>,
     // the same as episode_air_date as far as I can see
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub upload_date: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub free_available_date: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub premium_available_date: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub availability_starts: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub availability_ends: DateTime<Utc>,
 
     pub is_subbed: bool,
@@ -191,9 +193,9 @@ pub struct EpisodeMetadata {
     tenant_categories: Option<crate::StrictValue>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CollectionImages {
     pub thumbnail: Option<Vec<Vec<Image>>>,
     pub poster_tall: Option<Vec<Vec<Image>>>,
@@ -201,14 +203,18 @@ pub struct CollectionImages {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Default, Request, Playback)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Collection {
     #[serde(skip)]
     executor: Arc<Executor>,
 
     pub id: String,
+    #[serde(rename = "__links__")]
+    #[serde(default)]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_stream_id_option")]
+    pub stream_id: Option<String>,
     #[serde(rename = "playback")]
     pub playback_id: Option<String>,
     pub external_id: String,
@@ -239,37 +245,12 @@ pub struct Collection {
     linked_resource_key: crate::StrictValue,
 }
 
-impl Request for Collection {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
-        self.executor = executor
-    }
-}
-
-#[async_trait::async_trait]
-impl Playback for Collection {
-    async fn playback(&self) -> Result<PlaybackStream> {
-        if let Some(playback_id) = self.playback_id.clone() {
-            self.executor
-                .request(self.executor.client.get(playback_id))
-                .await
-        } else {
-            Err(CrunchyrollError::Request(CrunchyrollErrorContext::new(
-                "no playback id available".into(),
-            )))
-        }
-    }
-}
-
 type PanelImages = CollectionImages;
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request, Playback)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(
-    not(feature = "__test_strict"),
-    serde(default),
-    derive(smart_default::SmartDefault)
-)]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Panel {
     #[serde(skip)]
     executor: Arc<Executor>,
@@ -290,7 +271,7 @@ pub struct Panel {
     pub new: bool,
     pub new_content: bool,
 
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub last_public: DateTime<Utc>,
 
     pub series_metadata: Option<SeriesMetadata>,
@@ -306,16 +287,10 @@ pub struct Panel {
     linked_resource_key: crate::StrictValue,
 }
 
-impl Request for Panel {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
-        self.executor = executor
-    }
-}
-
 /// The standard representation of images how the api returns them.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Image {
     pub source: String,
     #[serde(rename(deserialize = "type"))]
@@ -331,13 +306,9 @@ pub trait Request {
     /// Set a usable [`Executor`] instance to the struct if required
     fn __set_executor(&mut self, _: Arc<Executor>) {}
 
-    /// When using the `__test_strict` feature, all fields starting and ending with `__` are removed
-    /// from the json before converting it into a struct. These fields are usually not required. But
-    /// if they're needed to be accessed, return the names of these fields with this method and they
-    /// won't get touched.
-    #[cfg(feature = "__test_strict")]
-    fn __not_clean_fields() -> Vec<String> {
-        vec![]
+    /// Get the [`Executor`] instance of the struct which implements this trait (if available).
+    fn __get_executor(&self) -> Option<Arc<Executor>> {
+        None
     }
 }
 
@@ -348,7 +319,7 @@ impl Request for () {}
 impl<K, V> Request for HashMap<K, V> {}
 
 /// Check if further actions with the struct which implements this are available.
-pub trait Available {
+pub trait Available: Request {
     /// Returns if the current episode, series, ... is available.
     fn available(&self) -> bool;
 }

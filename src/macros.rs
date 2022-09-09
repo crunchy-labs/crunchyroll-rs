@@ -52,7 +52,7 @@ macro_rules! enum_values {
             fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
                 where D: serde::Deserializer<'de>
             {
-                $crate::internal::serde::string_to_enum(deserializer)
+                Ok(Self::from(String::deserialize(deserializer)?))
             }
         }
 

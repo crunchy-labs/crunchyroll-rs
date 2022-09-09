@@ -1,6 +1,7 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::{FromId, MovieListing};
+use crunchyroll_rs::common::FromId;
+use crunchyroll_rs::MovieListing;
 
 mod utils;
 

@@ -1,5 +1,5 @@
 use crate::common::Request;
-use crate::error::{check_request_error, CrunchyrollError, CrunchyrollErrorContext, Result};
+use crate::error::{check_request, CrunchyrollError, CrunchyrollErrorContext, Result};
 use crate::{Crunchyroll, Locale};
 use chrono::{DateTime, Duration, Utc};
 use reqwest::header::HeaderMap;
@@ -17,9 +17,9 @@ pub enum SessionToken {
     EtpRt(String),
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 #[allow(dead_code)]
 struct AuthResponse {
     access_token: String,
@@ -68,7 +68,7 @@ impl Executor {
     pub(crate) async fn request<T: Request + DeserializeOwned>(
         self: &Arc<Self>,
         mut builder: RequestBuilder,
-    ) -> Result<T, CrunchyrollError> {
+    ) -> Result<T> {
         let mut config = self.config.lock().await;
         if config.session_expire <= Utc::now() {
             let login_response = match config.session_token.clone() {
@@ -136,8 +136,7 @@ impl Executor {
             .send()
             .await?;
 
-        let resp_value = resp.bytes().await?;
-        check_request_error(resp_value.as_ref())
+        check_request(resp).await
     }
 
     async fn auth_with_etp_rt(client: reqwest::Client, etp_rt: String) -> Result<AuthResponse> {
@@ -157,8 +156,7 @@ impl Executor {
             .send()
             .await?;
 
-        let resp_value = resp.bytes().await?;
-        check_request_error(resp_value.as_ref())
+        check_request(resp).await
     }
 }
 
@@ -230,8 +228,7 @@ impl CrunchyrollBuilder {
             .send()
             .await?;
 
-        let resp_value = resp.bytes().await?;
-        let login_response: AuthResponse = check_request_error(resp_value.as_ref())?;
+        let login_response: AuthResponse = check_request(resp).await?;
         let session_token = SessionToken::RefreshToken(login_response.refresh_token.clone());
 
         self.post_login(login_response, session_token).await
@@ -280,7 +277,8 @@ impl CrunchyrollBuilder {
             self.login_with_etp_rt(cookie).await
         } else {
             Err(CrunchyrollError::Authentication(
-                CrunchyrollErrorContext::new("invalid session id".into()),
+                CrunchyrollErrorContext::new("invalid session id".into())
+                    .with_url(resp.url().to_string()),
             ))
         }
     }
@@ -302,25 +300,29 @@ impl CrunchyrollBuilder {
         );
 
         let index_endpoint = "https://beta-api.crunchyroll.com/index/v2";
-        #[derive(Deserialize)]
-        #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+        #[derive(Deserialize, smart_default::SmartDefault)]
         #[cfg_attr(
-            not(feature = "__test_strict"),
-            serde(default),
-            derive(smart_default::SmartDefault)
+            feature = "__test_strict",
+            serde(deny_unknown_fields),
+            derive(serde::Serialize)
         )]
+        #[cfg_attr(not(feature = "__test_strict"), serde(default))]
         #[allow(dead_code)]
         struct IndexRespCms {
             bucket: String,
-            #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+            #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
             expires: DateTime<Utc>,
             key_pair_id: String,
             policy: String,
             signature: String,
         }
-        #[derive(Deserialize)]
-        #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-        #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+        #[derive(Deserialize, Default, Request)]
+        #[cfg_attr(
+            feature = "__test_strict",
+            serde(deny_unknown_fields),
+            derive(serde::Serialize)
+        )]
+        #[cfg_attr(not(feature = "__test_strict"), serde(default))]
         #[allow(dead_code)]
         struct IndexResp {
             cms: IndexRespCms,
@@ -332,7 +334,6 @@ impl CrunchyrollBuilder {
             #[cfg(feature = "__test_strict")]
             cms_web: crate::StrictValue,
         }
-        impl Request for IndexResp {}
         let index_req = self.client.get(index_endpoint).headers(headers.to_owned());
         let index = request::<IndexResp>(index_req).await?;
 
@@ -376,19 +377,26 @@ impl CrunchyrollBuilder {
 async fn request<T: Request + DeserializeOwned>(builder: RequestBuilder) -> Result<T> {
     let resp = builder.send().await?;
 
-    let result = check_request_error(resp.bytes().await?.as_ref())?;
-
     #[cfg(not(feature = "__test_strict"))]
     {
-        Ok(result)
+        Ok(check_request(resp).await?)
     }
     #[cfg(feature = "__test_strict")]
     {
-        let cleaned = clean_request(result, T::__not_clean_fields());
+        let url = resp.url().to_string();
+        let result = check_request(resp).await?;
+
+        let cleaned = clean_request(result);
         let value = serde_json::Value::deserialize(serde::de::value::MapDeserializer::new(
             cleaned.into_iter(),
         ))?;
-        check_request_error(value.to_string().as_bytes())
+        serde_json::from_value(value.clone()).map_err(|e| {
+            CrunchyrollError::Decode(
+                CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
+                    .with_url(url)
+                    .with_value(value.to_string().as_bytes()),
+            )
+        })
     }
 }
 
@@ -398,22 +406,30 @@ async fn request<T: Request + DeserializeOwned>(builder: RequestBuilder) -> Resu
 #[cfg(feature = "__test_strict")]
 fn clean_request(
     mut map: serde_json::Map<String, serde_json::Value>,
-    not_clean_fields: Vec<String>,
 ) -> serde_json::Map<String, serde_json::Value> {
     for (key, value) in map.clone() {
-        if key.starts_with("__") && key.ends_with("__") && !not_clean_fields.contains(&key) {
+        if key.starts_with("__") && key.ends_with("__") {
+            // `Episode` requires the __links__ field because crunchyroll does not provide another
+            // way to obtain a stream id
+            if key == "__links__" {
+                let classic_crunchyroll_exception: serde_json::Map<String, serde_json::Value> =
+                    serde_json::from_value(value).unwrap();
+                if classic_crunchyroll_exception.contains_key("episode/series")
+                    && classic_crunchyroll_exception.contains_key("streams")
+                {
+                    continue;
+                }
+            }
             map.remove(key.as_str());
         } else if let Some(object) = value.as_object() {
             map.insert(
                 key,
-                serde_json::to_value(clean_request(object.clone(), not_clean_fields.clone()))
-                    .unwrap(),
+                serde_json::to_value(clean_request(object.clone())).unwrap(),
             );
         } else if let Some(array) = value.as_array() {
             map.insert(
                 key,
-                serde_json::to_value(clean_request_array(array.clone(), not_clean_fields.clone()))
-                    .unwrap(),
+                serde_json::to_value(clean_request_array(array.clone())).unwrap(),
             );
         }
     }
@@ -421,18 +437,12 @@ fn clean_request(
 }
 
 #[cfg(feature = "__test_strict")]
-fn clean_request_array(
-    mut arr: Vec<serde_json::Value>,
-    not_clean_fields: Vec<String>,
-) -> Vec<serde_json::Value> {
+fn clean_request_array(mut arr: Vec<serde_json::Value>) -> Vec<serde_json::Value> {
     for (i, item) in arr.clone().iter().enumerate() {
         if let Some(object) = item.as_object() {
-            arr[i] = serde_json::to_value(clean_request(object.clone(), not_clean_fields.clone()))
-                .unwrap();
+            arr[i] = serde_json::to_value(clean_request(object.clone())).unwrap();
         } else if let Some(array) = item.as_array() {
-            arr[i] =
-                serde_json::to_value(clean_request_array(array.clone(), not_clean_fields.clone()))
-                    .unwrap();
+            arr[i] = serde_json::to_value(clean_request_array(array.clone())).unwrap();
         }
     }
     arr

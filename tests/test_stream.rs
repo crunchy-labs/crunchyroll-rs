@@ -1,6 +1,6 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::{DefaultStreams, FromId, VariantData, VariantSegment, VideoStream};
+use crunchyroll_rs::{DefaultStreams, VariantData, VariantSegment, VideoStream};
 use rand::seq::SliceRandom;
 
 mod utils;

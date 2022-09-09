@@ -1,42 +1,32 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
-use serde::de::Error;
 use serde::Deserialize;
 
-use crate::common::{Image, Request};
+use crate::common::{FromId, Image, Request};
 use crate::error::Result;
-use crate::{
-    Crunchyroll, Executor, FromId, Locale, Playback, PlaybackStream, Streams, VideoStream,
-};
+use crate::{Executor, Locale, Playback, PlaybackStream, Streams, VideoStream};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(
-    not(feature = "__test_strict"),
-    serde(default),
-    derive(smart_default::SmartDefault)
-)]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct EpisodeImages {
     pub thumbnail: Vec<Vec<Image>>,
 }
 
 /// This struct represents a Crunchyroll episode.
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault, Playback, FromId)]
+#[from_id(multiple(crate::Season))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(
-    not(feature = "__test_strict"),
-    serde(default),
-    derive(smart_default::SmartDefault)
-)]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Episode {
     #[serde(skip)]
     executor: Arc<Executor>,
 
     pub id: String,
     #[serde(rename = "__links__")]
-    #[serde(deserialize_with = "stream_id")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_stream_id")]
     pub stream_id: String,
     #[serde(rename = "playback")]
     pub playback_id: String,
@@ -68,22 +58,26 @@ pub struct Episode {
     // usually also the same as episode_number, I don't know the purpose of this
     pub sequence_number: u32,
     #[serde(alias = "duration_ms")]
-    #[serde(deserialize_with = "crate::internal::serde::millis_to_duration")]
-    #[cfg_attr(not(feature = "__test_strict"), default(Duration::milliseconds(0)))]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[cfg_attr(
+        feature = "__test_strict",
+        serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")
+    )]
+    #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub episode_air_date: DateTime<Utc>,
     // the same as episode_air_date as far as I can see
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub upload_date: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub free_available_date: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub premium_available_date: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub availability_starts: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub availability_ends: DateTime<Utc>,
 
     pub is_subbed: bool,
@@ -93,8 +87,14 @@ pub struct Episode {
     pub audio_locale: String,
     pub subtitle_locales: Vec<Locale>,
 
-    pub next_episode_id: String,
-    pub next_episode_title: String,
+    #[serde(default)]
+    // the api result simply does not contain this field if the episode is the last of its season.
+    // classic crunchyroll moment
+    pub next_episode_id: Option<String>,
+    #[serde(default)]
+    // the api result simply does not contain this field if the episode is the last of its season.
+    // classic crunchyroll moment
+    pub next_episode_title: Option<String>,
 
     pub season_tags: Vec<String>,
 
@@ -132,33 +132,8 @@ impl Request for Episode {
         self.executor = executor
     }
 
-    #[cfg(feature = "__test_strict")]
-    fn __not_clean_fields() -> Vec<String> {
-        vec!["__links__".into()]
-    }
-}
-
-#[async_trait::async_trait]
-impl FromId for Episode {
-    async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
-        let executor = crunchy.executor.clone();
-
-        let endpoint = format!(
-            "https://beta-api.crunchyroll.com/cms/v2/{}/episodes/{}",
-            executor.details.bucket, id
-        );
-        let builder = executor.client.get(endpoint).query(&executor.media_query());
-
-        executor.request(builder).await
-    }
-}
-
-#[async_trait::async_trait]
-impl Playback for Episode {
-    async fn playback(&self) -> Result<PlaybackStream> {
-        self.executor
-            .request(self.executor.client.get(self.playback_id.clone()))
-            .await
+    fn __get_executor(&self) -> Option<Arc<Executor>> {
+        Some(self.executor.clone())
     }
 }
 
@@ -183,13 +158,9 @@ type MovieImages = EpisodeImages;
 
 /// This struct represents a Crunchyroll movie.
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault, Request, Playback, FromId)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(
-    not(feature = "__test_strict"),
-    serde(default),
-    derive(smart_default::SmartDefault)
-)]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Movie {
     #[serde(skip)]
     executor: Arc<Executor>,
@@ -208,13 +179,17 @@ pub struct Movie {
     pub description: String,
 
     #[serde(alias = "duration_ms")]
-    #[serde(deserialize_with = "crate::internal::serde::millis_to_duration")]
-    #[cfg_attr(not(feature = "__test_strict"), default(Duration::milliseconds(0)))]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[cfg_attr(
+        feature = "__test_strict",
+        serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")
+    )]
+    #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub free_available_date: DateTime<Utc>,
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub premium_available_date: DateTime<Utc>,
 
     pub is_subbed: bool,
@@ -242,36 +217,6 @@ pub struct Movie {
     media_type: crate::StrictValue,
 }
 
-impl Request for Movie {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
-        self.executor = executor
-    }
-}
-
-#[async_trait::async_trait]
-impl FromId for Movie {
-    async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
-        let executor = crunchy.executor.clone();
-
-        let endpoint = format!(
-            "https://beta-api.crunchyroll.com/cms/v2/{}/movies/{}",
-            executor.details.bucket, id
-        );
-        let builder = executor.client.get(endpoint).query(&executor.media_query());
-
-        executor.request(builder).await
-    }
-}
-
-#[async_trait::async_trait]
-impl Playback for Movie {
-    async fn playback(&self) -> Result<PlaybackStream> {
-        self.executor
-            .request(self.executor.client.get(self.playback_id.clone()))
-            .await
-    }
-}
-
 #[async_trait::async_trait]
 impl Streams for Movie {
     async fn streams(&self) -> Result<VideoStream> {
@@ -286,34 +231,5 @@ impl Streams for Movie {
             .query(&self.executor.media_query());
 
         self.executor.request(builder).await
-    }
-}
-
-fn stream_id<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> std::result::Result<String, D::Error> {
-    #[derive(Deserialize)]
-    struct StreamHref {
-        href: String,
-    }
-    #[derive(Deserialize)]
-    struct Streams {
-        streams: StreamHref,
-    }
-
-    let streams: Streams = serde_json::from_value(serde_json::Value::deserialize(deserializer)?)
-        .map_err(|e| Error::custom(e.to_string()))?;
-
-    let mut split_streams = streams
-        .streams
-        .href
-        .split('/')
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
-    split_streams.reverse();
-    if let Some(stream_id) = split_streams.get(1) {
-        Ok(stream_id.clone())
-    } else {
-        Err(Error::custom("cannot extract stream id"))
     }
 }

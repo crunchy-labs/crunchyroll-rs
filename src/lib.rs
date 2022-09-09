@@ -14,7 +14,7 @@ mod internal;
 mod macros;
 
 use auth::Executor;
-pub use common::{BulkResult, Collection, FromId, Playback, Streams};
+pub use common::{BulkResult, Collection, Playback, Streams};
 pub use crunchyroll::{Crunchyroll, Locale};
 pub use media::{Episode, Movie};
 pub use media_collection::{MovieListing, Season, Series};

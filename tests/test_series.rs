@@ -1,6 +1,7 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::{FromId, Series};
+use crunchyroll_rs::common::FromId;
+use crunchyroll_rs::Series;
 
 mod utils;
 
@@ -15,4 +16,10 @@ static SERIES: Store<Series> = Store::new(|| {
 #[tokio::test]
 async fn series_from_id() {
     assert_result!(SERIES.get().await)
+}
+
+#[tokio::test]
+async fn series_seasons() {
+    let series = SERIES.get().await.unwrap();
+    assert_result!(series.seasons().await)
 }

@@ -54,8 +54,9 @@ pub mod query {
     use serde::Deserialize;
     use std::sync::Arc;
 
-    #[derive(Deserialize, Debug)]
+    #[derive(Debug, Deserialize, Default)]
     #[serde(try_from = "BulkResult<QueryBulkResult>")]
+    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     pub struct QueryResults {
         #[serde(skip)]
         executor: Arc<Executor>,
@@ -90,6 +91,10 @@ pub mod query {
                     collection.__set_executor(executor.clone());
                 }
             }
+        }
+
+        fn __get_executor(&self) -> Option<Arc<Executor>> {
+            Some(self.executor.clone())
         }
     }
 
@@ -134,15 +139,15 @@ pub mod query {
         }
     }
 
-    #[derive(Clone, Debug, Default, Deserialize)]
+    #[derive(Clone, Debug, Default, Deserialize, Request)]
+    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     struct QueryBulkResult {
         #[serde(rename = "type")]
         result_type: String,
         items: Vec<Collection>,
         total: u32,
     }
-
-    impl Request for QueryBulkResult {}
 
     enum_values! {
         QueryType,

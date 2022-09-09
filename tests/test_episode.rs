@@ -1,6 +1,7 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::{Episode, FromId, Playback, Streams};
+use crunchyroll_rs::common::FromId;
+use crunchyroll_rs::{Episode, Playback, Streams};
 
 mod utils;
 

@@ -74,21 +74,28 @@ impl From<reqwest::Error> for CrunchyrollError {
 #[derive(Debug)]
 pub struct CrunchyrollErrorContext {
     pub message: String,
+    pub url: Option<String>,
     pub value: Option<Vec<u8>>,
 }
 
 impl Display for CrunchyrollErrorContext {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if let Some(value) = &self.value {
-            write!(
-                f,
-                "{}: {}",
-                self.message,
-                std::str::from_utf8(value.as_slice()).unwrap_or("-- not displayable --")
-            )
-        } else {
-            write!(f, "{}", self.message)
+        let mut res = self.message.clone();
+
+        if let Some(url) = &self.url {
+            res.push_str(format!(" ({})", url).as_str());
         }
+        if let Some(value) = &self.value {
+            res.push_str(
+                format!(
+                    ": {}",
+                    std::str::from_utf8(value.as_slice()).unwrap_or("-- not displayable --")
+                )
+                .as_str(),
+            );
+        }
+
+        write!(f, "{}", res)
     }
 }
 
@@ -96,8 +103,15 @@ impl CrunchyrollErrorContext {
     pub(crate) fn new(message: String) -> Self {
         Self {
             message,
+            url: None,
             value: None,
         }
+    }
+
+    pub(crate) fn with_url(mut self, url: String) -> Self {
+        self.url = Some(url);
+
+        self
     }
 
     pub(crate) fn with_value(mut self, value: &[u8]) -> Self {
@@ -157,18 +171,29 @@ pub(crate) fn is_request_error(value: serde_json::Value) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn check_request_error<T: DeserializeOwned>(raw: &[u8]) -> Result<T> {
-    let value: serde_json::Value = serde_json::from_slice(raw).map_err(|e| {
+pub(crate) async fn check_request<T: DeserializeOwned>(resp: reqwest::Response) -> Result<T> {
+    let url = resp.url().to_string();
+    let raw = resp.bytes().await?;
+
+    let value: serde_json::Value = serde_json::from_slice(raw.as_ref()).map_err(|e| {
         CrunchyrollError::Decode(
             CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
-                .with_value(raw),
+                .with_url(url.clone())
+                .with_value(raw.as_ref()),
         )
     })?;
-    is_request_error(value.clone())?;
+    is_request_error(value.clone()).map_err(|e| {
+        if let CrunchyrollError::Request(context) = e {
+            CrunchyrollError::Request(context.with_url(url.clone()))
+        } else {
+            e
+        }
+    })?;
     serde_json::from_value::<T>(value).map_err(|e| {
         CrunchyrollError::Decode(
             CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
-                .with_value(raw),
+                .with_url(url)
+                .with_value(raw.as_ref()),
         )
     })
 }

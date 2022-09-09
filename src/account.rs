@@ -8,13 +8,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(
-    not(feature = "__test_strict"),
-    serde(default),
-    derive(smart_default::SmartDefault)
-)]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Account {
     #[serde(skip)]
     executor: Arc<Executor>,
@@ -22,7 +18,7 @@ pub struct Account {
     pub username: String,
     pub email: String,
 
-    #[cfg_attr(not(feature = "__test_strict"), default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH)))]
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub created: DateTime<Utc>,
 
     pub avatar: String,
@@ -57,12 +53,6 @@ pub struct Account {
 
     #[cfg(feature = "__test_strict")]
     crleg_email_verified: crate::StrictValue,
-}
-
-impl Request for Account {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
-        self.executor = executor
-    }
 }
 
 /// The [`Account`] struct is actually not required to perform this actions ([`Crunchyroll`] itself
@@ -208,21 +198,20 @@ mod wallpaper {
     use crate::Crunchyroll;
     use serde::Deserialize;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, Default)]
     #[serde(from = "String")]
-    #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+    #[cfg_attr(feature = "__test_strict", derive(serde::Serialize))]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct Wallpaper {
         pub name: String,
     }
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, Default, Request)]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-    #[cfg_attr(not(feature = "__test_strict"), serde(default), derive(Default))]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     struct AllWallpapers {
         items: Vec<Wallpaper>,
     }
-
-    impl Request for AllWallpapers {}
 
     impl From<String> for Wallpaper {
         fn from(s: String) -> Self {
