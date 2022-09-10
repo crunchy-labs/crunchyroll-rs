@@ -1,17 +1,9 @@
 #[macro_export]
 macro_rules! enum_values {
-    ($name:ident, $($field:tt = $value:expr),*) => {
-        enum_values!{
-            $name,
-            #[derive()],
-            $(
-                $field = $value
-            ),*
-        }
-    };
-    ($name:ident, #[derive($($derives:tt),*)], $($field:tt = $value:expr),*) => {
-        #[allow(non_camel_case_types)]
-        #[derive($($derives),*)]
+    ($(#[$attribute:meta])* $name:ident; $($field:tt = $value:expr),*) => {
+        $(
+            #[$attribute]
+        )*
         pub enum $name {
             $(
                 $field
@@ -61,15 +53,19 @@ macro_rules! enum_values {
                 serializer.serialize_str(self.to_string().as_str())
             }
         }
-    };
+    }
 }
 
 #[macro_export]
 macro_rules! options {
-    ($name:ident, $($field:tt($t:ty, $query_name:literal) = $default:expr),*) => {
+    // `$(#[$attribute:meta])*` should generally only be used for `#[doc = "..."]`
+    ($name:ident; $($(#[$attribute:meta])* $field:ident($t:ty, $query_name:literal) = $default:expr),*) => {
         #[derive(smart_default::SmartDefault)]
         pub struct $name {
             $(
+                $(
+                    #[$attribute]
+                )*
                 #[default($default)]
                 $field: Option<$t>
             ),*
@@ -91,7 +87,7 @@ macro_rules! options {
                     &[
                         $(
                             ($query_name.to_string(), if let Some(field) = &self.$field {
-                                // this workaround is required because serde_urlencoded::to_string
+                                // this workaround is required because `serde_urlencoded::to_string`
                                 // cannot deserialize non map / sequence values.
                                 serde_urlencoded::to_string(&[("hack", field)]).unwrap().strip_prefix("hack=").unwrap().to_string()
                             } else {

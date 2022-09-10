@@ -5,8 +5,8 @@ use serde::Deserialize;
 use std::sync::Arc;
 
 enum_values! {
-    MediaType,
-    #[derive(Debug)],
+    #[derive(Debug)]
+    MediaType;
     Series = "series",
     Movie = "movie_listing"
 }

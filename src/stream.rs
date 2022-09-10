@@ -28,7 +28,7 @@ fn deserialize_streams<'de, D: Deserializer<'de>, T: FixStream>(
             // check only for errors and not use the `Ok(...)` result in `raw` because `T::Variant`
             // then must implement `serde::Serialize`
             if let Err(e) = T::Variant::deserialize(&data) {
-                return Err(Error::custom(e.to_string()))
+                return Err(Error::custom(e.to_string()));
             }
 
             if let Some(entry) = raw.get_mut(&locale) {

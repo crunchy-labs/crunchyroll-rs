@@ -157,6 +157,8 @@ impl Account {
 }
 
 impl Crunchyroll {
+    /// Return information about the current account. [`Account`] can be used to modify account
+    /// settings like the email or web interface language.
     pub async fn account(&self) -> Result<Account> {
         let mut result: HashMap<String, Value> = HashMap::new();
 

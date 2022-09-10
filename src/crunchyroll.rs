@@ -4,8 +4,9 @@ use crate::error::Result;
 use std::sync::Arc;
 
 enum_values! {
-    Locale,
-    #[derive(Clone, Debug, Hash, Eq, PartialEq)],
+    #[allow(non_camel_case_types)]
+    #[derive(Clone, Debug, Hash, Eq, PartialEq)]
+    Locale;
     ar_ME = "ar-ME",
     ar_SA = "ar-SA",
     de_DE = "de-DE",
@@ -21,8 +22,8 @@ enum_values! {
 }
 
 enum_values! {
-    MaturityRating,
-    #[derive(Clone, Debug)],
+    #[derive(Clone, Debug)]
+    MaturityRating;
     NotMature = "M2",
     Mature = "M3"
 }
@@ -44,10 +45,13 @@ impl Crunchyroll {
         }
     }
 
+    /// Check if the current used account has premium.
     pub fn premium(&self) -> bool {
         self.executor.details.premium
     }
 
+    /// Return the current session token. It can be used to log-in later with
+    /// [`Crunchyroll::login_with_refresh_token`] or [`Crunchyroll::login_with_etp_rt`].
     pub async fn session_token(&self) -> SessionToken {
         self.executor.config.lock().await.session_token.clone()
     }

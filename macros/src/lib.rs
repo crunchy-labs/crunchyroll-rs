@@ -82,12 +82,61 @@ struct DeriveFromIdOpts {
     multiple: Option<darling::util::PathList>
 }
 
+/// Derives the [`crunchyroll_rs::common::FromId`] crate.
+///
+/// It takes a `#[from_id(...)]` helper which currently only has the `multiple` sub-field
+/// (`#[from_id(multiple(...))]`. The sub-field can take multiple [`syn::Path`]s as arguments
+/// which must be library structs, and for every given argument, a
+/// `from_`_`argument_struct_name`_`_id` method in the deriven struct is implemented as well as a
+/// _`deriven_struct_name`_`s` method in the struct passed as current argument.
+///
+/// # Examples
+///
+/// ```
+/// struct Season;
+///
+/// #[derive(FromId)]
+/// #[from(multiple(AStruct))]
+/// struct Episode;
+/// ```
+///
+/// This would lead to the following implementation:
+///
+/// ```
+/// struct Season;
+///
+/// struct Episode;
+///
+/// // generated from `#[derive(FromId)]`
+/// #[async_trait::async_trait]
+/// impl crate::common::FromId for Episode {
+///     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self, CrunchyrollError> {
+///         /* ... */
+///     }
+/// }
+///
+/// // generated from `#[from(multiple(AStruct))]`
+/// impl AStruct {
+///     pub async fn from_season_id(crunchy: Crunchyroll, a_struct_id: String) -> Result<BulkResult<Self>, CrunchyrollError> {
+///         /* ... */
+///     }
+/// }
+///
+/// // generated from `#[from(multiple(AStruct))]`
+/// impl AnotherStruct {
+///     pub async fn episodes(&self) -> Result<BulkResult<Self>, CrunchyrollError> {
+///         /* ... */
+///     }
+/// }
+/// ```
+///
 #[proc_macro_derive(FromId, attributes(from_id))]
 pub fn derive_from_id(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
     let DeriveInput {ident, generics, ..} = &derive_input;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+    // convert the struct name from CamelCase to snake_case
     let mut _path = String::new();
     for (i, char) in ident.to_string().chars().enumerate() {
         if char.is_ascii_uppercase() && i != 0 {
@@ -98,22 +147,27 @@ pub fn derive_from_id(input: TokenStream) -> TokenStream {
     if !_path.ends_with('s') {
         _path.push('s');
     }
-    let path = syn::Ident::from_string(_path.as_str()).unwrap();
+    let ident_path = syn::Ident::from_string(_path.as_str()).unwrap();
 
     let mut opt_impls = vec![];
     let mut other_impls = vec![];
 
     let from_id_opts: DeriveFromIdOpts = DeriveFromIdOpts::from_derive_input(&derive_input).unwrap();
+    // check if the `#[from_id(multiple(...))]` attribute is populated
     if let Some(multiple) = from_id_opts.multiple {
+        // iterate over every elemenet in the `#[from_id(multiple(...))]` attribute and create a
         for opt_path in multiple.iter() {
             let name = opt_path.segments.last().unwrap().ident.to_string().to_ascii_lowercase();
             let name_id = syn::Ident::from_string(format!("{}_id", &name).as_str()).unwrap();
             let from_name_id = syn::Ident::from_string(format!("from_{}_id", &name).as_str()).unwrap();
+
+            let opt_impl_desc = format!("Return all {} by their parent {} id.", ident_path, name);
             opt_impls.push(quote! {
+                #[doc = #opt_impl_desc]
                 pub async fn #from_name_id(crunchy: &crate::crunchyroll::Crunchyroll, #name_id: String) -> crate::error::Result<crate::common::BulkResult<#ident>> {
                     let endpoint = format!(
                         "https://beta-api.crunchyroll.com/cms/v2/{}/{}",
-                        crunchy.executor.details.bucket, stringify!(#path)
+                        crunchy.executor.details.bucket, stringify!(#ident_path)
                     );
                     let builder = crunchy
                         .executor
@@ -125,9 +179,11 @@ pub fn derive_from_id(input: TokenStream) -> TokenStream {
                     crunchy.executor.request(builder).await
                 }
             });
+            let other_impl_desc = format!("Return all {} {}.", name, ident_path);
             other_impls.push(quote! {
                 impl #opt_path {
-                    pub async fn #path(&self) -> crate::error::Result<crate::common::BulkResult<#ident>> {
+                    #[doc = #other_impl_desc]
+                    pub async fn #ident_path(&self) -> crate::error::Result<crate::common::BulkResult<#ident>> {
                         #ident::#from_name_id(&crate::crunchyroll::Crunchyroll { executor: self.__get_executor().unwrap() }, self.id.clone()).await
                     }
                 }
@@ -141,7 +197,7 @@ pub fn derive_from_id(input: TokenStream) -> TokenStream {
             async fn from_id(crunchy: &crate::crunchyroll::Crunchyroll, id: String) -> crate::error::Result<Self> {
                 let endpoint = format!(
                     "https://beta-api.crunchyroll.com/cms/v2/{}/{}/{}",
-                    crunchy.executor.details.bucket, stringify!(#path), id
+                    crunchy.executor.details.bucket, stringify!(#ident_path), id
                 );
                 let builder = crunchy
                     .executor
@@ -176,7 +232,10 @@ pub fn derive_playback(input: TokenStream) -> TokenStream {
 
     for field in data.fields {
         if let Some(name_ident) = field.ident {
+            // only if the `playback_id` id field exists, playback can be deriven
             if name_ident == "playback_id" {
+                // check if the `playback_id` field has `String` as type or `Option<String>` which
+                // must be handled separately
                 if (&field.ty).into_token_stream().to_string().replace(' ', "").ends_with("String") {
                     playback_id = quote! {
                         async fn playback(&self) -> crate::error::Result<PlaybackStream> {
