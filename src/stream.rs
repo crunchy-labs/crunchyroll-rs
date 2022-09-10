@@ -2,15 +2,15 @@ use crate::common::Request;
 use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
 use crate::{Crunchyroll, Executor, Locale};
 use serde::de::{DeserializeOwned, Error};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::Write;
 use std::sync::Arc;
 
-trait FixStream: DeserializeOwned + Serialize {
-    type Variant: DeserializeOwned + Serialize;
+trait FixStream: DeserializeOwned {
+    type Variant: DeserializeOwned;
 }
 
 fn deserialize_streams<'de, D: Deserializer<'de>, T: FixStream>(
@@ -18,17 +18,23 @@ fn deserialize_streams<'de, D: Deserializer<'de>, T: FixStream>(
 ) -> Result<HashMap<Locale, T>, D::Error> {
     let as_map: HashMap<String, HashMap<Locale, Value>> = HashMap::deserialize(deserializer)?;
 
-    let mut raw: HashMap<Locale, HashMap<String, T::Variant>> = HashMap::new();
+    let mut raw: HashMap<Locale, HashMap<String, Value>> = HashMap::new();
     for (key, value) in as_map {
         for (mut locale, data) in value {
             if locale == Locale::Custom(":".to_string()) {
                 locale = Locale::Custom("".to_string());
             }
-            let t_data = T::Variant::deserialize(data).map_err(|e| Error::custom(e.to_string()))?;
+
+            // check only for errors and not use the `Ok(...)` result in `raw` because `T::Variant`
+            // then must implement `serde::Serialize`
+            if let Err(e) = T::Variant::deserialize(&data) {
+                return Err(Error::custom(e.to_string()))
+            }
+
             if let Some(entry) = raw.get_mut(&locale) {
-                entry.insert(key.clone(), t_data);
+                entry.insert(key.clone(), data.clone());
             } else {
-                raw.insert(locale, HashMap::from([(key.clone(), t_data)]));
+                raw.insert(locale, HashMap::from([(key.clone(), data)]));
             }
         }
     }
@@ -159,7 +165,7 @@ impl StreamSubtitle {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct VideoVariant {
@@ -171,7 +177,7 @@ pub struct VideoVariant {
     pub url: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct PlaybackVariant {
@@ -186,7 +192,7 @@ pub struct PlaybackVariant {
     pub vcodec: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct VideoVariants {
@@ -213,7 +219,7 @@ impl FixStream for VideoVariants {
     type Variant = VideoVariant;
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct PlaybackVariants {

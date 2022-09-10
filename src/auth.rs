@@ -301,11 +301,7 @@ impl CrunchyrollBuilder {
 
         let index_endpoint = "https://beta-api.crunchyroll.com/index/v2";
         #[derive(Deserialize, smart_default::SmartDefault)]
-        #[cfg_attr(
-            feature = "__test_strict",
-            serde(deny_unknown_fields),
-            derive(serde::Serialize)
-        )]
+        #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
         #[cfg_attr(not(feature = "__test_strict"), serde(default))]
         #[allow(dead_code)]
         struct IndexRespCms {
@@ -317,11 +313,7 @@ impl CrunchyrollBuilder {
             signature: String,
         }
         #[derive(Deserialize, Default, Request)]
-        #[cfg_attr(
-            feature = "__test_strict",
-            serde(deny_unknown_fields),
-            derive(serde::Serialize)
-        )]
+        #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
         #[cfg_attr(not(feature = "__test_strict"), serde(default))]
         #[allow(dead_code)]
         struct IndexResp {

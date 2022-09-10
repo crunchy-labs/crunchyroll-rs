@@ -200,7 +200,6 @@ mod wallpaper {
 
     #[derive(Debug, Deserialize, Default)]
     #[serde(from = "String")]
-    #[cfg_attr(feature = "__test_strict", derive(serde::Serialize))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct Wallpaper {
         pub name: String,
