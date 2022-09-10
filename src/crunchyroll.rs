@@ -1,31 +1,33 @@
 use crate::auth::{CrunchyrollBuilder, Executor, SessionToken};
-use crate::enum_values;
 use crate::error::Result;
 use std::sync::Arc;
+use crate::enum_values;
 
 enum_values! {
     #[allow(non_camel_case_types)]
     #[derive(Clone, Debug, Hash, Eq, PartialEq)]
-    Locale;
-    ar_ME = "ar-ME",
-    ar_SA = "ar-SA",
-    de_DE = "de-DE",
-    en_US = "en-US",
-    es_419 = "es-419",
-    es_ES = "es-ES",
-    es_LA = "es-LA",
-    fr_FR = "fr-FR",
-    it_IT = "it-IT",
-    ja_JP = "ja-JP",
-    pt_BR = "pt-BR",
-    ru_RU = "ru-RU"
+    pub enum Locale {
+        ar_ME = "ar-ME"
+        ar_SA = "ar-SA"
+        de_DE = "de-DE"
+        en_US = "en-US"
+        es_419 = "es-419"
+        es_ES = "es-ES"
+        es_LA = "es-LA"
+        fr_FR = "fr-FR"
+        it_IT = "it-IT"
+        ja_JP = "ja-JP"
+        pt_BR = "pt-BR"
+        ru_RU = "ru-RU"
+    }
 }
 
 enum_values! {
     #[derive(Clone, Debug)]
-    MaturityRating;
-    NotMature = "M2",
-    Mature = "M3"
+    pub enum MaturityRating {
+        NotMature = "M2"
+        Mature = "M3"
+    }
 }
 
 /// Starting point of this whole library.

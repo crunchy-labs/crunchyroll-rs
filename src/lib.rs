@@ -36,6 +36,7 @@ pub mod stream;
 // internal
 mod internal;
 mod macros;
+pub(crate) use macros::{enum_values, options};
 
 use auth::Executor;
 pub use common::{BulkResult, Collection, Playback, Streams};

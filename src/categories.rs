@@ -5,22 +5,23 @@ use serde::Deserialize;
 
 enum_values! {
     #[doc = "Video categories / genres"]
-    Category;
-    Action = "action",
-    Adventure = "adventure",
-    Comedy = "comedy",
-    Drama = "drama",
-    Fantasy = "fantasy",
-    Music = "music",
-    Romance = "romance",
-    SciFi = "sci-fi",
-    Seinen = "seinen",
-    Shojo = "shojo",
-    Shonen = "shonen",
-    SliceOfLife = "slice-of-life",
-    Sports = "sports",
-    Supernatural = "supernatural",
-    Thriller = "thriller"
+    pub enum Category {
+        Action = "action"
+        Adventure = "adventure"
+        Comedy = "comedy"
+        Drama = "drama"
+        Fantasy = "fantasy"
+        Music = "music"
+        Romance = "romance"
+        SciFi = "sci-fi"
+        Seinen = "seinen"
+        Shojo = "shojo"
+        Shonen = "shonen"
+        SliceOfLife = "slice-of-life"
+        Sports = "sports"
+        Supernatural = "supernatural"
+        Thriller = "thriller"
+    }
 }
 
 impl From<TenantCategory> for Category {

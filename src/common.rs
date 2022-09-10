@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub(crate) use macros::{Available, FromId, Playback, Request};
+pub(crate) use proc_macros::{Available, FromId, Playback, Request};
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.

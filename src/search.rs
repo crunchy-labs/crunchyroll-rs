@@ -7,10 +7,11 @@ pub mod browse {
 
     enum_values! {
         #[derive(Debug)]
-        BrowseSortType;
-        Popularity = "popularity",
-        NewlyAdded = "newly_added",
-        Alphabetical = "alphabetical"
+        pub enum BrowseSortType {
+            Popularity = "popularity"
+            NewlyAdded = "newly_added"
+            Alphabetical = "alphabetical"
+        }
     }
 
     options! {
@@ -155,10 +156,11 @@ pub mod query {
 
     enum_values! {
         #[derive(Debug)]
-        QueryType;
-        Series = "series",
-        MovieListing = "movie_listing",
-        Episode = "episode"
+        pub enum QueryType {
+            Series = "series"
+            MovieListing = "movie_listing"
+            Episode = "episode"
+        }
     }
 
     options! {

@@ -6,9 +6,10 @@ use std::sync::Arc;
 
 enum_values! {
     #[derive(Debug)]
-    MediaType;
-    Series = "series",
-    Movie = "movie_listing"
+    pub enum MediaType {
+        Series = "series"
+        Movie = "movie_listing"
+    }
 }
 
 #[derive(Debug, Deserialize, Default)]
