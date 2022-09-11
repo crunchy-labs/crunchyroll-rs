@@ -1,6 +1,6 @@
-use crate::common::{Image, Request};
-use crate::error::Result;
-use crate::{enum_values, BulkResult, Crunchyroll, Locale};
+use crate::common::Image;
+use crate::Result;
+use crate::{enum_values, BulkResult, Crunchyroll, Locale, Request};
 use serde::Deserialize;
 
 enum_values! {

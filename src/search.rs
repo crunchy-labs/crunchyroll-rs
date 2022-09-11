@@ -1,9 +1,8 @@
 pub mod browse {
     use crate::categories::Category;
-    use crate::common::{BulkResult, Panel};
-    use crate::error::Result;
-    use crate::media_collection::MediaType;
-    use crate::{enum_values, options, Crunchyroll};
+    use crate::common::BulkResult;
+    use crate::media::{MediaType, Panel};
+    use crate::{enum_values, options, Crunchyroll, Result};
 
     enum_values! {
         #[derive(Debug)]
@@ -55,7 +54,8 @@ pub mod browse {
 pub mod query {
     use crate::common::Request;
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
-    use crate::{enum_values, options, BulkResult, Collection, Crunchyroll, Executor};
+    use crate::media::Collection;
+    use crate::{enum_values, options, BulkResult, Crunchyroll, Executor};
     use serde::Deserialize;
     use std::sync::Arc;
 

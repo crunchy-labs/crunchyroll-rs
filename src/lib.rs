@@ -23,29 +23,24 @@
 //! fail.
 
 pub mod account;
-pub mod auth;
 pub mod categories;
 pub mod common;
 pub mod crunchyroll;
 pub mod error;
 pub mod media;
-pub mod media_collection;
 pub mod search;
-pub mod stream;
 
 // internal
 mod internal;
 mod macros;
+pub(crate) use common::Request;
+pub(crate) use crunchyroll::Executor;
+pub(crate) use error::Result;
 pub(crate) use macros::{enum_values, options};
 
-use auth::Executor;
-pub use common::{BulkResult, Collection, Playback, Streams};
+pub use common::BulkResult;
 pub use crunchyroll::{Crunchyroll, Locale};
-pub use media::{Episode, Movie};
-pub use media_collection::{MovieListing, Season, Series};
-#[cfg(feature = "streaming")]
-pub use stream::{DefaultStreams, VariantData, VariantSegment};
-pub use stream::{PlaybackStream, VideoStream};
+pub use media::{Episode, Movie, MovieListing, Season, Series};
 
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;

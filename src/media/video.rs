@@ -4,8 +4,8 @@ use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
 
 use crate::common::{FromId, Image, Request};
-use crate::error::Result;
-use crate::{Executor, Locale, Playback, PlaybackStream, Streams, VideoStream};
+use crate::media::{Playback, Streams, VideoStream};
+use crate::{Executor, Locale, Result};
 
 #[derive(Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]

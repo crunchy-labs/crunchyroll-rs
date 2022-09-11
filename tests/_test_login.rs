@@ -9,7 +9,7 @@ async fn login_with_credentials() {
     let user = env::var("USER").expect("'USER' environment variable not found");
     let password = env::var("PASSWORD").expect("'PASSWORD' environment variable not found");
 
-    let crunchy = Crunchyroll::new()
+    let crunchy = Crunchyroll::builder()
         .login_with_credentials(user, password)
         .await;
 
@@ -25,7 +25,7 @@ async fn login_with_refresh_token() {
     let refresh_token =
         env::var("REFRESH_TOKEN").expect("'REFRESH_TOKEN' environment variable not found");
 
-    let crunchy = Crunchyroll::new()
+    let crunchy = Crunchyroll::builder()
         .login_with_refresh_token(refresh_token)
         .await;
 
@@ -40,7 +40,7 @@ async fn login_with_refresh_token() {
 async fn login_with_etp_rt() {
     let etp_rt = env::var("ETP_RT").expect("'ETP_RT' environment variable not found");
 
-    let crunchy = Crunchyroll::new().login_with_etp_rt(etp_rt).await;
+    let crunchy = Crunchyroll::builder().login_with_etp_rt(etp_rt).await;
 
     assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
 
@@ -53,7 +53,9 @@ async fn login_with_etp_rt() {
 async fn login_with_session_id() {
     let session_id = env::var("SESSION_ID").expect("'SESSION_ID' environment variable not found");
 
-    let crunchy = Crunchyroll::new().login_with_session_id(session_id).await;
+    let crunchy = Crunchyroll::builder()
+        .login_with_session_id(session_id)
+        .await;
 
     assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
 

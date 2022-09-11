@@ -1,6 +1,5 @@
 use crate::common::Request;
-use crate::error::Result;
-use crate::{Crunchyroll, Executor, Locale};
+use crate::{Crunchyroll, Executor, Locale, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::Value;
@@ -195,9 +194,7 @@ fn mature_content_flag_manga<'de, D: serde::Deserializer<'de>>(
 }
 
 mod wallpaper {
-    use crate::common::Request;
-    use crate::error::Result;
-    use crate::Crunchyroll;
+    use crate::{Crunchyroll, Request, Result};
     use serde::Deserialize;
 
     #[derive(Debug, Deserialize, Default)]

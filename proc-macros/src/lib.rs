@@ -37,7 +37,7 @@ pub fn derive_request(input: TokenStream) -> TokenStream {
     }
 
     let expanded = quote! {
-        impl #impl_generics crate::common::Request for #ident #ty_generics # where_clause {
+        impl #impl_generics crate::Request for #ident #ty_generics # where_clause {
             #executor
         }
     };
@@ -164,7 +164,7 @@ pub fn derive_from_id(input: TokenStream) -> TokenStream {
             let opt_impl_desc = format!("Return all {} by their parent {} id.", ident_path, name);
             opt_impls.push(quote! {
                 #[doc = #opt_impl_desc]
-                pub async fn #from_name_id(crunchy: &crate::crunchyroll::Crunchyroll, #name_id: String) -> crate::error::Result<crate::common::BulkResult<#ident>> {
+                pub async fn #from_name_id(crunchy: &crate::crunchyroll::Crunchyroll, #name_id: String) -> crate::Result<crate::common::BulkResult<#ident>> {
                     let endpoint = format!(
                         "https://beta-api.crunchyroll.com/cms/v2/{}/{}",
                         crunchy.executor.details.bucket, stringify!(#ident_path)
@@ -183,7 +183,7 @@ pub fn derive_from_id(input: TokenStream) -> TokenStream {
             other_impls.push(quote! {
                 impl #opt_path {
                     #[doc = #other_impl_desc]
-                    pub async fn #ident_path(&self) -> crate::error::Result<crate::common::BulkResult<#ident>> {
+                    pub async fn #ident_path(&self) -> crate::Result<crate::common::BulkResult<#ident>> {
                         #ident::#from_name_id(&crate::crunchyroll::Crunchyroll { executor: self.__get_executor().unwrap() }, self.id.clone()).await
                     }
                 }
@@ -194,7 +194,7 @@ pub fn derive_from_id(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         #[async_trait::async_trait]
         impl #impl_generics crate::common::FromId for #ident #ty_generics #where_clause {
-            async fn from_id(crunchy: &crate::crunchyroll::Crunchyroll, id: String) -> crate::error::Result<Self> {
+            async fn from_id(crunchy: &crate::crunchyroll::Crunchyroll, id: String) -> crate::Result<Self> {
                 let endpoint = format!(
                     "https://beta-api.crunchyroll.com/cms/v2/{}/{}/{}",
                     crunchy.executor.details.bucket, stringify!(#ident_path), id
@@ -238,7 +238,7 @@ pub fn derive_playback(input: TokenStream) -> TokenStream {
                 // must be handled separately
                 if (&field.ty).into_token_stream().to_string().replace(' ', "").ends_with("String") {
                     playback_id = quote! {
-                        async fn playback(&self) -> crate::error::Result<PlaybackStream> {
+                        async fn playback(&self) -> crate::Result<crate::media::PlaybackStream> {
                             self.executor
                                 .request(self.executor.client.get(&self.playback_id))
                                 .await
@@ -246,13 +246,13 @@ pub fn derive_playback(input: TokenStream) -> TokenStream {
                     }
                 } else if field.ty.into_token_stream().to_string().replace(' ', "").ends_with("Option<String>") {
                     playback_id = quote! {
-                        async fn playback(&self) -> crate::error::Result<PlaybackStream> {
+                        async fn playback(&self) -> crate::Result<crate::media::PlaybackStream> {
                             if let Some(playback_id) = &self.playback_id {
                                 self.executor
                                     .request(self.executor.client.get(playback_id))
                                     .await
                             } else {
-                                Err(CrunchyrollError::Request(CrunchyrollErrorContext::new(
+                                Err(crate::error::CrunchyrollError::Request(crate::error::CrunchyrollErrorContext::new(
                                     "no playback id available".into(),
                                 )))
                             }
@@ -265,7 +265,7 @@ pub fn derive_playback(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[async_trait::async_trait]
-        impl #impl_generics crate::common::Playback for #ident #ty_generics # where_clause {
+        impl #impl_generics crate::media::Playback for #ident #ty_generics # where_clause {
             #playback_id
         }
     };

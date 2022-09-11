@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::utils::store::{get_store, has_store, set_store, Store};
-use crunchyroll_rs::auth::SessionToken;
+use crunchyroll_rs::crunchyroll::SessionToken;
 use crunchyroll_rs::Crunchyroll;
 
 pub static SESSION: Store<Crunchyroll> = Store::new(|| {
@@ -9,11 +9,11 @@ pub static SESSION: Store<Crunchyroll> = Store::new(|| {
         let raw_session = get_store("session".into()).unwrap();
         let (token_type, token) = raw_session.split_once(':').unwrap_or(("", ""));
         let crunchy = match token_type {
-            "refresh_token" => Crunchyroll::new()
+            "refresh_token" => Crunchyroll::builder()
                 .login_with_refresh_token(token.into())
                 .await
                 .unwrap(),
-            "etp_rt" => Crunchyroll::new()
+            "etp_rt" => Crunchyroll::builder()
                 .login_with_etp_rt(token.into())
                 .await
                 .unwrap(),

@@ -1,16 +1,8 @@
 use crate::common::{Available, FromId, Image, Request};
-use crate::{enum_values, Executor, Locale};
+use crate::{Executor, Locale};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
-
-enum_values! {
-    #[derive(Debug)]
-    pub enum MediaType {
-        Series = "series"
-        Movie = "movie_listing"
-    }
-}
 
 #[derive(Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
