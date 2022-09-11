@@ -8,14 +8,10 @@ pub(crate) use proc_macros::{Available, FromId, Request};
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(
-    not(feature = "__test_strict"),
-    serde(default),
-    derive(smart_default::SmartDefault)
-)]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct BulkResult<T: Request + DeserializeOwned> {
     #[cfg_attr(not(feature = "__test_strict"), default(Vec::new()))]
     pub items: Vec<T>,

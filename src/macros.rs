@@ -14,6 +14,7 @@ macro_rules! enum_values {
         $(
             #[$attribute]
         )*
+        #[derive(Clone)]
         $v enum $name {
             $(
                 $field
@@ -125,15 +126,24 @@ macro_rules! enum_values {
 macro_rules! options {
     // `$(#[$attribute:meta])*` should generally only be used for `#[doc = "..."]`
     ($name:ident; $($(#[$attribute:meta])* $field:ident($t:ty, $query_name:literal) = $default:expr),*) => {
-        #[derive(smart_default::SmartDefault)]
+        #[derive(Clone)]
         pub struct $name {
             $(
                 $(
                     #[$attribute]
                 )*
-                #[default($default)]
                 $field: Option<$t>
             ),*
+        }
+
+        impl Default for $name {
+            fn default() -> Self {
+                Self {
+                    $(
+                        $field: $default
+                    ),*
+                }
+            }
         }
 
         impl $name {

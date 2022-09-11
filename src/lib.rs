@@ -33,6 +33,8 @@ pub mod search;
 // internal
 mod internal;
 mod macros;
+
+// internal
 pub(crate) use common::Request;
 pub(crate) use crunchyroll::Executor;
 pub(crate) use error::Result;

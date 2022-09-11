@@ -1,17 +1,15 @@
-use crate::utils::{Store, SESSION};
-use crunchyroll_rs::categories::TenantCategory;
-use crunchyroll_rs::BulkResult;
+use crate::utils::SESSION;
 
 mod utils;
 
-static TENANT_CATEGORIES: Store<BulkResult<TenantCategory>> = Store::new(|| {
-    Box::pin(async {
-        let crunchy = SESSION.get().await?;
-        Ok(crunchy.tenant_categories().await?)
-    })
-});
-
 #[tokio::test]
 async fn tenant_categories() {
-    assert_result!(TENANT_CATEGORIES.get().await)
+    let crunchy = SESSION.get().await.unwrap();
+    assert_result!(crunchy.tenant_categories(false).await)
+}
+
+#[tokio::test]
+async fn tenant_categories_with_subcategories() {
+    let crunchy = SESSION.get().await.unwrap();
+    assert_result!(crunchy.tenant_categories(true).await)
 }
