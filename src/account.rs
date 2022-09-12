@@ -1,8 +1,8 @@
 use crate::common::Request;
-use crate::{Crunchyroll, Executor, Locale, Result};
+use crate::{Crunchyroll, EmptyJsonProxy, Executor, Locale, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -112,8 +112,13 @@ impl Account {
 
     async fn update_preferences(&self, name: String, value: String) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
-        let builder = self.executor.client.patch(endpoint).json(&[(name, value)]);
-        self.executor.request(builder).await
+        let builder = self
+            .executor
+            .client
+            .patch(endpoint)
+            .json(&json!({ name: value }));
+        self.executor.request::<EmptyJsonProxy>(builder).await?;
+        Ok(())
     }
 
     /// Changes the current account password.
@@ -123,22 +128,24 @@ impl Account {
         new_password: String,
     ) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/credentials";
-        let builder = self.executor.client.patch(endpoint).json(&[
-            ("accountId", self.account_id.clone()),
-            ("current_password", current_password),
-            ("new_password", new_password),
-        ]);
-        self.executor.request(builder).await
+        let builder = self.executor.client.patch(endpoint).json(&json!({
+            "accountId": self.account_id.clone(),
+            "current_password": current_password,
+            "new_password": new_password,
+        }));
+        self.executor.request::<EmptyJsonProxy>(builder).await?;
+        Ok(())
     }
 
     /// Changes the current account email.
     pub async fn change_email(&self, current_password: String, new_email: String) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/credentials";
-        let builder = self.executor.client.patch(endpoint).json(&[
-            ("current_password", current_password),
-            ("new_email", new_email),
-        ]);
-        self.executor.request(builder).await
+        let builder = self.executor.client.patch(endpoint).json(&json!({
+            "current_password": current_password,
+            "new_email": new_email,
+        }));
+        self.executor.request(builder).await?;
+        Ok(())
     }
 
     /// Changes the current profile wallpaper.
@@ -148,7 +155,7 @@ impl Account {
             .executor
             .client
             .patch(endpoint)
-            .json(&[("wallpaper", &wallpaper.name)]);
+            .json(&json!({"wallpaper": &wallpaper.name}));
         self.executor.request(builder).await?;
         self.wallpaper = wallpaper;
         Ok(())

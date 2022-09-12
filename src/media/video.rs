@@ -163,7 +163,7 @@ type MovieImages = EpisodeImages;
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Movie {
     #[serde(skip)]
-    executor: Arc<Executor>,
+    pub(crate) executor: Arc<Executor>,
 
     pub id: String,
     #[serde(rename = "playback")]

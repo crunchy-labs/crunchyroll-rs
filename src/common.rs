@@ -13,12 +13,31 @@ pub(crate) use proc_macros::{Available, FromId, Request};
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct BulkResult<T: Request + DeserializeOwned> {
-    #[cfg_attr(not(feature = "__test_strict"), default(Vec::new()))]
+    #[default(Vec::new())]
     pub items: Vec<T>,
     pub total: u32,
 }
 
 impl<T: Request + DeserializeOwned> Request for BulkResult<T> {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
+        for item in self.items.iter_mut() {
+            item.__set_executor(executor.clone())
+        }
+    }
+}
+
+/// Just like [`BulkResult`] but without [`BulkResult::total`] because some request does not have
+/// this field (but should?!).
+#[derive(Debug, Deserialize, smart_default::SmartDefault)]
+#[serde(bound = "T: Request + DeserializeOwned")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct CrappyBulkResult<T: Request + DeserializeOwned> {
+    #[default(Vec::new())]
+    pub items: Vec<T>,
+}
+
+impl<T: Request + DeserializeOwned> Request for CrappyBulkResult<T> {
     fn __set_executor(&mut self, executor: Arc<Executor>) {
         for item in self.items.iter_mut() {
             item.__set_executor(executor.clone())
@@ -56,6 +75,8 @@ pub trait Request {
 impl Request for () {}
 
 impl<K, V> Request for HashMap<K, V> {}
+
+impl Request for serde_json::Value {}
 
 /// Check if further actions with the struct which implements this are available.
 pub trait Available: Request {

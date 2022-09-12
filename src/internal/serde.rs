@@ -1,7 +1,27 @@
+use crate::Request;
 use chrono::Duration;
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
+
+#[derive(Request)]
+pub(crate) struct EmptyJsonProxy;
+impl<'de> Deserialize<'de> for EmptyJsonProxy {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if let Ok(map) = serde_json::Map::deserialize(deserializer) {
+            if map.is_empty() {
+                return Ok(EmptyJsonProxy);
+            }
+        }
+        Err(Error::custom("result must be empty object / map"))
+    }
+}
+impl From<EmptyJsonProxy> for () {
+    fn from(_: EmptyJsonProxy) -> Self {}
+}
 
 pub(crate) fn deserialize_millis_to_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where

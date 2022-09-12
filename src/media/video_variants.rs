@@ -228,6 +228,10 @@ pub struct Panel {
     executor: Arc<Executor>,
 
     pub id: String,
+    #[serde(rename = "__links__")]
+    #[serde(default)]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_stream_id_option")]
+    pub stream_id: Option<String>,
     #[serde(rename = "playback")]
     pub playback_id: Option<String>,
     pub external_id: String,
@@ -240,12 +244,6 @@ pub struct Panel {
     pub description: String,
     pub promo_description: String,
 
-    pub new: bool,
-    pub new_content: bool,
-
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub last_public: DateTime<Utc>,
-
     pub series_metadata: Option<SeriesMetadata>,
     pub movie_listing_metadata: Option<MovieListingMetadata>,
     pub episode_metadata: Option<EpisodeMetadata>,
@@ -255,6 +253,12 @@ pub struct Panel {
     #[serde(alias = "type")]
     #[cfg(feature = "__test_strict")]
     collection_type: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    new: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    new_content: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    last_public: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     linked_resource_key: crate::StrictValue,
 }

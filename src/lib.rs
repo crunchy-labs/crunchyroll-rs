@@ -27,6 +27,7 @@ pub mod categories;
 pub mod common;
 pub mod crunchyroll;
 pub mod error;
+pub mod list;
 pub mod media;
 pub mod search;
 
@@ -38,6 +39,7 @@ mod macros;
 pub(crate) use common::Request;
 pub(crate) use crunchyroll::Executor;
 pub(crate) use error::Result;
+pub(crate) use internal::serde::EmptyJsonProxy;
 pub(crate) use macros::{enum_values, options};
 
 pub use common::BulkResult;

@@ -4,6 +4,10 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
 
+pub trait VideoCollection {
+    fn id(&self) -> String;
+}
+
 #[derive(Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -19,7 +23,7 @@ pub struct MovieListingImages {
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct MovieListing {
     #[serde(skip)]
-    executor: Arc<Executor>,
+    pub(crate) executor: Arc<Executor>,
 
     pub id: String,
     pub channel_id: String,
@@ -65,6 +69,68 @@ pub struct MovieListing {
     available_date: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     premium_date: crate::StrictValue,
+}
+
+impl VideoCollection for MovieListing {
+    fn id(&self) -> String {
+        self.id.clone()
+    }
+}
+
+type SeriesImages = MovieListingImages;
+
+/// This struct represents a crunchyroll series.
+#[allow(dead_code)]
+#[derive(Deserialize, Debug, Default, Request, Available, FromId)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct Series {
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
+
+    pub id: String,
+    pub channel_id: String,
+
+    pub slug: String,
+    pub title: String,
+    pub slug_title: String,
+    pub seo_title: String,
+    pub description: String,
+    pub seo_description: String,
+    pub extended_description: String,
+
+    pub series_launch_year: u32,
+    pub content_provider: String,
+
+    pub episode_count: u32,
+    pub season_count: u32,
+    pub media_count: u32,
+
+    pub keywords: Vec<String>,
+    pub season_tags: Vec<String>,
+
+    pub images: SeriesImages,
+
+    pub is_subbed: bool,
+    pub is_dubbed: bool,
+    pub is_simulcast: bool,
+    pub audio_locales: Vec<Locale>,
+    pub subtitle_locales: Vec<Locale>,
+
+    pub maturity_ratings: Vec<String>,
+    pub is_mature: bool,
+    pub mature_blocked: bool,
+
+    pub availability_notes: String,
+
+    #[cfg(feature = "__test_strict")]
+    extended_maturity_rating: crate::StrictValue,
+}
+
+impl VideoCollection for Series {
+    fn id(&self) -> String {
+        self.id.clone()
+    }
 }
 
 #[allow(dead_code)]
@@ -123,54 +189,4 @@ pub struct Season {
     versions: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     identifier: crate::StrictValue,
-}
-
-type SeriesImages = MovieListingImages;
-
-/// This struct represents a crunchyroll series.
-#[allow(dead_code)]
-#[derive(Deserialize, Debug, Default, Request, Available, FromId)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct Series {
-    #[serde(skip)]
-    executor: Arc<Executor>,
-
-    pub id: String,
-    pub channel_id: String,
-
-    pub slug: String,
-    pub title: String,
-    pub slug_title: String,
-    pub seo_title: String,
-    pub description: String,
-    pub seo_description: String,
-    pub extended_description: String,
-
-    pub series_launch_year: u32,
-    pub content_provider: String,
-
-    pub episode_count: u32,
-    pub season_count: u32,
-    pub media_count: u32,
-
-    pub keywords: Vec<String>,
-    pub season_tags: Vec<String>,
-
-    pub images: SeriesImages,
-
-    pub is_subbed: bool,
-    pub is_dubbed: bool,
-    pub is_simulcast: bool,
-    pub audio_locales: Vec<Locale>,
-    pub subtitle_locales: Vec<Locale>,
-
-    pub maturity_ratings: Vec<String>,
-    pub is_mature: bool,
-    pub mature_blocked: bool,
-
-    pub availability_notes: String,
-
-    #[cfg(feature = "__test_strict")]
-    extended_maturity_rating: crate::StrictValue,
 }

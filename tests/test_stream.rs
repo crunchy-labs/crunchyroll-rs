@@ -1,3 +1,5 @@
+#![cfg(feature = "__test_strict")]
+
 use crate::utils::Store;
 use crate::utils::SESSION;
 use crunchyroll_rs::media::{DefaultStreams, VariantData, VariantSegment, VideoStream};

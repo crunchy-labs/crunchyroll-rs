@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 enum_values! {
     #[allow(non_camel_case_types)]
-    #[derive(Clone, Debug, Hash, Eq, PartialEq)]
+    #[derive(Debug, Hash, Eq, PartialEq)]
     pub enum Locale {
         ar_ME = "ar-ME"
         ar_SA = "ar-SA"
@@ -21,7 +21,7 @@ enum_values! {
 }
 
 enum_values! {
-    #[derive(Clone, Debug)]
+    #[derive(Debug)]
     pub enum MaturityRating {
         NotMature = "M2"
         Mature = "M3"
@@ -60,7 +60,8 @@ impl Crunchyroll {
         self.executor
             .to_owned()
             .request(self.executor.client.get(endpoint))
-            .await
+            .await?;
+        Ok(())
     }
 }
 
