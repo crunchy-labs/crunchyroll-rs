@@ -5,10 +5,14 @@ use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
 
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SearchMetadata {
+    // `None` if queried by `Crunchyroll::by_query`
+    pub last_public: Option<DateTime<Utc>>,
+    // `None` if queried by `Crunchyroll::by_query`
+    pub rank: Option<u32>,
     pub score: f64,
 }
 
@@ -172,6 +176,7 @@ pub struct CollectionImages {
     pub thumbnail: Option<Vec<Vec<Image>>>,
     pub poster_tall: Option<Vec<Vec<Image>>>,
     pub poster_wide: Option<Vec<Vec<Image>>>,
+    pub promo_image: Option<Vec<Vec<Image>>>,
 }
 
 #[allow(dead_code)]

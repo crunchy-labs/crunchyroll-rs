@@ -43,6 +43,26 @@ where
     Ok(value.unwrap_or_default())
 }
 
+/// Sometimes response values are `"none"` but should actually be `null`. This function implements
+/// this functionality.
+pub(crate) fn deserialize_maybe_none_to_option<'de, D>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Option<String> = Deserialize::deserialize(deserializer)?;
+    if let Some(maybe_none) = &value {
+        if maybe_none == "none" || maybe_none.is_empty() {
+            Ok(None)
+        } else {
+            Ok(value)
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 pub(crate) fn deserialize_stream_id<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<String, D::Error> {
@@ -69,6 +89,22 @@ pub(crate) fn deserialize_stream_id<'de, D: Deserializer<'de>>(
     } else {
         Err(Error::custom("cannot extract stream id"))
     }
+}
+
+pub(crate) fn deserialize_resource<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<String, D::Error> {
+    #[derive(Deserialize)]
+    struct ResourceHref {
+        href: String,
+    }
+    #[derive(Deserialize)]
+    struct Resource {
+        resource: ResourceHref,
+    }
+
+    let resource: Resource = Resource::deserialize(deserializer)?;
+    Ok(resource.resource.href)
 }
 
 pub(crate) fn deserialize_stream_id_option<'de, D: Deserializer<'de>>(

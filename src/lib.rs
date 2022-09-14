@@ -27,6 +27,7 @@ pub mod categories;
 pub mod common;
 pub mod crunchyroll;
 pub mod error;
+pub mod feed;
 pub mod list;
 pub mod media;
 pub mod search;

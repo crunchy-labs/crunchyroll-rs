@@ -480,14 +480,24 @@ mod auth {
     ) -> serde_json::Map<String, serde_json::Value> {
         for (key, value) in map.clone() {
             if key.starts_with("__") && key.ends_with("__") {
-                // `Episode` requires the __links__ field because crunchyroll does not provide another
-                // way to obtain a stream id
                 if key == "__links__" {
                     let classic_crunchyroll_exception: serde_json::Map<String, serde_json::Value> =
                         serde_json::from_value(value).unwrap();
+                    #[allow(clippy::if_same_then_else)]
                     if classic_crunchyroll_exception.contains_key("episode/series")
                         && classic_crunchyroll_exception.contains_key("streams")
                     {
+                        // `Episode` requires the __links__ field because crunchyroll does not provide another
+                        // way to obtain a stream id
+                        continue;
+                    } else if map
+                        .get("id")
+                        .unwrap_or(&serde_json::Value::default())
+                        .as_str()
+                        .unwrap_or("")
+                        .starts_with("dynamic_collection-")
+                    {
+                        // `HomeFeed` has some implementations which require __links__ to be accessible
                         continue;
                     }
                 }
