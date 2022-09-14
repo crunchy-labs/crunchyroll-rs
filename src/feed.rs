@@ -92,6 +92,8 @@ pub enum HomeFeedType {
     /// Represents a series. Call [`Series::from_id`] with the value of this field to get a usable
     /// [`Series`] struct.
     Series(String),
+    /// Results similar to a series. Call [`Series::similar`] with the value of this field as first
+    /// argument to get similar series.
     SimilarTo(String),
     /// Represents a separate feed. Call [`CuratedFeed::from_id`] with the value of this field to
     /// get a usable [`CuratedFeed`] struct.

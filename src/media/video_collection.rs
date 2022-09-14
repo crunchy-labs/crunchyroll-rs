@@ -1,5 +1,7 @@
 use crate::common::{Available, FromId, Image, Request};
-use crate::{Executor, Locale};
+use crate::media::Panel;
+use crate::Result;
+use crate::{options, BulkResult, Executor, Locale};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
@@ -130,6 +132,30 @@ pub struct Series {
 impl VideoCollection for Series {
     fn id(&self) -> String {
         self.id.clone()
+    }
+}
+
+options! {
+    SimilarOptions;
+    #[doc = "Limit of results to return."]
+    limit(u32, "n") = Some(20)
+}
+
+impl Series {
+    pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<Panel>> {
+        let endpoint = "https://beta.crunchyroll.com/content/v1/13050d47-adec-50c9-ae63-5e2ed8f4e251/similar_to";
+        let builder = self
+            .executor
+            .client
+            .get(endpoint)
+            .query(&options.to_query(&[
+                ("guid".to_string(), self.id.clone()),
+                (
+                    "locale".to_string(),
+                    self.executor.details.locale.to_string(),
+                ),
+            ]));
+        self.executor.request(builder).await
     }
 }
 
