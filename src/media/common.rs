@@ -2,7 +2,7 @@ use crate::media::{PlaybackStream, VideoStream};
 use crate::Result;
 
 use crate::enum_values;
-pub(crate) use proc_macros::Playback;
+pub(crate) use proc_macro::Playback;
 
 enum_values! {
     #[derive(Debug)]

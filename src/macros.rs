@@ -1,4 +1,4 @@
-/// This proc-macros allows to crete enums with string values. The syntax for this is like specifying a
+/// This proc-macro allows to crete enums with string values. The syntax for this is like specifying a
 /// enum with numerics values, just with strings instead of numbers.
 /// Every created enum has a `Custom(String)`
 /// field which can be used to represent custom values of the enums purpose (in case the enum
@@ -67,7 +67,7 @@ macro_rules! enum_values {
     };
 }
 
-/// This proc-macros creates a struct which is internal primarily used to specify request options for
+/// This proc-macro creates a struct which is internal primarily used to specify request options for
 /// specific endpoints.
 ///
 /// # Examples
