@@ -30,6 +30,7 @@ pub mod error;
 pub mod feed;
 pub mod list;
 pub mod media;
+pub mod rating;
 pub mod search;
 
 // internal

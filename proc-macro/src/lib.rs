@@ -96,11 +96,11 @@ struct DeriveFromIdOpts {
 /// struct Season;
 ///
 /// #[derive(FromId)]
-/// #[from(multiple(AStruct))]
+/// #[from_id(multiple(Season))]
 /// struct Episode;
 /// ```
 ///
-/// This would lead to the following implementation:
+/// This would lead to the following generated implementation:
 ///
 /// ```
 /// struct Season;
@@ -115,15 +115,15 @@ struct DeriveFromIdOpts {
 ///     }
 /// }
 ///
-/// // generated from `#[from(multiple(AStruct))]`
-/// impl AStruct {
-///     pub async fn from_season_id(crunchy: Crunchyroll, a_struct_id: String) -> Result<BulkResult<Self>, CrunchyrollError> {
+/// // generated from `#[from_id(multiple(Season))]`
+/// impl Episode {
+///     pub async fn from_season_id(crunchy: &Crunchyroll, season_id: String) -> Result<BulkResult<Self>, CrunchyrollError> {
 ///         /* ... */
 ///     }
 /// }
 ///
-/// // generated from `#[from(multiple(AStruct))]`
-/// impl AnotherStruct {
+/// // generated from `#[from_id(multiple(Season))]`
+/// impl Season {
 ///     pub async fn episodes(&self) -> Result<BulkResult<Self>, CrunchyrollError> {
 ///         /* ... */
 ///     }

@@ -1,5 +1,5 @@
 use crate::common::{Available, FromId, Image, Request};
-use crate::media::Panel;
+use crate::media::{Collection, Panel};
 use crate::Result;
 use crate::{options, BulkResult, Executor, Locale};
 use chrono::{DateTime, Utc};
@@ -142,7 +142,7 @@ options! {
 }
 
 impl Series {
-    pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<Panel>> {
+    pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<Collection>> {
         let endpoint = "https://beta.crunchyroll.com/content/v1/13050d47-adec-50c9-ae63-5e2ed8f4e251/similar_to";
         let builder = self
             .executor

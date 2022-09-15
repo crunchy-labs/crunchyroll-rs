@@ -59,10 +59,6 @@ pub struct Episode {
     pub sequence_number: u32,
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
-    #[cfg_attr(
-        feature = "__test_strict",
-        serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")
-    )]
     #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
@@ -180,10 +176,6 @@ pub struct Movie {
 
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
-    #[cfg_attr(
-        feature = "__test_strict",
-        serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")
-    )]
     #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 

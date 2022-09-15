@@ -71,9 +71,9 @@ mod auth {
     use crate::{Crunchyroll, Locale};
     use chrono::{DateTime, Duration, Utc};
     use reqwest::header::HeaderMap;
-    use reqwest::RequestBuilder;
+    use reqwest::{IntoUrl, RequestBuilder};
     use serde::de::DeserializeOwned;
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
     use std::ops::Add;
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -133,6 +133,26 @@ mod auth {
     }
 
     impl Executor {
+        pub(crate) fn get<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.get(url))
+        }
+
+        pub(crate) fn post<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.post(url))
+        }
+
+        pub(crate) fn put<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.put(url))
+        }
+
+        pub(crate) fn patch<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.patch(url))
+        }
+
+        pub(crate) fn delete<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.delete(url))
+        }
+
         pub(crate) async fn request<T: Request + DeserializeOwned>(
             self: &Arc<Self>,
             mut builder: RequestBuilder,
@@ -249,6 +269,36 @@ mod auth {
                     key_pair_id: "".to_string(),
                 },
             }
+        }
+    }
+
+    pub(crate) struct ExecutorRequestBuilder {
+        executor: Arc<Executor>,
+        builder: RequestBuilder
+    }
+
+    impl ExecutorRequestBuilder {
+        pub(crate) fn new(executor: Arc<Executor>, builder: RequestBuilder) -> Self {
+            Self {
+                executor,
+                builder
+            }
+        }
+
+        pub(crate) fn query<T: Serialize + ?Sized>(mut self, query: &T) -> ExecutorRequestBuilder {
+            self.builder = self.builder.query(query);
+
+            self
+        }
+
+        pub(crate) fn json<T: Serialize + ?Sized>(mut self, json: &T) -> ExecutorRequestBuilder {
+            self.builder = self.builder.json(json);
+
+            self
+        }
+
+        pub(crate) async fn request<T: Request + DeserializeOwned>(self) -> Result<T> {
+            self.executor.request(self.builder).await
         }
     }
 

@@ -13,7 +13,10 @@ pub struct SearchMetadata {
     pub last_public: Option<DateTime<Utc>>,
     // `None` if queried by `Crunchyroll::by_query`
     pub rank: Option<u32>,
+
     pub score: f64,
+    // `None` if not queried by `Series::similar` or `MovieListing::similar`
+    pub popularity_score: Option<f64>
 }
 
 #[allow(dead_code)]
@@ -60,10 +63,6 @@ pub struct MovieListingMetadata {
 
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
-    #[cfg_attr(
-        feature = "__test_strict",
-        serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")
-    )]
     #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
@@ -115,10 +114,6 @@ pub struct EpisodeMetadata {
     pub sequence_number: u32,
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
-    #[cfg_attr(
-        feature = "__test_strict",
-        serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")
-    )]
     #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
@@ -169,6 +164,38 @@ pub struct EpisodeMetadata {
     tenant_categories: Option<crate::StrictValue>,
 }
 
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct MovieMetadata {
+    pub movie_listing_id: String,
+
+    pub movie_listing_title: String,
+    pub movie_listing_slug_title: String,
+
+    #[serde(alias = "duration_ms")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[default(Duration::milliseconds(0))]
+    pub duration: Duration,
+
+    pub is_subbed: bool,
+    pub is_dubbed: bool,
+    pub closed_captions_available: bool,
+
+    pub is_premium_only: bool,
+
+    pub maturity_ratings: Vec<String>,
+    pub is_mature: bool,
+    pub mature_blocked: bool,
+
+    pub available_offline: bool,
+    pub availability_notes: String,
+
+    #[cfg(feature = "__test_strict")]
+    extended_maturity_rating: crate::StrictValue,
+}
+
 #[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -212,6 +239,7 @@ pub struct Collection {
     pub series_metadata: Option<SeriesMetadata>,
     pub movie_listing_metadata: Option<MovieListingMetadata>,
     pub episode_metadata: Option<EpisodeMetadata>,
+    pub movie_metadata: Option<MovieMetadata>,
 
     pub images: Option<CollectionImages>,
 
@@ -252,6 +280,7 @@ pub struct Panel {
     pub series_metadata: Option<SeriesMetadata>,
     pub movie_listing_metadata: Option<MovieListingMetadata>,
     pub episode_metadata: Option<EpisodeMetadata>,
+    pub movie_metadata: Option<MovieMetadata>,
 
     pub images: Option<PanelImages>,
 

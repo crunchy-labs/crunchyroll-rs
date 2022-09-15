@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::Request;
 use chrono::Duration;
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
@@ -30,6 +31,11 @@ where
     Ok(Duration::milliseconds(i64::deserialize(deserializer)?))
 }
 
+pub(crate) fn deserialize_try_from_string<'de, D, T: FromStr>(deserializer: D) -> Result<T, D::Error> where D: Deserializer<'de> {
+    let value = String::deserialize(deserializer)?;
+    T::from_str(value.as_str()).map_err(|_| Error::custom("could not convert string to T"))
+}
+
 /// Some response values are `null` for whatever reason even though they shouldn't be.
 /// This is a fix to these events. If this occurs more often, a custom `Deserialize` implementation
 /// must be written which automatically detects if a value is `null` even it they shouldn't be
@@ -60,6 +66,16 @@ where
         }
     } else {
         Ok(None)
+    }
+}
+
+/// Deserializes a empty string (`""`) to `None`.
+pub(crate) fn deserialize_empty_pre_string_to_none<'de, D, T> (deserializer: D) -> Result<Option<T>, D::Error> where D: Deserializer<'de>, T: From<String> {
+    let value: String = Deserialize::deserialize(deserializer)?;
+    if value.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(T::from(value)))
     }
 }
 
