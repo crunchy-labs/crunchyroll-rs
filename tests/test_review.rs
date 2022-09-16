@@ -1,7 +1,7 @@
-use crunchyroll_rs::{BulkResult, Series};
-use crate::utils::{SESSION, Store};
+use crate::utils::{Store, SESSION};
 use crunchyroll_rs::common::FromId;
 use crunchyroll_rs::rating::{RatingStar, Review, ReviewOptions};
+use crunchyroll_rs::{BulkResult, Series};
 
 mod utils;
 
@@ -27,7 +27,14 @@ async fn rating() {
 
 #[tokio::test]
 async fn rate() {
-    assert_result!(SERIES.get().await.unwrap().rate(RatingStar::FiveStars).await);
+    assert_result!(
+        SERIES
+            .get()
+            .await
+            .unwrap()
+            .rate(RatingStar::FiveStars)
+            .await
+    );
 }
 
 #[tokio::test]

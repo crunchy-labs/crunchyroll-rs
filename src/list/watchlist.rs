@@ -107,7 +107,6 @@ enum_values! {
 }
 
 enum_values! {
-    #[derive(Eq, PartialEq)]
     pub enum WatchlistLanguage {
         Subbed = "subbed"
         Dubbed = "dubbed"

@@ -1,9 +1,9 @@
-use std::str::FromStr;
 use crate::Request;
 use chrono::Duration;
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
+use std::str::FromStr;
 
 #[derive(Request)]
 pub(crate) struct EmptyJsonProxy;
@@ -12,12 +12,17 @@ impl<'de> Deserialize<'de> for EmptyJsonProxy {
     where
         D: Deserializer<'de>,
     {
-        if let Ok(map) = serde_json::Map::deserialize(deserializer) {
+        let value = Value::deserialize(deserializer)?;
+
+        if let Some(map) = &value.as_object() {
             if map.is_empty() {
                 return Ok(EmptyJsonProxy);
             }
         }
-        Err(Error::custom("result must be empty object / map"))
+        Err(Error::custom(format!(
+            "result must be empty object / map: '{}'",
+            value
+        )))
     }
 }
 impl From<EmptyJsonProxy> for () {
@@ -31,7 +36,12 @@ where
     Ok(Duration::milliseconds(i64::deserialize(deserializer)?))
 }
 
-pub(crate) fn deserialize_try_from_string<'de, D, T: FromStr>(deserializer: D) -> Result<T, D::Error> where D: Deserializer<'de> {
+pub(crate) fn deserialize_try_from_string<'de, D, T: FromStr>(
+    deserializer: D,
+) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+{
     let value = String::deserialize(deserializer)?;
     T::from_str(value.as_str()).map_err(|_| Error::custom("could not convert string to T"))
 }
@@ -70,7 +80,13 @@ where
 }
 
 /// Deserializes a empty string (`""`) to `None`.
-pub(crate) fn deserialize_empty_pre_string_to_none<'de, D, T> (deserializer: D) -> Result<Option<T>, D::Error> where D: Deserializer<'de>, T: From<String> {
+pub(crate) fn deserialize_empty_pre_string_to_none<'de, D, T>(
+    deserializer: D,
+) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: From<String>,
+{
     let value: String = Deserialize::deserialize(deserializer)?;
     if value.is_empty() {
         Ok(None)

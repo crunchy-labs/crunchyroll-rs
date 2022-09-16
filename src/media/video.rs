@@ -22,7 +22,7 @@ pub struct EpisodeImages {
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Episode {
     #[serde(skip)]
-    executor: Arc<Executor>,
+    pub(crate) executor: Arc<Executor>,
 
     pub id: String,
     #[serde(rename = "__links__")]

@@ -27,5 +27,12 @@ async fn series_seasons() {
 
 #[tokio::test]
 async fn series_similar() {
-    assert_result!(SERIES.get().await.unwrap().similar(SimilarOptions::default()).await)
+    assert_result!(
+        SERIES
+            .get()
+            .await
+            .unwrap()
+            .similar(SimilarOptions::default())
+            .await
+    )
 }

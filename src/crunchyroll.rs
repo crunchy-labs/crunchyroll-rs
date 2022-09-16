@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 enum_values! {
     #[allow(non_camel_case_types)]
-    #[derive(Debug, Hash, Eq, PartialEq)]
+    #[derive(Debug, Hash)]
     pub enum Locale {
         ar_ME = "ar-ME"
         ar_SA = "ar-SA"
@@ -274,21 +274,23 @@ mod auth {
 
     pub(crate) struct ExecutorRequestBuilder {
         executor: Arc<Executor>,
-        builder: RequestBuilder
+        builder: RequestBuilder,
     }
 
     impl ExecutorRequestBuilder {
         pub(crate) fn new(executor: Arc<Executor>, builder: RequestBuilder) -> Self {
-            Self {
-                executor,
-                builder
-            }
+            Self { executor, builder }
         }
 
         pub(crate) fn query<T: Serialize + ?Sized>(mut self, query: &T) -> ExecutorRequestBuilder {
             self.builder = self.builder.query(query);
 
             self
+        }
+
+        pub(crate) fn apply_locale_query(self) -> ExecutorRequestBuilder {
+            let locale = self.executor.details.locale.clone();
+            self.query(&[("locale", locale)])
         }
 
         pub(crate) fn json<T: Serialize + ?Sized>(mut self, json: &T) -> ExecutorRequestBuilder {

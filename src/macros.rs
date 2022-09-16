@@ -14,7 +14,7 @@ macro_rules! enum_values {
         $(
             #[$attribute]
         )*
-        #[derive(Clone)]
+        #[derive(Clone, Eq, PartialEq)]
         $v enum $name {
             $(
                 $field

@@ -16,7 +16,7 @@ pub struct SearchMetadata {
 
     pub score: f64,
     // `None` if not queried by `Series::similar` or `MovieListing::similar`
-    pub popularity_score: Option<f64>
+    pub popularity_score: Option<f64>,
 }
 
 #[allow(dead_code)]

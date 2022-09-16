@@ -1,10 +1,10 @@
-use std::sync::Arc;
-use chrono::{DateTime, Utc};
-use crate::{EmptyJsonProxy, enum_values, Executor, Locale, options, Request};
-use serde::{Deserialize, Deserializer};
-use serde::de::Error;
-use serde_json::json;
 use crate::Result;
+use crate::{enum_values, options, EmptyJsonProxy, Executor, Locale, Request};
+use chrono::{DateTime, Utc};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer};
+use serde_json::json;
+use std::sync::Arc;
 
 enum_values! {
     #[derive(Debug)]
@@ -51,7 +51,7 @@ pub struct Rating {
     pub average: f64,
 
     #[serde(deserialize_with = "crate::internal::serde::deserialize_empty_pre_string_to_none")]
-    pub rating: Option<RatingStar>
+    pub rating: Option<RatingStar>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -64,7 +64,7 @@ pub struct ReviewRatings {
 
     #[serde(rename = "rating")]
     #[serde(deserialize_with = "deserialize_rating_to_bool")]
-    pub helpful: Option<bool>
+    pub helpful: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, smart_default::SmartDefault)]
@@ -95,7 +95,7 @@ pub struct ReviewAuthor {
 
     pub username: String,
 
-    pub avatar: String
+    pub avatar: String,
 }
 
 #[derive(Debug, Deserialize, Default, Request)]
@@ -112,17 +112,21 @@ pub struct Review {
 
     pub ratings: ReviewRatings,
 
-    pub reported: bool
+    pub reported: bool,
 }
 
 impl Review {
     /// Mark a review as helpful. A review can only be marked once as helpful (or not). If
     /// [`Review::review::helpful`] is [`Some`], a review were already made.
     pub async fn mark_helpful(&mut self, helpful: bool) -> Result<()> {
-        let endpoint = format!("https://beta.crunchyroll.com/content-reviews/v2/user/{}/rating/review/{}", self.executor.details.account_id, self.review.id);
+        let endpoint = format!(
+            "https://beta.crunchyroll.com/content-reviews/v2/user/{}/rating/review/{}",
+            self.executor.details.account_id, self.review.id
+        );
         let rating = if helpful { "yes" } else { "no" };
-        self.executor.put(endpoint)
-            .json(&json!({"rating": rating}))
+        self.executor
+            .put(endpoint)
+            .json(&json!({ "rating": rating }))
             .request()
             .await?;
         self.ratings.helpful = Some(helpful);
@@ -132,12 +136,16 @@ impl Review {
     /// Report this review. You can report or unreport it, use the function parameter to control it.
     /// See [`Review::reported`] if the comment was already reported from your account or not.
     pub async fn report(&mut self, report: bool) -> Result<()> {
-        let endpoint = format!("https://beta.crunchyroll.com/content-reviews/v2/user/{}/report/review/{}", self.executor.details.account_id, self.review.id);
-        let builder = if report { self.executor.put(endpoint) } else { self.executor.delete(endpoint) };
-        builder
-            .json(&json!({}))
-            .request::<EmptyJsonProxy>()
-            .await?;
+        let endpoint = format!(
+            "https://beta.crunchyroll.com/content-reviews/v2/user/{}/report/review/{}",
+            self.executor.details.account_id, self.review.id
+        );
+        let builder = if report {
+            self.executor.put(endpoint)
+        } else {
+            self.executor.delete(endpoint)
+        };
+        builder.json(&json!({})).request::<EmptyJsonProxy>().await?;
         self.reported = report;
         Ok(())
     }
@@ -164,9 +172,17 @@ impl SelfReview {
     pub async fn edit(&mut self, title: String, body: String, spoiler: bool) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
-            self.executor.details.account_id, self.executor.details.locale, self.endpoint, self.review.id
+            self.executor.details.account_id,
+            self.executor.details.locale,
+            self.endpoint,
+            self.review.id
         );
-        *self = self.executor.patch(endpoint).json(&json!({"title": title, "body": body, "spoiler": spoiler})).request().await?;
+        *self = self
+            .executor
+            .patch(endpoint)
+            .json(&json!({"title": title, "body": body, "spoiler": spoiler}))
+            .request()
+            .await?;
 
         Ok(())
     }
@@ -174,19 +190,28 @@ impl SelfReview {
     pub async fn delete(&self) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
-            self.executor.details.account_id, self.executor.details.locale, self.endpoint, self.review.id
+            self.executor.details.account_id,
+            self.executor.details.locale,
+            self.endpoint,
+            self.review.id
         );
         self.executor.delete(endpoint).request().await
     }
 }
 
-fn deserialize_rating_to_bool<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error> where D: Deserializer<'de> {
+fn deserialize_rating_to_bool<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+where
+    D: Deserializer<'de>,
+{
     let value = String::deserialize(deserializer)?;
     match value.as_str() {
         "yes" => Ok(Some(true)),
         "no" => Ok(Some(false)),
         "" => Ok(None),
-        _ => Err(Error::custom(format!("could not deserialize rating value '{}'", value)))
+        _ => Err(Error::custom(format!(
+            "could not deserialize rating value '{}'",
+            value
+        ))),
     }
 }
 

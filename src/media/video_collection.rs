@@ -1,5 +1,5 @@
 use crate::common::{Available, FromId, Image, Request};
-use crate::media::{Collection, Panel};
+use crate::media::Collection;
 use crate::Result;
 use crate::{options, BulkResult, Executor, Locale};
 use chrono::{DateTime, Utc};
