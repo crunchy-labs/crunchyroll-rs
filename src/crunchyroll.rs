@@ -288,6 +288,16 @@ mod auth {
             self
         }
 
+        pub(crate) fn apply_media_query(self) -> ExecutorRequestBuilder {
+            let details = self.executor.details.clone();
+
+            self.query(&[
+                ("Signature".to_string(), details.signature),
+                ("Policy".to_string(), details.policy),
+                ("Key-Pair-Id".to_string(), details.key_pair_id),
+            ])
+        }
+
         pub(crate) fn apply_locale_query(self) -> ExecutorRequestBuilder {
             let locale = self.executor.details.locale.clone();
             self.query(&[("locale", locale)])

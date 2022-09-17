@@ -1,6 +1,7 @@
 use crate::common::Image;
+use crate::error::{CrunchyrollError, CrunchyrollErrorContext};
 use crate::media::Playback;
-use crate::{Executor, Locale, Request};
+use crate::{BulkResult, Crunchyroll, Executor, Locale, Request, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
@@ -47,6 +48,35 @@ pub struct SeriesMetadata {
     extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     tenant_categories: Option<crate::StrictValue>,
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct SeasonMetadata {
+    // always empty (currently)
+    pub audio_locales: Vec<Locale>,
+    // always empty (currently)
+    pub subtitle_locales: Vec<Locale>,
+    // i have no idea what the difference between `audio_locales` and `audio_locale` should be.
+    // they're both empty
+    pub audio_locale: String,
+
+    pub maturity_ratings: Vec<String>,
+    pub is_mature: bool,
+    pub mature_blocked: bool,
+
+    #[cfg(feature = "__test_strict")]
+    season_display_number: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    season_sequence_number: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    extended_maturity_rating: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    versions: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    identifier: crate::StrictValue,
 }
 
 #[allow(dead_code)]
@@ -199,58 +229,12 @@ pub struct MovieMetadata {
 #[derive(Clone, Debug, Deserialize, Default)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct CollectionImages {
+pub struct PanelImages {
     pub thumbnail: Option<Vec<Vec<Image>>>,
     pub poster_tall: Option<Vec<Vec<Image>>>,
     pub poster_wide: Option<Vec<Vec<Image>>>,
     pub promo_image: Option<Vec<Vec<Image>>>,
 }
-
-#[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Default, Request, Playback)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct Collection {
-    #[serde(skip)]
-    executor: Arc<Executor>,
-
-    pub id: String,
-    #[serde(rename = "__links__")]
-    #[serde(default)]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_stream_id_option")]
-    pub stream_id: Option<String>,
-    #[serde(rename = "playback")]
-    pub playback_id: Option<String>,
-    pub external_id: String,
-    pub channel_id: String,
-
-    pub slug: String,
-    pub title: String,
-    pub slug_title: String,
-    pub promo_title: String,
-    pub description: String,
-    pub promo_description: String,
-
-    pub new: bool,
-    pub new_content: bool,
-
-    pub search_metadata: SearchMetadata,
-
-    pub series_metadata: Option<SeriesMetadata>,
-    pub movie_listing_metadata: Option<MovieListingMetadata>,
-    pub episode_metadata: Option<EpisodeMetadata>,
-    pub movie_metadata: Option<MovieMetadata>,
-
-    pub images: Option<CollectionImages>,
-
-    #[serde(alias = "type")]
-    #[cfg(feature = "__test_strict")]
-    collection_type: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    linked_resource_key: crate::StrictValue,
-}
-
-type PanelImages = CollectionImages;
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request, Playback)]
@@ -278,9 +262,13 @@ pub struct Panel {
     pub promo_description: String,
 
     pub series_metadata: Option<SeriesMetadata>,
-    pub movie_listing_metadata: Option<MovieListingMetadata>,
+    pub season_metadata: Option<SeasonMetadata>,
     pub episode_metadata: Option<EpisodeMetadata>,
+    pub movie_listing_metadata: Option<MovieListingMetadata>,
     pub movie_metadata: Option<MovieMetadata>,
+
+    // only populated if `Panel` results from search query 'src/search.rs'
+    pub search_metadata: Option<SearchMetadata>,
 
     pub images: Option<PanelImages>,
 
@@ -295,4 +283,33 @@ pub struct Panel {
     last_public: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     linked_resource_key: crate::StrictValue,
+}
+
+impl Panel {
+    pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Panel> {
+        let endpoint = format!(
+            "https://beta.crunchyroll.com/cms/v2/{}/objects/{}",
+            crunchy.executor.details.bucket, &id
+        );
+        let result: BulkResult<Panel> = crunchy
+            .executor
+            .get(endpoint)
+            .apply_media_query()
+            .apply_locale_query()
+            .request()
+            .await?;
+
+        if result.total == 0 {
+            Err(CrunchyrollError::Input(CrunchyrollErrorContext::new(
+                format!("no media can be found for id '{}'", id),
+            )))
+        } else if result.total >= 2 {
+            // if this ever gets fired, crunchyroll hopefully unified episode and movie on the api
+            // level (this functions was only implemented so `Crunchyroll::parse_url` can work
+            // easily)
+            Err(CrunchyrollError::Internal(CrunchyrollErrorContext::new(format!("multiple media were found for id '{}'. this shouldn't happen, please report it immediately!", id))))
+        } else {
+            Ok(result.items.into_iter().next().unwrap())
+        }
+    }
 }

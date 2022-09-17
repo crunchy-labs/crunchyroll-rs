@@ -54,7 +54,7 @@ pub mod browse {
 pub mod query {
     use crate::common::Request;
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
-    use crate::media::Collection;
+    use crate::media::Panel;
     use crate::{enum_values, options, BulkResult, Crunchyroll, Executor};
     use serde::Deserialize;
     use std::sync::Arc;
@@ -66,10 +66,10 @@ pub mod query {
         #[serde(skip)]
         executor: Arc<Executor>,
 
-        pub top_results: Option<BulkResult<Collection>>,
-        pub series: Option<BulkResult<Collection>>,
-        pub movie_listing: Option<BulkResult<Collection>>,
-        pub episode: Option<BulkResult<Collection>>,
+        pub top_results: Option<BulkResult<Panel>>,
+        pub series: Option<BulkResult<Panel>>,
+        pub movie_listing: Option<BulkResult<Panel>>,
+        pub episode: Option<BulkResult<Panel>>,
     }
 
     impl Request for QueryResults {
@@ -107,10 +107,10 @@ pub mod query {
         type Error = CrunchyrollError;
 
         fn try_from(value: BulkResult<QueryBulkResult>) -> std::result::Result<Self, Self::Error> {
-            let mut top_results: Option<BulkResult<Collection>> = None;
-            let mut series: Option<BulkResult<Collection>> = None;
-            let mut movie_listing: Option<BulkResult<Collection>> = None;
-            let mut episode: Option<BulkResult<Collection>> = None;
+            let mut top_results: Option<BulkResult<Panel>> = None;
+            let mut series: Option<BulkResult<Panel>> = None;
+            let mut movie_listing: Option<BulkResult<Panel>> = None;
+            let mut episode: Option<BulkResult<Panel>> = None;
 
             for item in value.items.clone() {
                 let result = BulkResult {
@@ -150,7 +150,7 @@ pub mod query {
     struct QueryBulkResult {
         #[serde(rename = "type")]
         result_type: String,
-        items: Vec<Collection>,
+        items: Vec<Panel>,
         total: u32,
     }
 

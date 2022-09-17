@@ -30,6 +30,8 @@ pub mod error;
 pub mod feed;
 pub mod list;
 pub mod media;
+#[cfg(feature = "parse")]
+pub mod parse;
 pub mod rating;
 pub mod search;
 

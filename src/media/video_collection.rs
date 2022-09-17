@@ -1,5 +1,5 @@
 use crate::common::{Available, FromId, Image, Request};
-use crate::media::Collection;
+use crate::media::Panel;
 use crate::Result;
 use crate::{options, BulkResult, Executor, Locale};
 use chrono::{DateTime, Utc};
@@ -142,7 +142,7 @@ options! {
 }
 
 impl Series {
-    pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<Collection>> {
+    pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<Panel>> {
         let endpoint = "https://beta.crunchyroll.com/content/v1/13050d47-adec-50c9-ae63-5e2ed8f4e251/similar_to";
         let builder = self
             .executor
@@ -160,7 +160,7 @@ impl Series {
 }
 
 #[allow(dead_code)]
-#[derive(Deserialize, Debug, Default, Request, Available, FromId)]
+#[derive(Debug, Default, Deserialize, Request, Available, FromId)]
 #[from_id(multiple(Series))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]

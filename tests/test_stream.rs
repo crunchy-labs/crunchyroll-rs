@@ -1,4 +1,4 @@
-#![cfg(feature = "__test_strict")]
+#![cfg(feature = "stream")]
 
 use crate::utils::Store;
 use crate::utils::SESSION;

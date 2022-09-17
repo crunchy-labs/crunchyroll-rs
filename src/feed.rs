@@ -1,6 +1,6 @@
 use crate::common::{CrappyBulkResult, FromId};
 use crate::error::{CrunchyrollError, CrunchyrollErrorContext};
-use crate::media::{Collection, MediaType, Panel};
+use crate::media::{MediaType, Panel};
 use crate::search::browse::{BrowseOptions, BrowseSortType};
 use crate::{options, BulkResult, Crunchyroll, Executor, Request, Result};
 use chrono::{DateTime, Utc};
@@ -310,7 +310,7 @@ impl Crunchyroll {
     pub async fn recommendations(
         &self,
         options: RecommendationOptions,
-    ) -> Result<BulkResult<Collection>> {
+    ) -> Result<BulkResult<Panel>> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/{}/recommendations",
             self.executor.details.account_id
