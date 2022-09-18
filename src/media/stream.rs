@@ -1,6 +1,5 @@
-use crate::common::Request;
-use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
-use crate::{Crunchyroll, Executor, Locale};
+use crate::error::CrunchyrollError;
+use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -45,7 +44,8 @@ fn deserialize_streams<'de, D: Deserializer<'de>, T: FixStream>(
 
 /// A video stream.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(subtitles))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct VideoStream {
@@ -79,38 +79,25 @@ pub struct VideoStream {
     versions: crate::StrictValue,
 }
 
-impl Request for VideoStream {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
-        self.executor = executor.clone();
-
-        for value in self.subtitles.values_mut() {
-            value.executor = executor.clone();
-        }
-    }
-
-    fn __get_executor(&self) -> Option<Arc<Executor>> {
-        Some(self.executor.clone())
-    }
-}
-
 impl VideoStream {
     pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let endpoint = format!(
-            "https://beta-api.crunchyroll.com/cms/v2/{}/videos/{}/streams",
+            "https://beta.crunchyroll.com/cms/v2/{}/videos/{}/streams",
             crunchy.executor.details.bucket, id
         );
-        let builder = crunchy
+        crunchy
             .executor
-            .client
             .get(endpoint)
-            .query(&crunchy.executor.media_query());
-
-        crunchy.executor.request(builder).await
+            .apply_media_query()
+            .apply_locale_query()
+            .request()
+            .await
     }
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(subtitles))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct PlaybackStream {
@@ -129,21 +116,7 @@ pub struct PlaybackStream {
     qos: crate::StrictValue,
 }
 
-impl Request for PlaybackStream {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
-        self.executor = executor.clone();
-
-        for value in self.subtitles.values_mut() {
-            value.executor = executor.clone();
-        }
-    }
-
-    fn __get_executor(&self) -> Option<Arc<Executor>> {
-        Some(self.executor.clone())
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct StreamSubtitle {
@@ -160,12 +133,12 @@ impl StreamSubtitle {
         let resp = self.executor.client.get(self.url).send().await?;
         let body = resp.bytes().await?;
         w.write_all(body.as_ref())
-            .map_err(|e| CrunchyrollError::External(CrunchyrollErrorContext::new(e.to_string())))?;
+            .map_err(|e| CrunchyrollError::External(e.to_string().into()))?;
         Ok(())
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct VideoVariant {
@@ -177,7 +150,7 @@ pub struct VideoVariant {
     pub url: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct PlaybackVariant {
@@ -193,7 +166,7 @@ pub struct PlaybackVariant {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct VideoVariants {
@@ -220,7 +193,7 @@ impl FixStream for VideoVariants {
     type Variant = VideoVariant;
 }
 
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct PlaybackVariants {

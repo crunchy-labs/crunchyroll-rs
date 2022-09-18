@@ -1,14 +1,15 @@
-use crate::media::{MediaType, Panel};
+use crate::common::BulkResult;
+use crate::error::CrunchyrollError;
 use crate::{
-    enum_values, options, BulkResult, Crunchyroll, EmptyJsonProxy, Executor, MovieListing, Request,
-    Result, Series,
+    enum_values, options, Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
-#[derive(Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct WatchlistEntry {
@@ -24,27 +25,30 @@ pub struct WatchlistEntry {
     pub never_watched: bool,
     pub completion_status: bool,
 
-    pub panel: Panel,
-}
-
-impl Request for WatchlistEntry {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
-        self.executor = executor.clone();
-
-        self.panel.__set_executor(executor);
-    }
+    pub panel: MediaCollection,
 }
 
 impl WatchlistEntry {
     pub async fn mark_favorite(&mut self, favorite: bool) -> Result<()> {
-        mark_favorite_watchlist(&self.executor, &self.panel.id, favorite).await?;
+        mark_favorite_watchlist(&self.executor, self.get_id()?, favorite).await?;
         self.is_favorite = favorite;
 
         Ok(())
     }
 
     pub async fn remove(self) -> Result<()> {
-        remove_from_watchlist(self.executor, self.panel.id).await
+        let id = self.get_id()?;
+        remove_from_watchlist(self.executor, id).await
+    }
+
+    fn get_id(&self) -> Result<String> {
+        match self.panel.clone() {
+            MediaCollection::Series(series) => Ok(series.id),
+            MediaCollection::MovieListing(movie_listing) => Ok(movie_listing.id),
+            _ => Err(CrunchyrollError::Internal(
+                "panel is not series nor movie listing".into(),
+            )),
+        }
     }
 }
 
@@ -65,7 +69,7 @@ pub struct SimpleWatchlistEntry {
 
 impl SimpleWatchlistEntry {
     pub async fn mark_favorite(&mut self, favorite: bool) -> Result<()> {
-        mark_favorite_watchlist(&self.executor, &self.id, favorite).await?;
+        mark_favorite_watchlist(&self.executor, self.id.clone(), favorite).await?;
         self.is_favorite = favorite;
 
         Ok(())
@@ -77,11 +81,10 @@ impl SimpleWatchlistEntry {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 struct BulkWatchlistResult {
-    #[default(Vec::new())]
     items: Vec<WatchlistEntry>,
 
     total: u32,
@@ -117,9 +120,9 @@ options! {
     WatchlistOptions;
     order(WatchlistOrder, "order") = Some(WatchlistOrder::Newest),
     sort(WatchlistSort, "sort_by") = None,
-    media_type(MediaType, "type") = None,
+    media_type(crate::media::MediaType, "type") = None,
     language(WatchlistLanguage, "language") = None,
-    only_favorits(bool, "only_favorites") = Some(false)
+    only_favorites(bool, "only_favorites") = Some(false)
 }
 
 impl Crunchyroll {
@@ -127,14 +130,15 @@ impl Crunchyroll {
         &self,
         mut options: WatchlistOptions,
     ) -> Result<BulkResult<WatchlistEntry>> {
+        let true_string = true.to_string();
         let language_field = if let Some(language) = options.language {
             match language {
-                WatchlistLanguage::Subbed => ("is_subbed".to_string(), true.to_string()),
-                WatchlistLanguage::Dubbed => ("is_dubbed".to_string(), true.to_string()),
-                _ => ("".to_string(), "".to_string()),
+                WatchlistLanguage::Subbed => ("is_subbed", true_string.as_str()),
+                WatchlistLanguage::Dubbed => ("is_dubbed", true_string.as_str()),
+                _ => ("", ""),
             }
         } else {
-            ("".to_string(), "".to_string())
+            ("", "")
         };
         options.language = None;
 
@@ -142,18 +146,14 @@ impl Crunchyroll {
             "https://beta.crunchyroll.com/content/v1/{}/watchlist",
             self.executor.details.account_id
         );
-        let builder = self
+        let bulk_watchlist_result: BulkWatchlistResult = self
             .executor
-            .client
             .get(endpoint)
-            .query(&options.to_query(&[
-                (
-                    "locale".to_string(),
-                    self.executor.details.locale.to_string(),
-                ),
-                language_field,
-            ]));
-        let bulk_watchlist_result: BulkWatchlistResult = self.executor.request(builder).await?;
+            .query(&options.to_query())
+            .query(&[language_field])
+            .apply_locale_query()
+            .request()
+            .await?;
         Ok(BulkResult {
             items: bulk_watchlist_result.items,
             total: bulk_watchlist_result.total,
@@ -162,7 +162,7 @@ impl Crunchyroll {
 }
 
 macro_rules! add_to_watchlist {
-    ($(#[doc = $add:literal] #[doc = $as:literal] $s:ident);*) => {
+    ($(#[doc = $add:literal] #[doc = $as:literal] $s:path);*) => {
         $(
             impl $s {
                 #[doc = $add]
@@ -197,26 +197,26 @@ macro_rules! add_to_watchlist {
 add_to_watchlist! {
     #[doc = "Add this series to your watchlist."]
     #[doc = "Check and convert this series to a watchlist entry (to check if this series was watched before)."]
-    Series;
+    crate::Media<crate::media::Series>;
     #[doc = "Add this movie to your watchlist."]
     #[doc = "Check and convert this movie to a watchlist entry (to check if this movie was watched before)."]
-    MovieListing
+    crate::Media<crate::media::MovieListing>
 }
 
 async fn mark_favorite_watchlist(
     executor: &Arc<Executor>,
-    id: &String,
+    id: String,
     favorite: bool,
 ) -> Result<()> {
     let endpoint = format!(
         "https://beta.crunchyroll.com/content/v1/watchlist/{}/{}",
         executor.details.account_id, id
     );
-    let builder = executor
-        .client
+    executor
         .patch(endpoint)
-        .json(&json!({ "is_favorite": favorite }));
-    executor.request::<EmptyJsonProxy>(builder).await?;
+        .json(&json!({ "is_favorite": favorite }))
+        .request::<EmptyJsonProxy>()
+        .await?;
     Ok(())
 }
 
@@ -225,11 +225,11 @@ async fn remove_from_watchlist(executor: Arc<Executor>, id: String) -> Result<()
         "https://beta.crunchyroll.com/content/v1/watchlist/{}/{}",
         executor.details.account_id, id
     );
-    let builder = executor
-        .client
+    executor
         .delete(endpoint)
         .json(&json!({}))
-        .query(&[("locale", &executor.details.locale)]);
-    executor.request::<EmptyJsonProxy>(builder).await?;
+        .apply_locale_query()
+        .request::<EmptyJsonProxy>()
+        .await?;
     Ok(())
 }

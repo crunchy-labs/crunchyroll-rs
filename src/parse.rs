@@ -1,4 +1,6 @@
-use crate::error::{CrunchyrollError, CrunchyrollErrorContext};
+#![cfg(feature = "parse")]
+
+use crate::error::CrunchyrollError;
 use crate::{Crunchyroll, Result};
 use regex::Regex;
 
@@ -70,7 +72,7 @@ impl Crunchyroll {
             match capture.name("type").unwrap().as_str() {
                 "series" => Ok(UrlType::BetaSeries(id)),
                 "movie_listing" => Ok(UrlType::BetaMovieListing(id)),
-                _ => Err(CrunchyrollError::Internal(CrunchyrollErrorContext::new("could not get url type. this should never happen".to_string())))
+                _ => Err(CrunchyrollError::Internal("could not get url type. this should never happen".into()))
             }
         } else if let Some(capture) = Regex::new(r"^https?://beta\.crunchyroll\.com/([a-zA-Z]{2}/)?watch/(?P<id>[a-zA-Z]+).*$")
             .unwrap()
@@ -100,7 +102,7 @@ impl Crunchyroll {
                 movie_name: plsss.name("movie_name").unwrap().as_str().to_string(),
             })
         } else {
-            Err(CrunchyrollError::Input(CrunchyrollErrorContext::new("invalid url".to_string())))
+            Err(CrunchyrollError::Input("invalid url".into()))
         }
     }
 }

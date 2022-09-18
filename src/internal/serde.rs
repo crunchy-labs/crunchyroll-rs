@@ -143,11 +143,9 @@ pub(crate) fn deserialize_stream_id_option<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Option<String>, D::Error> {
     if let Some(value) = Option::<Value>::deserialize(deserializer)? {
-        Ok(Some(
-            deserialize_stream_id(value.into_deserializer())
-                .map_err(|e| Error::custom(e.to_string()))?,
-        ))
-    } else {
-        Ok(None)
+        if let Ok(stream_id) = deserialize_stream_id(value.into_deserializer()) {
+            return Ok(Some(stream_id));
+        }
     }
+    Ok(None)
 }

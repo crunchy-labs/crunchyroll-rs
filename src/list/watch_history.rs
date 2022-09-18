@@ -1,6 +1,5 @@
 use crate::common::CrappyBulkResult;
-use crate::media::Panel;
-use crate::{options, Crunchyroll, EmptyJsonProxy, Request, Result};
+use crate::{options, Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -16,7 +15,7 @@ pub struct WatchHistoryEntry {
     pub playhead: u32,
     pub fullywatched: bool,
 
-    pub panel: Panel,
+    pub panel: MediaCollection,
 }
 
 #[allow(dead_code)]
@@ -24,7 +23,6 @@ pub struct WatchHistoryEntry {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 struct BulkWatchHistoryResult {
-    #[default(Vec::new())]
     items: Vec<WatchHistoryEntry>,
 
     #[cfg(feature = "__test_strict")]
@@ -49,16 +47,13 @@ impl Crunchyroll {
             "https://beta.crunchyroll.com/content/v1/watch-history/{}",
             self.executor.details.account_id
         );
-        let builder = self
+        let bulk_watch_history_result: BulkWatchHistoryResult = self
             .executor
-            .client
             .get(endpoint)
-            .query(&options.to_query(&[(
-                "locale".to_string(),
-                self.executor.details.locale.to_string(),
-            )]));
-        let bulk_watch_history_result: BulkWatchHistoryResult =
-            self.executor.request(builder).await?;
+            .query(&options.to_query())
+            .apply_locale_query()
+            .request()
+            .await?;
         Ok(CrappyBulkResult {
             items: bulk_watch_history_result.items,
         })
@@ -69,11 +64,11 @@ impl Crunchyroll {
             "https://beta.crunchyroll.com/content/v1/watch-history/{}",
             self.executor.details.account_id
         );
-        let builder = self.executor.client.delete(endpoint).query(&[(
-            "locale".to_string(),
-            self.executor.details.locale.to_string(),
-        )]);
-        self.executor.request::<EmptyJsonProxy>(builder).await?;
+        self.executor
+            .delete(endpoint)
+            .apply_locale_query()
+            .request::<EmptyJsonProxy>()
+            .await?;
         Ok(())
     }
 }

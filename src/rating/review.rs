@@ -17,7 +17,7 @@ enum_values! {
     }
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 pub struct RatingStarDetails {
     /// The amount of user ratings.
     pub displayed: String,
@@ -31,7 +31,7 @@ pub struct RatingStarDetails {
     pub percentage: Option<u8>,
 }
 
-#[derive(Debug, Deserialize, Default, Request)]
+#[derive(Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Rating {
@@ -54,7 +54,7 @@ pub struct Rating {
     pub rating: Option<RatingStar>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ReviewRatings {
@@ -87,7 +87,7 @@ pub struct ReviewContent {
     pub authored_reviews: u32,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ReviewAuthor {
@@ -98,7 +98,7 @@ pub struct ReviewAuthor {
     pub avatar: String,
 }
 
-#[derive(Debug, Deserialize, Default, Request)]
+#[derive(Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Review {
@@ -151,7 +151,7 @@ impl Review {
     }
 }
 
-#[derive(Debug, Deserialize, Default, Request)]
+#[derive(Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SelfReview {
@@ -243,12 +243,12 @@ macro_rules! impl_rating {
                     self.executor.get(endpoint).request().await
                 }
 
-                pub async fn reviews(&self, options: ReviewOptions) -> Result<$crate::BulkResult<Review>> {
+                pub async fn reviews(&self, options: ReviewOptions) -> Result<$crate::common::BulkResult<Review>> {
                     let endpoint = format!(
                         "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/review/{}/{}/list",
                         self.executor.details.locale, self.executor.details.account_id, $endpoint, self.id
                     );
-                    self.executor.get(endpoint).query(&options.to_query(&[])).request().await
+                    self.executor.get(endpoint).query(&options.to_query()).request().await
                 }
 
                 pub async fn rate(&self, stars: RatingStar) -> Result<Rating> {
@@ -289,6 +289,6 @@ macro_rules! impl_rating {
 }
 
 impl_rating! {
-    crate::Series, "series";
-    crate::MovieListing, "movie_listing"
+    crate::Media<crate::media::Series>, "series";
+    crate::Media<crate::media::MovieListing>, "movie_listing"
 }

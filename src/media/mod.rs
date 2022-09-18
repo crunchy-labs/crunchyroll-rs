@@ -1,15 +1,18 @@
-mod common;
+#[allow(clippy::module_inception)] // naming is difficult
+mod media;
+mod old_media;
 mod stream;
 mod streaming;
-mod video;
-mod video_collection;
-mod video_variants;
 
-pub use common::*;
+pub use media::*;
 pub use stream::*;
-pub use video::*;
-pub use video_collection::*;
-pub use video_variants::*;
-
-#[cfg(feature = "__test_strict")]
+#[cfg(feature = "stream")]
 pub use streaming::*;
+
+use crate::enum_values;
+enum_values! {
+    pub enum MediaType {
+        Series = "series"
+        Movie = "movie_listing"
+    }
+}

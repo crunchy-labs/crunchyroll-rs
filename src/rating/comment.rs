@@ -1,12 +1,12 @@
-use crate::common::Image;
-use crate::{enum_values, options, BulkResult, EmptyJsonProxy, Executor, Locale, Request, Result};
+use crate::common::{BulkResult, Image};
+use crate::{enum_values, options, EmptyJsonProxy, Executor, Locale, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use std::sync::Arc;
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentUserAttributesAvatar {
@@ -14,7 +14,7 @@ pub struct CommentUserAttributesAvatar {
     pub unlocked: Vec<Image>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentUserAttributes {
@@ -22,7 +22,7 @@ pub struct CommentUserAttributes {
     pub avatar: CommentUserAttributesAvatar,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentUser {
@@ -32,7 +32,7 @@ pub struct CommentUser {
     pub user_flags: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentVotes {
@@ -102,7 +102,7 @@ impl Comment {
         );
         self.executor
             .get(endpoint)
-            .query(&options.to_query(&[]))
+            .query(&options.to_query())
             .apply_locale_query()
             .request()
             .await
@@ -141,7 +141,7 @@ impl Comment {
                 CommentFlag::Like => self.votes.like += 1,
                 CommentFlag::Spoiler => self.votes.spoiler += 1,
                 CommentFlag::Inappropriate => self.votes.inappropriate += 1,
-                _ => {}
+                _ => (),
             }
             self.user_flags.push(flag);
         } else {
@@ -156,7 +156,7 @@ impl Comment {
                 CommentFlag::Like => self.votes.like -= 1,
                 CommentFlag::Spoiler => self.votes.spoiler -= 1,
                 CommentFlag::Inappropriate => self.votes.inappropriate -= 1,
-                _ => {}
+                _ => (),
             }
             // `.unwrap()` should be save to call here but if something goes wrong this `Some(...)`
             // check is an extra layer of security
@@ -237,7 +237,7 @@ macro_rules! impl_comment {
                     let endpoint = format!("https://beta.crunchyroll.com/talkbox/guestbooks/{}/comments", self.id);
                     self.executor
                         .get(endpoint)
-                        .query(&options.to_query(&[]))
+                        .query(&options.to_query())
                         .apply_locale_query()
                         .request()
                         .await
@@ -252,7 +252,7 @@ macro_rules! impl_comment {
 }
 
 impl_comment! {
-    crate::Episode crate::Movie
+    crate::Media<crate::media::Episode> crate::Media<crate::media::Movie>
 }
 
 async fn create_comment(

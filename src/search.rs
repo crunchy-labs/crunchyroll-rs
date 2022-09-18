@@ -1,11 +1,10 @@
 pub mod browse {
     use crate::categories::Category;
     use crate::common::BulkResult;
-    use crate::media::{MediaType, Panel};
-    use crate::{enum_values, options, Crunchyroll, Result};
+    use crate::media::MediaType;
+    use crate::{enum_values, options, Crunchyroll, MediaCollection, Result};
 
     enum_values! {
-        #[derive(Debug)]
         pub enum BrowseSortType {
             Popularity = "popularity"
             NewlyAdded = "newly_added"
@@ -37,93 +36,89 @@ pub mod browse {
     impl Crunchyroll {
         /// Browses the crunchyroll catalog filtered by the specified options and returns all found
         /// series and movies.
-        pub async fn browse(&self, options: BrowseOptions) -> Result<BulkResult<Panel>> {
-            let executor = self.executor.clone();
-
+        pub async fn browse(&self, options: BrowseOptions) -> Result<BulkResult<MediaCollection>> {
             let endpoint = "https://beta.crunchyroll.com/content/v1/browse";
-            let builder = executor.client.get(endpoint).query(&options.to_query(&[(
-                "locale".to_string(),
-                self.executor.details.locale.to_string(),
-            )]));
-
-            executor.request(builder).await
+            self.executor
+                .get(endpoint)
+                .query(&options.to_query())
+                .apply_locale_query()
+                .request()
+                .await
         }
     }
 }
 
 pub mod query {
-    use crate::common::Request;
+    use crate::common::{BulkResult, Request};
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
-    use crate::media::Panel;
-    use crate::{enum_values, options, BulkResult, Crunchyroll, Executor};
+    use crate::media::{Episode, MovieListing, Series};
+    use crate::{enum_values, options, Crunchyroll, Executor, Media, MediaCollection};
     use serde::Deserialize;
     use std::sync::Arc;
 
-    #[derive(Debug, Deserialize, Default)]
+    #[derive(Debug, Default, Deserialize, Request)]
+    #[request(executor(top_results, series, movie_listing, episode))]
     #[serde(try_from = "BulkResult<QueryBulkResult>")]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     pub struct QueryResults {
         #[serde(skip)]
         executor: Arc<Executor>,
 
-        pub top_results: Option<BulkResult<Panel>>,
-        pub series: Option<BulkResult<Panel>>,
-        pub movie_listing: Option<BulkResult<Panel>>,
-        pub episode: Option<BulkResult<Panel>>,
-    }
-
-    impl Request for QueryResults {
-        fn __set_executor(&mut self, executor: Arc<Executor>) {
-            self.executor = executor.clone();
-
-            if let Some(top_results) = &mut self.top_results {
-                for collection in top_results.items.iter_mut() {
-                    collection.__set_executor(executor.clone());
-                }
-            }
-            if let Some(series) = &mut self.series {
-                for collection in series.items.iter_mut() {
-                    collection.__set_executor(executor.clone());
-                }
-            }
-            if let Some(movie_listing) = &mut self.movie_listing {
-                for collection in movie_listing.items.iter_mut() {
-                    collection.__set_executor(executor.clone());
-                }
-            }
-            if let Some(episode) = &mut self.episode {
-                for collection in episode.items.iter_mut() {
-                    collection.__set_executor(executor.clone());
-                }
-            }
-        }
-
-        fn __get_executor(&self) -> Option<Arc<Executor>> {
-            Some(self.executor.clone())
-        }
+        pub top_results: Option<BulkResult<MediaCollection>>,
+        pub series: Option<BulkResult<Media<Series>>>,
+        pub movie_listing: Option<BulkResult<Media<MovieListing>>>,
+        pub episode: Option<BulkResult<Media<Episode>>>,
     }
 
     impl TryFrom<BulkResult<QueryBulkResult>> for QueryResults {
         type Error = CrunchyrollError;
 
         fn try_from(value: BulkResult<QueryBulkResult>) -> std::result::Result<Self, Self::Error> {
-            let mut top_results: Option<BulkResult<Panel>> = None;
-            let mut series: Option<BulkResult<Panel>> = None;
-            let mut movie_listing: Option<BulkResult<Panel>> = None;
-            let mut episode: Option<BulkResult<Panel>> = None;
+            let mut top_results: Option<BulkResult<MediaCollection>> = None;
+            let mut series: Option<BulkResult<Media<Series>>> = None;
+            let mut movie_listing: Option<BulkResult<Media<MovieListing>>> = None;
+            let mut episode: Option<BulkResult<Media<Episode>>> = None;
 
             for item in value.items.clone() {
-                let result = BulkResult {
-                    items: item.items,
-                    total: item.total,
-                };
                 match item.result_type.as_str() {
-                    "top_results" => top_results = Some(result),
-                    "series" => series = Some(result),
-                    "movie_listing" => movie_listing = Some(result),
-                    "episode" => episode = Some(result),
+                    "top_results" => {
+                        top_results = Some(BulkResult {
+                            items: item.items,
+                            total: item.total,
+                        })
+                    }
+                    "series" => {
+                        series = Some(BulkResult {
+                            items: item
+                                .items
+                                .into_iter()
+                                .map(|i| i.try_into())
+                                .collect::<Result<Vec<Media<Series>>>>()?,
+                            total: item.total,
+                        })
+                    }
+                    "movie_listing" => {
+                        movie_listing = Some(BulkResult {
+                            items: item
+                                .items
+                                .into_iter()
+                                .map(|i| i.try_into())
+                                .collect::<Result<Vec<Media<MovieListing>>>>()?,
+                            total: item.total,
+                        })
+                    }
+                    "episode" => {
+                        episode = Some(BulkResult {
+                            items: item
+                                .items
+                                .into_iter()
+                                .map(|i| i.try_into())
+                                .collect::<Result<Vec<Media<Episode>>>>()?,
+                            total: item.total,
+                        })
+                    }
                     _ => {
-                        return Err(CrunchyrollError::Decode(
+                        return Err(CrunchyrollError::Internal(
                             CrunchyrollErrorContext::new(format!(
                                 "invalid result type found: '{}'",
                                 item.result_type
@@ -150,7 +145,7 @@ pub mod query {
     struct QueryBulkResult {
         #[serde(rename = "type")]
         result_type: String,
-        items: Vec<Panel>,
+        items: Vec<MediaCollection>,
         total: u32,
     }
 
@@ -174,18 +169,14 @@ pub mod query {
     impl Crunchyroll {
         /// Search the Crunchyroll catalog by a given query / string.
         pub async fn query(&self, query: String, options: QueryOptions) -> Result<QueryResults> {
-            let executor = self.executor.clone();
-
             let endpoint = "https://beta.crunchyroll.com/content/v1/search";
-            let builder = executor.client.get(endpoint).query(&options.to_query(&[
-                ("q".to_string(), query.clone()),
-                (
-                    "locale".to_string(),
-                    self.executor.details.locale.to_string(),
-                ),
-            ]));
-
-            executor.request(builder).await
+            self.executor
+                .get(endpoint)
+                .query(&options.to_query())
+                .query(&[("q", query)])
+                .apply_locale_query()
+                .request()
+                .await
         }
     }
 }

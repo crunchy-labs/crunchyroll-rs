@@ -1,12 +1,12 @@
-use crate::common::FromId;
-use crate::media::{Panel, VideoCollection};
-use crate::{Crunchyroll, EmptyJsonProxy, Executor, Request, Result};
+use crate::error::CrunchyrollError;
+use crate::{Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request, FromId)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CrunchylistEntry {
@@ -19,7 +19,7 @@ pub struct CrunchylistEntry {
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub modified_at: DateTime<Utc>,
 
-    pub panel: Panel,
+    pub panel: MediaCollection,
 }
 
 impl CrunchylistEntry {
@@ -28,12 +28,11 @@ impl CrunchylistEntry {
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}/{}",
             self.executor.details.account_id, entry.list_id, self.id
         );
-        let builder = self
-            .executor
-            .client
+        self.executor
             .delete(endpoint)
-            .query(&[("locale", &self.executor.details.locale)]);
-        self.executor.request::<EmptyJsonProxy>(builder).await?;
+            .apply_locale_query()
+            .request()
+            .await?;
         Ok(())
     }
 }
@@ -45,7 +44,6 @@ pub struct Crunchylists {
     #[serde(skip)]
     executor: Arc<Executor>,
 
-    #[default(Vec::new())]
     pub items: Vec<CrunchylistPreview>,
 
     pub total_public: u32,
@@ -71,13 +69,13 @@ impl Crunchylists {
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}",
             self.executor.details.account_id
         );
-        let builder = self
+        let create_result: CrunchylistCreate = self
             .executor
-            .client
             .post(endpoint)
             .json(&json!({ "title": &title }))
-            .query(&[("locale", &self.executor.details.locale)]);
-        let create_result: CrunchylistCreate = self.executor.request(builder).await?;
+            .apply_locale_query()
+            .request()
+            .await?;
         Ok(CrunchylistPreview {
             executor: self.executor.clone(),
             list_id: create_result.list_id,
@@ -90,6 +88,7 @@ impl Crunchylists {
 }
 
 #[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(items))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Crunchylist {
@@ -99,7 +98,6 @@ pub struct Crunchylist {
     #[serde(skip)]
     pub id: String,
 
-    #[default(Vec::new())]
     pub items: Vec<CrunchylistEntry>,
 
     pub title: String,
@@ -113,18 +111,26 @@ pub struct Crunchylist {
 }
 
 impl Crunchylist {
-    pub async fn add(&self, collection: impl VideoCollection) -> Result<()> {
+    pub async fn add(&self, media: MediaCollection) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
             self.executor.details.account_id, self.id
         );
-        let builder = self
-            .executor
-            .client
+        let id = match media {
+            MediaCollection::Series(series) => series.id,
+            MediaCollection::Season(_) => {
+                return Err(CrunchyrollError::Input("seasons are not supported".into()))
+            }
+            MediaCollection::Episode(episode) => episode.metadata.series_id,
+            MediaCollection::MovieListing(movie_listing) => movie_listing.id,
+            MediaCollection::Movie(movie) => movie.metadata.movie_listing_id,
+        };
+        self.executor
             .post(endpoint)
-            .json(&json!({"content_id": collection.id()}))
-            .query(&[("locale", &self.executor.details.locale)]);
-        self.executor.request::<EmptyJsonProxy>(builder).await?;
+            .json(&json!({ "content_id": id }))
+            .apply_locale_query()
+            .request::<EmptyJsonProxy>()
+            .await?;
         Ok(())
     }
 
@@ -133,13 +139,12 @@ impl Crunchylist {
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
             self.executor.details.account_id, self.id
         );
-        let builder = self
-            .executor
-            .client
+        self.executor
             .patch(endpoint)
-            .query(&[("locale", &self.executor.details.locale)])
-            .json(&json!({ "title": name }));
-        self.executor.request::<EmptyJsonProxy>(builder).await?;
+            .json(&json!({ "title": name }))
+            .apply_locale_query()
+            .request::<EmptyJsonProxy>()
+            .await?;
         Ok(())
     }
 
@@ -148,12 +153,11 @@ impl Crunchylist {
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
             self.executor.details.account_id, self.id
         );
-        let builder = self
-            .executor
-            .client
+        self.executor
             .delete(endpoint)
-            .query(&[("content_id", &self.id)]);
-        self.executor.request::<EmptyJsonProxy>(builder).await?;
+            .apply_locale_query()
+            .request::<EmptyJsonProxy>()
+            .await?;
         Ok(())
     }
 }
@@ -182,12 +186,12 @@ impl CrunchylistPreview {
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
             self.executor.details.account_id, self.list_id
         );
-        let builder = self
+        let mut crunchylist: Crunchylist = self
             .executor
-            .client
             .get(endpoint)
-            .query(&[("locale", &self.executor.details.locale)]);
-        let mut crunchylist: Crunchylist = self.executor.request(builder).await?;
+            .apply_locale_query()
+            .request()
+            .await?;
         crunchylist.id = self.list_id.clone();
         Ok(crunchylist)
     }
@@ -199,11 +203,10 @@ impl Crunchyroll {
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}",
             self.executor.details.account_id
         );
-        let builder = self
-            .executor
-            .client
+        self.executor
             .get(endpoint)
-            .query(&[("locale", &self.executor.details.locale)]);
-        self.executor.request(builder).await
+            .apply_locale_query()
+            .request()
+            .await
     }
 }

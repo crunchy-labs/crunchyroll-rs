@@ -1,11 +1,10 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::common::FromId;
-use crunchyroll_rs::media::{Episode, Playback, Streams};
+use crunchyroll_rs::{Episode, Media};
 
 mod utils;
 
-static EPISODE: Store<Episode> = Store::new(|| {
+static EPISODE: Store<Media<Episode>> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
         let episode = Episode::from_id(crunchy, "GRDKJZ81Y".to_string()).await?;

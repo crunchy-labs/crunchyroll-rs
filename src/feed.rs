@@ -1,14 +1,14 @@
-use crate::common::{CrappyBulkResult, FromId};
-use crate::error::{CrunchyrollError, CrunchyrollErrorContext};
-use crate::media::{MediaType, Panel};
+use crate::common::{BulkResult, CrappyBulkResult};
+use crate::error::CrunchyrollError;
+use crate::media::MediaType;
 use crate::search::browse::{BrowseOptions, BrowseSortType};
-use crate::{options, BulkResult, Crunchyroll, Executor, Request, Result};
+use crate::{options, Crunchyroll, Executor, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Default, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CuratedFeed {
@@ -18,7 +18,7 @@ pub struct CuratedFeed {
     pub title: String,
     pub description: String,
 
-    pub items: Vec<Panel>,
+    pub items: Vec<MediaCollection>,
 
     #[cfg(feature = "__test_strict")]
     feed_type: crate::StrictValue,
@@ -26,23 +26,22 @@ pub struct CuratedFeed {
     version: crate::StrictValue,
 }
 
-#[async_trait::async_trait]
-impl FromId for CuratedFeed {
-    async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
+impl CuratedFeed {
+    pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/curated_feeds/{}",
             id
         );
-        let builder = crunchy
+        crunchy
             .executor
-            .client
             .get(endpoint)
-            .query(&[("locale", &crunchy.executor.details.locale)]);
-        crunchy.executor.request(builder).await
+            .apply_locale_query()
+            .request()
+            .await
     }
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CarouselFeedImages {
@@ -51,7 +50,7 @@ pub struct CarouselFeedImages {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Default, Request)]
+#[derive(Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CarouselFeed {
@@ -76,12 +75,12 @@ impl CarouselFeed {
         id: String,
     ) -> Result<BulkResult<CarouselFeed>> {
         let endpoint = format!("https://beta.crunchyroll.com/content/v1/carousel/{}", id);
-        let builder = crunchy
+        crunchy
             .executor
-            .client
             .get(endpoint)
-            .query(&[("locale", &crunchy.executor.details.locale)]);
-        crunchy.executor.request(builder).await
+            .apply_locale_query()
+            .request()
+            .await
     }
 }
 
@@ -116,7 +115,7 @@ pub enum HomeFeedType {
     Banner(String, HomeFeedBannerImages),
 }
 
-#[derive(Clone, Debug, Deserialize, Default)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct HomeFeedBannerImages {
@@ -175,9 +174,9 @@ impl HomeFeed {
                 } else if (&self.resource).contains("similar_to") {
                     Ok(HomeFeedType::SimilarTo(self.id.clone()))
                 } else {
-                    Err(CrunchyrollError::Internal(CrunchyrollErrorContext::new(
-                        format!("invalid dynamic collection type `{}`", self.resource),
-                    )))
+                    Err(CrunchyrollError::Internal(
+                        format!("invalid dynamic collection type `{}`", self.resource).into(),
+                    ))
                 }
             }
             "continue_watching" => Ok(HomeFeedType::UpNext),
@@ -193,14 +192,14 @@ impl HomeFeed {
                 self.banner_images.clone().unwrap(),
             )),
             "curated_collection" => Ok(HomeFeedType::CuratedFeed(self.id.clone())),
-            _ => Err(CrunchyrollError::Internal(CrunchyrollErrorContext::new(
-                format!("invalid resource type `{}`", self.resource_type),
-            ))),
+            _ => Err(CrunchyrollError::Internal(
+                format!("invalid resource type `{}`", self.resource_type).into(),
+            )),
         }
     }
 }
 
-#[derive(Debug, Deserialize, Default, Request)]
+#[derive(Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct NewsFeedResult {
@@ -225,28 +224,18 @@ pub struct NewsFeed {
     pub news_link: String,
 }
 
-#[derive(Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct UpNextEntry {
-    #[serde(skip)]
-    executor: Arc<Executor>,
-
     pub new: bool,
     pub new_content: bool,
 
     pub playhead: u32,
     pub fully_watched: bool,
 
-    pub panel: Panel,
-}
-
-impl Request for UpNextEntry {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
-        self.executor = executor.clone();
-
-        self.panel.__set_executor(executor);
-    }
+    pub panel: MediaCollection,
 }
 
 options! {
@@ -283,47 +272,38 @@ impl Crunchyroll {
             "https://beta.crunchyroll.com/content/v1/{}/home_feed",
             self.executor.details.account_id
         );
-        let builder = self
-            .executor
-            .client
+        self.executor
             .get(endpoint)
-            .query(&options.to_query(&[(
-                "locale".to_string(),
-                self.executor.details.locale.to_string(),
-            )]));
-        self.executor.request(builder).await
+            .query(&options.to_query())
+            .apply_locale_query()
+            .request()
+            .await
     }
 
     pub async fn news_feed(&self, options: NewsFeedOptions) -> Result<NewsFeedResult> {
         let endpoint = "https://beta.crunchyroll.com/content/v1/news_feed";
-        let builder = self
-            .executor
-            .client
+        self.executor
             .get(endpoint)
-            .query(&options.to_query(&[(
-                "locale".to_string(),
-                self.executor.details.locale.to_string(),
-            )]));
-        self.executor.request(builder).await
+            .query(&options.to_query())
+            .apply_locale_query()
+            .request()
+            .await
     }
 
     pub async fn recommendations(
         &self,
         options: RecommendationOptions,
-    ) -> Result<BulkResult<Panel>> {
+    ) -> Result<BulkResult<MediaCollection>> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/{}/recommendations",
             self.executor.details.account_id
         );
-        let builder = self
-            .executor
-            .client
+        self.executor
             .get(endpoint)
-            .query(&options.to_query(&[(
-                "locale".to_string(),
-                self.executor.details.locale.to_string(),
-            )]));
-        self.executor.request(builder).await
+            .query(&options.to_query())
+            .apply_locale_query()
+            .request()
+            .await
     }
 
     pub async fn up_next(&self, options: UpNextOptions) -> Result<BulkResult<UpNextEntry>> {
@@ -331,14 +311,11 @@ impl Crunchyroll {
             "	https://beta.crunchyroll.com/content/v1/{}/up_next_account",
             self.executor.details.account_id
         );
-        let builder = self
-            .executor
-            .client
+        self.executor
             .get(endpoint)
-            .query(&options.to_query(&[(
-                "locale".to_string(),
-                self.executor.details.locale.to_string(),
-            )]));
-        self.executor.request(builder).await
+            .query(&options.to_query())
+            .apply_locale_query()
+            .request()
+            .await
     }
 }

@@ -1,7 +1,8 @@
-use crate::common::Request;
-use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
+#![cfg(feature = "stream")]
+
+use crate::error::CrunchyrollError;
 use crate::media::{PlaybackStream, VideoStream};
-use crate::{Executor, Locale};
+use crate::{Executor, Locale, Request, Result};
 use aes::cipher::{BlockDecryptMut, KeyIvInit};
 use std::borrow::BorrowMut;
 use std::io::Write;
@@ -31,9 +32,9 @@ impl DefaultStreams for VideoStream {
             )
             .await
         } else {
-            Err(CrunchyrollError::Internal(CrunchyrollErrorContext::new(
+            Err(CrunchyrollError::Internal(
                 "could not find default stream".into(),
-            )))
+            ))
         }
     }
 }
@@ -54,9 +55,9 @@ impl DefaultStreams for PlaybackStream {
             )
             .await
         } else {
-            Err(CrunchyrollError::Internal(CrunchyrollErrorContext::new(
+            Err(CrunchyrollError::Internal(
                 "could not find default stream".into(),
-            )))
+            ))
         }
     }
 }
@@ -77,7 +78,8 @@ impl From<m3u8_rs::Resolution> for Resolution {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Request)]
+#[request(executor(segments))]
 pub struct VariantData {
     executor: Arc<Executor>,
 
@@ -100,7 +102,7 @@ impl VariantData {
         let raw_master_playlist = resp.text().await?;
 
         let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_bytes())
-            .map_err(|e| CrunchyrollError::Decode(CrunchyrollErrorContext::new(e.to_string())))?;
+            .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
 
         let mut stream_data: Vec<VariantData> = vec![];
 
@@ -152,9 +154,7 @@ impl VariantData {
             let resp = self.executor.client.get(self.url.clone()).send().await?;
             let raw_media_playlist = resp.text().await?;
             let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_bytes())
-                .map_err(|e| {
-                CrunchyrollError::Decode(CrunchyrollErrorContext::new(e.to_string()))
-            })?;
+                .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
 
             let mut segments: Vec<VariantSegment> = vec![];
             for segment in media_playlist.segments {
@@ -218,16 +218,12 @@ impl VariantSegment {
                 .decrypt_padded_mut::<aes::cipher::block_padding::Pkcs7>(
                     temp_encrypted.borrow_mut(),
                 )
-                .map_err(|e| {
-                    CrunchyrollError::Decode(CrunchyrollErrorContext::new(e.to_string()))
-                })?;
-            w.write(decrypted).map_err(|e| {
-                CrunchyrollError::External(CrunchyrollErrorContext::new(e.to_string()))
-            })?;
+                .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
+            w.write(decrypted)
+                .map_err(|e| CrunchyrollError::External(e.to_string().into()))?;
         } else {
-            w.write(segment.as_ref()).map_err(|e| {
-                CrunchyrollError::External(CrunchyrollErrorContext::new(e.to_string()))
-            })?;
+            w.write(segment.as_ref())
+                .map_err(|e| CrunchyrollError::External(e.to_string().into()))?;
         }
         Ok(())
     }

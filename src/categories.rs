@@ -1,10 +1,11 @@
-use crate::common::Image;
-use crate::{enum_values, BulkResult, Crunchyroll, Locale, Request};
+use crate::common::{BulkResult, Image};
+use crate::{enum_values, Crunchyroll, Locale, Request};
 use crate::{options, Result};
 use serde::Deserialize;
 
 enum_values! {
     #[doc = "Video categories / genres"]
+    #[derive(Debug)]
     pub enum Category {
         Action = "action"
         Adventure = "adventure"
@@ -47,7 +48,7 @@ pub struct TenantCategoryLocalization {
     pub locale: Locale,
 }
 
-#[derive(Clone, Debug, Deserialize, Default, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SubTenantCategory {
@@ -60,7 +61,7 @@ pub struct SubTenantCategory {
     pub localization: TenantCategoryLocalization,
 }
 
-#[derive(Clone, Debug, Deserialize, Default, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct TenantCategory {
@@ -92,14 +93,11 @@ impl Crunchyroll {
         options: TenantCategoryOptions,
     ) -> Result<BulkResult<TenantCategory>> {
         let endpoint = "https://beta.crunchyroll.com/content/v1/tenant_categories";
-        let builder = self
-            .executor
-            .client
+        self.executor
             .get(endpoint)
-            .query(&options.to_query(&[(
-                "locale".to_string(),
-                self.executor.details.locale.to_string(),
-            )]));
-        self.executor.request(builder).await
+            .query(&options.to_query())
+            .apply_locale_query()
+            .request()
+            .await
     }
 }

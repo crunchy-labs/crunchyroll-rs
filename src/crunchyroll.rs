@@ -1,4 +1,4 @@
-use crate::{enum_values, Result};
+use crate::enum_values;
 use std::sync::Arc;
 
 enum_values! {
@@ -54,21 +54,11 @@ impl Crunchyroll {
     pub async fn session_token(&self) -> SessionToken {
         self.executor.config.lock().await.session_token.clone()
     }
-
-    pub async fn invalidate_session(self) -> Result<()> {
-        let endpoint = "https://crunchyroll.com/logout";
-        self.executor
-            .to_owned()
-            .request(self.executor.client.get(endpoint))
-            .await?;
-        Ok(())
-    }
 }
 
 mod auth {
-    use crate::common::Request;
-    use crate::error::{check_request, CrunchyrollError, CrunchyrollErrorContext, Result};
-    use crate::{Crunchyroll, Locale};
+    use crate::error::{check_request, CrunchyrollError, CrunchyrollErrorContext};
+    use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
     use reqwest::header::HeaderMap;
     use reqwest::{IntoUrl, RequestBuilder};
@@ -85,7 +75,7 @@ mod auth {
         EtpRt(String),
     }
 
-    #[derive(Deserialize, Debug, Default)]
+    #[derive(Debug, Default, Deserialize)]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     #[allow(dead_code)]
@@ -99,7 +89,7 @@ mod auth {
         account_id: String,
     }
 
-    #[derive(Debug, Clone)]
+    #[derive(Clone, Debug)]
     pub(crate) struct ExecutorConfig {
         pub(crate) token_type: String,
         pub(crate) access_token: String,
@@ -108,7 +98,7 @@ mod auth {
     }
 
     #[allow(dead_code)]
-    #[derive(Debug, Clone)]
+    #[derive(Clone, Debug)]
     pub(crate) struct ExecutorDetails {
         pub(crate) locale: Locale,
 
@@ -193,20 +183,11 @@ mod auth {
             Ok(resp)
         }
 
-        pub(crate) fn media_query(&self) -> Vec<(String, String)> {
-            vec![
-                ("locale".to_string(), self.details.locale.to_string()),
-                ("Signature".to_string(), self.details.signature.clone()),
-                ("Policy".to_string(), self.details.policy.clone()),
-                ("Key-Pair-Id".to_string(), self.details.key_pair_id.clone()),
-            ]
-        }
-
         async fn auth_with_refresh_token(
             client: reqwest::Client,
             refresh_token: String,
         ) -> Result<AuthResponse> {
-            let endpoint = "https://beta-api.crunchyroll.com/auth/v1/token";
+            let endpoint = "https://beta.crunchyroll.com/auth/v1/token";
             let resp = client
                 .post(endpoint)
                 .header(
@@ -229,7 +210,7 @@ mod auth {
         }
 
         async fn auth_with_etp_rt(client: reqwest::Client, etp_rt: String) -> Result<AuthResponse> {
-            let endpoint = "https://beta-api.crunchyroll.com/auth/v1/token";
+            let endpoint = "https://beta.crunchyroll.com/auth/v1/token";
             let resp = client
                 .post(endpoint)
                 .header("Authorization", "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
@@ -348,7 +329,7 @@ mod auth {
             user: String,
             password: String,
         ) -> Result<Crunchyroll> {
-            let endpoint = "https://beta-api.crunchyroll.com/auth/v1/token";
+            let endpoint = "https://beta.crunchyroll.com/auth/v1/token";
             let resp = self
                 .client
                 .post(endpoint)
@@ -418,8 +399,7 @@ mod auth {
                 self.login_with_etp_rt(cookie).await
             } else {
                 Err(CrunchyrollError::Authentication(
-                    CrunchyrollErrorContext::new("invalid session id".into())
-                        .with_url(resp.url().to_string()),
+                    CrunchyrollErrorContext::new("invalid session id").with_url(resp.url().clone()),
                 ))
             }
         }
@@ -440,7 +420,7 @@ mod auth {
                 .unwrap(),
             );
 
-            let index_endpoint = "https://beta-api.crunchyroll.com/index/v2";
+            let index_endpoint = "https://beta.crunchyroll.com/index/v2";
             #[derive(Deserialize, smart_default::SmartDefault)]
             #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
             #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -453,17 +433,17 @@ mod auth {
                 policy: String,
                 signature: String,
             }
-            #[derive(Deserialize, Default, Request)]
+            #[derive(Default, Deserialize, Request)]
             #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
             #[cfg_attr(not(feature = "__test_strict"), serde(default))]
             #[allow(dead_code)]
             struct IndexResp {
-                cms: IndexRespCms,
+                cms_beta: IndexRespCms,
                 default_marketing_opt_in: bool,
                 service_available: bool,
 
                 #[cfg(feature = "__test_strict")]
-                cms_beta: crate::StrictValue,
+                cms: crate::StrictValue,
                 #[cfg(feature = "__test_strict")]
                 cms_web: crate::StrictValue,
             }
@@ -487,16 +467,16 @@ mod auth {
                         // '/' is trimmed so that urls which require it must be in .../{bucket}/... like format.
                         // this just looks cleaner
                         bucket: index
-                            .cms
+                            .cms_beta
                             .bucket
                             .strip_prefix('/')
-                            .unwrap_or(index.cms.bucket.as_str())
+                            .unwrap_or(index.cms_beta.bucket.as_str())
                             .to_string(),
 
                         premium: false,
-                        signature: index.cms.signature,
-                        policy: index.cms.policy,
-                        key_pair_id: index.cms.key_pair_id,
+                        signature: index.cms_beta.signature,
+                        policy: index.cms_beta.policy,
+                        key_pair_id: index.cms_beta.key_pair_id,
                         account_id: login_response.account_id,
                     },
                 }),

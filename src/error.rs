@@ -1,3 +1,4 @@
+use reqwest::{IntoUrl, Url};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
@@ -40,20 +41,13 @@ impl From<serde_json::Error> for CrunchyrollError {
     }
 }
 
-impl From<serde_urlencoded::de::Error> for CrunchyrollError {
-    fn from(err: serde_urlencoded::de::Error) -> Self {
-        Self::Decode(CrunchyrollErrorContext::new(err.to_string()))
-    }
-}
-
-impl From<serde_urlencoded::ser::Error> for CrunchyrollError {
-    fn from(err: serde_urlencoded::ser::Error) -> Self {
-        Self::Decode(CrunchyrollErrorContext::new(err.to_string()))
-    }
-}
-
 impl From<reqwest::Error> for CrunchyrollError {
     fn from(err: reqwest::Error) -> Self {
+        let mut context = CrunchyrollErrorContext::new(err.to_string());
+        if let Some(url) = err.url() {
+            context = context.with_url(url.clone());
+        }
+
         if err.is_request()
             || err.is_redirect()
             || err.is_timeout()
@@ -61,11 +55,11 @@ impl From<reqwest::Error> for CrunchyrollError {
             || err.is_body()
             || err.is_status()
         {
-            CrunchyrollError::Request(CrunchyrollErrorContext::new(err.to_string()))
+            CrunchyrollError::Request(context)
         } else if err.is_decode() {
-            CrunchyrollError::Decode(CrunchyrollErrorContext::new(err.to_string()))
+            CrunchyrollError::Decode(context)
         } else if err.is_builder() {
-            CrunchyrollError::Internal(CrunchyrollErrorContext::new(err.to_string()))
+            CrunchyrollError::Internal(context)
         } else {
             CrunchyrollError::Internal(CrunchyrollErrorContext::new(format!(
                 "Could not determine request error type - {}",
@@ -78,7 +72,7 @@ impl From<reqwest::Error> for CrunchyrollError {
 #[derive(Debug)]
 pub struct CrunchyrollErrorContext {
     pub message: String,
-    pub url: Option<String>,
+    pub url: Option<Url>,
     pub value: Option<Vec<u8>>,
 }
 
@@ -103,17 +97,29 @@ impl Display for CrunchyrollErrorContext {
     }
 }
 
+impl From<String> for CrunchyrollErrorContext {
+    fn from(string: String) -> Self {
+        CrunchyrollErrorContext::new(string)
+    }
+}
+
+impl From<&str> for CrunchyrollErrorContext {
+    fn from(str: &str) -> Self {
+        CrunchyrollErrorContext::new(str)
+    }
+}
+
 impl CrunchyrollErrorContext {
-    pub(crate) fn new(message: String) -> Self {
+    pub(crate) fn new<S: ToString>(message: S) -> Self {
         Self {
-            message,
+            message: message.to_string(),
             url: None,
             value: None,
         }
     }
 
-    pub(crate) fn with_url(mut self, url: String) -> Self {
-        self.url = Some(url);
+    pub(crate) fn with_url<U: IntoUrl>(mut self, url: U) -> Self {
+        self.url = Some(url.into_url().unwrap());
 
         self
     }
@@ -147,9 +153,9 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
     }
 
     if let Ok(err) = serde_json::from_value::<MessageType>(value.clone()) {
-        return Err(CrunchyrollError::Request(CrunchyrollErrorContext::new(
-            format!("{} - {}", err.error_type, err.message),
-        )));
+        return Err(CrunchyrollError::Request(
+            format!("{} - {}", err.error_type, err.message).into(),
+        ));
     } else if let Ok(err) = serde_json::from_value::<CodeContextError>(value) {
         let mut details: Vec<String> = vec![];
 
@@ -158,13 +164,13 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
         }
 
         return if let Some(message) = err.message {
-            Err(CrunchyrollError::Request(CrunchyrollErrorContext::new(
-                format!("{} ({}) - {}", message, err.code, details.join(", ")),
-            )))
+            Err(CrunchyrollError::Request(
+                format!("{} ({}) - {}", message, err.code, details.join(", ")).into(),
+            ))
         } else {
-            Err(CrunchyrollError::Request(CrunchyrollErrorContext::new(
-                format!("({}) - {}", err.code, details.join(", ")),
-            )))
+            Err(CrunchyrollError::Request(
+                format!("({}) - {}", err.code, details.join(", ")).into(),
+            ))
         };
     }
     Ok(())

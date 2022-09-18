@@ -1,273 +1,109 @@
-use darling::{FromDeriveInput, FromMeta};
+use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{Data, DeriveInput, parse_macro_input};
-use syn::__private::TokenStream2;
+use syn::{Data, DeriveInput, GenericArgument, Ident, parse_macro_input, Path, PathArguments, PathSegment, Type};
+use syn::__private::{Span, TokenStream2};
 
-#[proc_macro_derive(Request)]
+#[derive(FromDeriveInput)]
+#[darling(attributes(request))]
+struct DeriveRequestOpts {
+    executor: Option<darling::util::PathList>
+}
+
+#[proc_macro_derive(Request, attributes(request))]
 pub fn derive_request(input: TokenStream) -> TokenStream {
-    let DeriveInput {ident, generics, data, ..} = parse_macro_input!(input as DeriveInput);
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    let data = match data {
-        Data::Struct(data_struct) => data_struct,
-        _ => panic!("must only be applied to structs")
-    };
-
-    let mut executor = TokenStream2::new();
-
-    for field in data.fields {
-        if let Some(name_ident) = field.ident {
-            if field.ty.into_token_stream().to_string().replace(' ', "").ends_with("Arc<Executor>") {
-                if !executor.is_empty() {
-                    panic!("could not determine correct arc executor")
-                }
-
-                executor = quote! {
-                    fn __set_executor(&mut self, executor: Arc<Executor>) {
-                        self.#name_ident = executor
-                    }
-
-                    fn __get_executor(&self) -> Option<Arc<Executor>> {
-                        Some(self.#name_ident.clone())
-                    }
-                }
-            }
-        }
-    }
-
-    let expanded = quote! {
-        impl #impl_generics crate::Request for #ident #ty_generics # where_clause {
-            #executor
-        }
-    };
-    expanded.into()
-}
-
-#[proc_macro_derive(Available)]
-pub fn derive_available(input: TokenStream) -> TokenStream {
-    let DeriveInput {ident, generics, data, ..} = parse_macro_input!(input as DeriveInput);
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    let data = match data {
-        Data::Struct(data_struct) => data_struct,
-        _ => panic!("must only be applied to structs")
-    };
-
-    let mut options = vec![quote!{self.__get_executor().unwrap().details.premium}];
-
-    for field in data.fields {
-        if let Some(name_ident) = field.ident {
-            match name_ident.to_string().as_str() {
-                "is_premium_only" => options.push(quote!{!self.is_premium_only}),
-                "channel_id" => options.push(quote!{self.channel_id.is_empty()}),
-                _ => ()
-            }
-        }
-    }
-
-    let expanded = quote! {
-        impl #impl_generics crate::common::Available for #ident #ty_generics #where_clause {
-            fn available(&self) -> bool {
-                #(#options)||*
-            }
-        }
-    };
-    expanded.into()
-}
-
-#[derive(Debug, FromDeriveInput)]
-#[darling(attributes(from_id))]
-struct DeriveFromIdOpts {
-    multiple: Option<darling::util::PathList>
-}
-
-/// Derives the [`crunchyroll_rs::common::FromId`] crate.
-///
-/// It takes a `#[from_id(...)]` helper which currently only has the `multiple` sub-field
-/// (`#[from_id(multiple(...))]`. The sub-field can take multiple [`syn::Path`]s as arguments
-/// which must be library structs, and for every given argument, a
-/// `from_`_`argument_struct_name`_`_id` method in the deriven struct is implemented as well as a
-/// _`deriven_struct_name`_`s` method in the struct passed as current argument.
-///
-/// # Examples
-///
-/// ```
-/// struct Season;
-///
-/// #[derive(FromId)]
-/// #[from_id(multiple(Season))]
-/// struct Episode;
-/// ```
-///
-/// This would lead to the following generated implementation:
-///
-/// ```
-/// struct Season;
-///
-/// struct Episode;
-///
-/// // generated from `#[derive(FromId)]`
-/// #[async_trait::async_trait]
-/// impl crate::common::FromId for Episode {
-///     async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self, CrunchyrollError> {
-///         /* ... */
-///     }
-/// }
-///
-/// // generated from `#[from_id(multiple(Season))]`
-/// impl Episode {
-///     pub async fn from_season_id(crunchy: &Crunchyroll, season_id: String) -> Result<BulkResult<Self>, CrunchyrollError> {
-///         /* ... */
-///     }
-/// }
-///
-/// // generated from `#[from_id(multiple(Season))]`
-/// impl Season {
-///     pub async fn episodes(&self) -> Result<BulkResult<Self>, CrunchyrollError> {
-///         /* ... */
-///     }
-/// }
-/// ```
-///
-#[proc_macro_derive(FromId, attributes(from_id))]
-pub fn derive_from_id(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
-    let DeriveInput {ident, generics, ..} = &derive_input;
+    let DeriveInput {ident, generics, data, ..} = &derive_input;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    // convert the struct name from CamelCase to snake_case
-    let mut _path = String::new();
-    for (i, char) in ident.to_string().chars().enumerate() {
-        if char.is_ascii_uppercase() && i != 0 {
-            _path.push('_');
-        }
-        _path.push(char.to_ascii_lowercase());
-    }
-    if !_path.ends_with('s') {
-        _path.push('s');
-    }
-    let ident_path = syn::Ident::from_string(_path.as_str()).unwrap();
+    let request_opts: DeriveRequestOpts = DeriveRequestOpts::from_derive_input(&derive_input).unwrap();
+    let executor_fields = request_opts.executor.unwrap_or_default();
 
-    let mut opt_impls = vec![];
-    let mut other_impls = vec![];
+    let mut impl_executor = vec![];
 
-    let from_id_opts: DeriveFromIdOpts = DeriveFromIdOpts::from_derive_input(&derive_input).unwrap();
-    // check if the `#[from_id(multiple(...))]` attribute is populated
-    if let Some(multiple) = from_id_opts.multiple {
-        // iterate over every elemenet in the `#[from_id(multiple(...))]` attribute and create a
-        for opt_path in multiple.iter() {
-            let name = opt_path.segments.last().unwrap().ident.to_string().to_ascii_lowercase();
-            let name_id = syn::Ident::from_string(format!("{}_id", &name).as_str()).unwrap();
-            let from_name_id = syn::Ident::from_string(format!("from_{}_id", &name).as_str()).unwrap();
-
-            let opt_impl_desc = format!("Return all {} by their parent {} id.", ident_path, name);
-            opt_impls.push(quote! {
-                #[doc = #opt_impl_desc]
-                pub async fn #from_name_id(crunchy: &crate::crunchyroll::Crunchyroll, #name_id: String) -> crate::Result<crate::common::BulkResult<#ident>> {
-                    let endpoint = format!(
-                        "https://beta-api.crunchyroll.com/cms/v2/{}/{}",
-                        crunchy.executor.details.bucket, stringify!(#ident_path)
-                    );
-                    let builder = crunchy
-                        .executor
-                        .client
-                        .get(endpoint.clone())
-                        .query(&[(stringify!(#name_id), #name_id)])
-                        .query(&crunchy.executor.media_query());
-
-                    crunchy.executor.request(builder).await
-                }
-            });
-            let other_impl_desc = format!("Return all {} {}.", name, ident_path);
-            other_impls.push(quote! {
-                impl #opt_path {
-                    #[doc = #other_impl_desc]
-                    pub async fn #ident_path(&self) -> crate::Result<crate::common::BulkResult<#ident>> {
-                        #ident::#from_name_id(&crate::crunchyroll::Crunchyroll { executor: self.__get_executor().unwrap() }, self.id.clone()).await
-                    }
-                }
-            });
-        }
-    }
-
-    let expanded = quote! {
-        #[async_trait::async_trait]
-        impl #impl_generics crate::common::FromId for #ident #ty_generics #where_clause {
-            async fn from_id(crunchy: &crate::crunchyroll::Crunchyroll, id: String) -> crate::Result<Self> {
-                let endpoint = format!(
-                    "https://beta-api.crunchyroll.com/cms/v2/{}/{}/{}",
-                    crunchy.executor.details.bucket, stringify!(#ident_path), id
-                );
-                let builder = crunchy
-                    .executor
-                    .client
-                    .get(endpoint)
-                    .query(&crunchy.executor.media_query());
-
-                crunchy.executor.request(builder).await
-            }
-        }
-
-        impl #ident {
-            #(#opt_impls)*
-        }
-
-        #(#other_impls)*
-    };
-    expanded.into()
-}
-
-#[proc_macro_derive(Playback)]
-pub fn derive_playback(input: TokenStream) -> TokenStream {
-    let DeriveInput {ident, generics, data, ..} = parse_macro_input!(input as DeriveInput);
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    let data = match data {
-        Data::Struct(data_struct) => data_struct,
-        _ => panic!("must only be applied to structs")
-    };
-
-    let mut playback_id = TokenStream2::new();
-
-    for field in data.fields {
-        if let Some(name_ident) = field.ident {
-            // only if the `playback_id` id field exists, playback can be deriven
-            if name_ident == "playback_id" {
-                // check if the `playback_id` field has `String` as type or `Option<String>` which
-                // must be handled separately
-                if (&field.ty).into_token_stream().to_string().replace(' ', "").ends_with("String") {
-                    playback_id = quote! {
-                        async fn playback(&self) -> crate::Result<crate::media::PlaybackStream> {
-                            self.executor
-                                .request(self.executor.client.get(&self.playback_id))
-                                .await
+    match data {
+        Data::Struct(data_struct) => {
+            for field in data_struct.fields.iter() {
+                if let Some(ident) = &field.ident {
+                    for path in executor_fields.iter() {
+                        if path.is_ident(ident) {
+                            let ty = if let Type::Path(ty) = field.clone().ty { ty } else { panic!("shouldn't happen") };
+                            impl_executor.push(derive_request_check(quote! { self.#ident }, &ty.path).into());
+                            continue
                         }
                     }
-                } else if field.ty.into_token_stream().to_string().replace(' ', "").ends_with("Option<String>") {
-                    playback_id = quote! {
-                        async fn playback(&self) -> crate::Result<crate::media::PlaybackStream> {
-                            if let Some(playback_id) = &self.playback_id {
-                                self.executor
-                                    .request(self.executor.client.get(playback_id))
-                                    .await
-                            } else {
-                                Err(crate::error::CrunchyrollError::Request(crate::error::CrunchyrollErrorContext::new(
-                                    "no playback id available".into(),
-                                )))
+
+                    if let Type::Path(ty) = field.clone().ty {
+                        let segment = ty.path.segments.last().unwrap();
+                        if segment.ident == "Arc" {
+                            if segment_types(segment)[0].is_ident("Executor") {
+                                impl_executor.push(quote! {
+                                    self.#ident = executor.clone();
+                                })
                             }
                         }
                     }
                 }
             }
         }
-    }
+        _ => ()
+    };
 
     let expanded = quote! {
-        #[async_trait::async_trait]
-        impl #impl_generics crate::media::Playback for #ident #ty_generics # where_clause {
-            #playback_id
+        impl #impl_generics crate::Request for #ident #ty_generics # where_clause {
+            fn __set_executor(&mut self, executor: std::sync::Arc<crate::Executor>) {
+                #(#impl_executor)*
+            }
         }
     };
     expanded.into()
+}
+
+fn derive_request_check(set_path: TokenStream2, path: &Path) -> TokenStream2 {
+    let segment = path.segments.last().unwrap();
+
+    let _deep_set_path = set_path.to_string();
+    let deep_set_path = _deep_set_path.split(".").last().unwrap();
+
+    if segment.ident == "Option" {
+        let options_set_path = Ident::new(format!("{}{}", "option_", deep_set_path).as_str(), Span::call_site());
+        let ty = &segment_types(segment)[0];
+        let check = derive_request_check(options_set_path.to_token_stream(), ty);
+        quote! {
+            if let Some(#options_set_path) = &mut #set_path {
+                #check
+            }
+        }
+    } else if segment.ident == "Vec" {
+        let vec_set_path = Ident::new(format!("{}{}", "vec_", deep_set_path).as_str(), Span::call_site());
+        let ty = &segment_types(segment)[0];
+        let check = derive_request_check(vec_set_path.to_token_stream(), ty);
+        quote! {
+            for #vec_set_path in #set_path.iter_mut() {
+                #check
+            }
+        }
+    } else if segment.ident == "HashMap" {
+        let hash_map_set_path = Ident::new(format!("{}{}", "hash_map_", deep_set_path).as_str(), Span::call_site());
+        let ty = &segment_types(segment)[1];
+        let check = derive_request_check(hash_map_set_path.to_token_stream(), ty);
+        quote! {
+            for #hash_map_set_path in #set_path.values_mut() {
+                #check
+            }
+        }
+    } else {
+        quote! {
+            #set_path.__set_executor(executor.clone());
+        }
+    }
+}
+
+fn segment_types(segment: &PathSegment) -> Vec<Path> {
+    let args = if let PathArguments::AngleBracketed(args) = &segment.arguments { &args.args } else { panic!("shouldn't happen") };
+    args
+        .iter()
+        .map(|a| if let GenericArgument::Type(t) = a { t } else { panic!("shouldn't happen") })
+        .map(|t| if let Type::Path(ty) = t { ty.path.clone() } else { panic!("shouldn't happen")  })
+        .collect()
 }

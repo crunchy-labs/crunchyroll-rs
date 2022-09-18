@@ -1,5 +1,4 @@
-use crate::common::Request;
-use crate::{Crunchyroll, EmptyJsonProxy, Executor, Locale, Result};
+use crate::{Crunchyroll, EmptyJsonProxy, Executor, Locale, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -112,12 +111,11 @@ impl Account {
 
     async fn update_preferences(&self, name: String, value: String) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
-        let builder = self
-            .executor
-            .client
+        self.executor
             .patch(endpoint)
-            .json(&json!({ name: value }));
-        self.executor.request::<EmptyJsonProxy>(builder).await?;
+            .json(&json!({ name: value }))
+            .request::<EmptyJsonProxy>()
+            .await?;
         Ok(())
     }
 
@@ -128,35 +126,40 @@ impl Account {
         new_password: String,
     ) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/credentials";
-        let builder = self.executor.client.patch(endpoint).json(&json!({
-            "accountId": self.account_id.clone(),
-            "current_password": current_password,
-            "new_password": new_password,
-        }));
-        self.executor.request::<EmptyJsonProxy>(builder).await?;
+        self.executor
+            .patch(endpoint)
+            .json(&json!({
+                "accountId": self.account_id.clone(),
+                "current_password": current_password,
+                "new_password": new_password,
+            }))
+            .request::<EmptyJsonProxy>()
+            .await?;
         Ok(())
     }
 
     /// Changes the current account email.
     pub async fn change_email(&self, current_password: String, new_email: String) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/credentials";
-        let builder = self.executor.client.patch(endpoint).json(&json!({
-            "current_password": current_password,
-            "new_email": new_email,
-        }));
-        self.executor.request(builder).await?;
+        self.executor
+            .patch(endpoint)
+            .json(&json!({
+                "current_password": current_password,
+                "new_email": new_email,
+            }))
+            .request()
+            .await?;
         Ok(())
     }
 
     /// Changes the current profile wallpaper.
     pub async fn change_wallpaper(&mut self, wallpaper: Wallpaper) -> Result<()> {
         let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
-        let builder = self
-            .executor
-            .client
+        self.executor
             .patch(endpoint)
-            .json(&json!({"wallpaper": &wallpaper.name}));
-        self.executor.request(builder).await?;
+            .json(&json!({"wallpaper": &wallpaper.name}))
+            .request()
+            .await?;
         self.wallpaper = wallpaper;
         Ok(())
     }
@@ -169,18 +172,18 @@ impl Crunchyroll {
         let mut result: HashMap<String, Value> = HashMap::new();
 
         let me_endpoint = "https://beta.crunchyroll.com/accounts/v1/me";
-        let me_builder = self.executor.client.get(me_endpoint);
         result.extend(
             self.executor
-                .request::<HashMap<String, Value>>(me_builder)
+                .get(me_endpoint)
+                .request::<HashMap<String, Value>>()
                 .await?,
         );
 
         let profile_endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
-        let profile_builder = self.executor.client.get(profile_endpoint);
         result.extend(
             self.executor
-                .request::<HashMap<String, Value>>(profile_builder)
+                .get(profile_endpoint)
+                .request::<HashMap<String, Value>>()
                 .await?,
         );
 
@@ -204,14 +207,14 @@ mod wallpaper {
     use crate::{Crunchyroll, Request, Result};
     use serde::Deserialize;
 
-    #[derive(Debug, Deserialize, Default)]
+    #[derive(Debug, Default, Deserialize)]
     #[serde(from = "String")]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct Wallpaper {
         pub name: String,
     }
 
-    #[derive(Debug, Deserialize, Default, Request)]
+    #[derive(Debug, Default, Deserialize, Request)]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     struct AllWallpapers {
@@ -228,8 +231,8 @@ mod wallpaper {
         /// Returns all available wallpapers
         pub async fn all_wallpapers(crunchyroll: &Crunchyroll) -> Result<Vec<Wallpaper>> {
             let endpoint = "https://beta.crunchyroll.com/assets/v1/wallpaper";
-            let builder = crunchyroll.executor.client.get(endpoint);
-            let all_wallpapers: AllWallpapers = crunchyroll.executor.request(builder).await?;
+            let all_wallpapers: AllWallpapers =
+                crunchyroll.executor.get(endpoint).request().await?;
 
             Ok(all_wallpapers.items)
         }

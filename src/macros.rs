@@ -42,12 +42,12 @@ macro_rules! enum_values {
 
         impl From<String> for $name {
             fn from(value: String) -> Self {
-                match value.as_str() {
-                    $(
-                        $value => $name::$field
-                    ),*,
-                    _ => $name::Custom(value)
+                for (v, f) in [$(($value, $name::$field)),*] {
+                    if value.eq_ignore_ascii_case(v) {
+                        return f;
+                    }
                 }
+                $name::Custom(value)
             }
         }
 
@@ -156,21 +156,15 @@ macro_rules! options {
             )*
 
             #[allow(dead_code)]
-            pub(crate) fn to_query(&self, extra_params: &[(String, String)]) -> Vec<(String, String)> {
-                [
-                    extra_params,
-                    &[
-                        $(
-                            ($query_name.to_string(), if let Some(field) = &self.$field {
-                                // this workaround is required because `serde_urlencoded::to_string`
-                                // cannot deserialize non map / sequence values.
-                                serde_urlencoded::to_string(&[("hack", field)]).unwrap().strip_prefix("hack=").unwrap().to_string()
-                            } else {
-                                "".to_string()
-                            })
-                        ),*
-                    ]
-                ].concat().to_vec()
+            pub(crate) fn to_query(&self) -> Vec<(String, String)> {
+                let encoded = serde_urlencoded::to_string([
+                    $(
+                        ($query_name, if let Some(field) = &self.$field {
+                            Some(serde_json::to_value(field).unwrap())
+                        } else { None })
+                    ),*
+                ]).unwrap();
+                serde_urlencoded::from_str(encoded.as_str()).unwrap()
             }
         }
     }

@@ -46,9 +46,8 @@ pub(crate) use error::Result;
 pub(crate) use internal::serde::EmptyJsonProxy;
 pub(crate) use macros::{enum_values, options};
 
-pub use common::BulkResult;
 pub use crunchyroll::{Crunchyroll, Locale};
-pub use media::{Episode, Movie, MovieListing, Season, Series};
+pub use media::{Episode, Media, MediaCollection, Movie, MovieListing, Season, Series};
 
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;
