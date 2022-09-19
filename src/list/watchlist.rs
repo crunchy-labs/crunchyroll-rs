@@ -25,10 +25,13 @@ pub struct WatchlistEntry {
     pub never_watched: bool,
     pub completion_status: bool,
 
+    /// Should only be [`MediaCollection::Series`] or [`MediaCollection::MovieListing`].
     pub panel: MediaCollection,
 }
 
 impl WatchlistEntry {
+    /// Mark this entry as favorite on your watchlist. The argument this function takes, says if the
+    /// entry should be marked (`true`) or unmarked (`false`) as favorite.
     pub async fn mark_favorite(&mut self, favorite: bool) -> Result<()> {
         mark_favorite_watchlist(&self.executor, self.get_id()?, favorite).await?;
         self.is_favorite = favorite;
@@ -36,11 +39,13 @@ impl WatchlistEntry {
         Ok(())
     }
 
+    /// Remove this entry from your watchlist.
     pub async fn remove(self) -> Result<()> {
         let id = self.get_id()?;
         remove_from_watchlist(self.executor, id).await
     }
 
+    /// Get the media id of the series / movie listing which represents this entry.
     fn get_id(&self) -> Result<String> {
         match self.panel.clone() {
             MediaCollection::Series(series) => Ok(series.id),
@@ -68,6 +73,8 @@ pub struct SimpleWatchlistEntry {
 }
 
 impl SimpleWatchlistEntry {
+    /// Mark this entry as favorite on your watchlist. The argument this function takes, says if the
+    /// entry should be marked (`true`) or unmarked (`false`) as favorite.
     pub async fn mark_favorite(&mut self, favorite: bool) -> Result<()> {
         mark_favorite_watchlist(&self.executor, self.id.clone(), favorite).await?;
         self.is_favorite = favorite;
@@ -75,6 +82,7 @@ impl SimpleWatchlistEntry {
         Ok(())
     }
 
+    /// Remove this entry from your watchlist.
     pub async fn remove(self) -> Result<()> {
         remove_from_watchlist(self.executor, self.id).await
     }
@@ -126,6 +134,7 @@ options! {
 }
 
 impl Crunchyroll {
+    /// Returns your watchlist.
     pub async fn watchlist(
         &self,
         mut options: WatchlistOptions,

@@ -5,6 +5,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+/// Account data of the currently logged in user.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -246,21 +247,16 @@ fn mature_content_flag_manga<'de, D: serde::Deserializer<'de>>(
 }
 
 mod wallpaper {
+    use crate::common::CrappyBulkResult;
     use crate::{Crunchyroll, Request, Result};
     use serde::Deserialize;
 
-    #[derive(Clone, Debug, Default, Deserialize)]
+    /// Wallpaper which are shown at the top of your Crunchyroll profile.
+    #[derive(Clone, Debug, Default, Deserialize, Request)]
     #[serde(from = "String")]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct Wallpaper {
         pub name: String,
-    }
-
-    #[derive(Clone, Debug, Default, Deserialize, Request)]
-    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-    struct AllWallpapers {
-        items: Vec<Wallpaper>,
     }
 
     impl From<String> for Wallpaper {
@@ -271,12 +267,11 @@ mod wallpaper {
 
     impl Wallpaper {
         /// Returns all available wallpapers
-        pub async fn all_wallpapers(crunchyroll: &Crunchyroll) -> Result<Vec<Wallpaper>> {
+        pub async fn all_wallpapers(
+            crunchyroll: &Crunchyroll,
+        ) -> Result<CrappyBulkResult<Wallpaper>> {
             let endpoint = "https://beta.crunchyroll.com/assets/v1/wallpaper";
-            let all_wallpapers: AllWallpapers =
-                crunchyroll.executor.get(endpoint).request().await?;
-
-            Ok(all_wallpapers.items)
+            crunchyroll.executor.get(endpoint).request().await
         }
 
         /// Link to a low resolution image of the wallpaper.

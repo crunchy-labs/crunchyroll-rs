@@ -1,6 +1,5 @@
 use crate::utils::SESSION;
-use crunchyroll_rs::search::browse::BrowseOptions;
-use crunchyroll_rs::search::query::{QueryOptions, QueryType};
+use crunchyroll_rs::search::{BrowseOptions, QueryOptions, QueryType};
 
 mod utils;
 

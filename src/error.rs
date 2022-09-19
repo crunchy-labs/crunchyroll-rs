@@ -7,16 +7,23 @@ use std::fmt::{Debug, Display, Formatter};
 
 pub(crate) type Result<T, E = CrunchyrollError> = core::result::Result<T, E>;
 
+/// Crate specfic error types.
 #[derive(Clone, Debug)]
 pub enum CrunchyrollError {
+    /// Error was caused by something library internal. This only happens if something was
+    /// implemented incorrectly (which hopefully should never be the case) or if Crunchyroll
+    /// surprisingly changed specific parts of their api which broke a part of this crate.
     Internal(CrunchyrollErrorContext),
-    External(CrunchyrollErrorContext),
 
+    /// Some sort of error occurred while requesting the Crunchyroll api.
     Request(CrunchyrollErrorContext),
+    /// While decoding the api response body something went wrong.
     Decode(CrunchyrollErrorContext),
 
+    /// Something went wrong while logging in.
     Authentication(CrunchyrollErrorContext),
 
+    /// Generally malformed or invalid user input.
     Input(CrunchyrollErrorContext),
 }
 
@@ -24,7 +31,6 @@ impl Display for CrunchyrollError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             CrunchyrollError::Internal(context) => write!(f, "{}", context),
-            CrunchyrollError::External(context) => write!(f, "{}", context),
             CrunchyrollError::Request(context) => write!(f, "{}", context),
             CrunchyrollError::Decode(context) => write!(f, "{}", context),
             CrunchyrollError::Authentication(context) => write!(f, "{}", context),
@@ -69,6 +75,7 @@ impl From<reqwest::Error> for CrunchyrollError {
     }
 }
 
+/// Information about a [`CrunchyrollError`].
 #[derive(Clone, Debug)]
 pub struct CrunchyrollErrorContext {
     pub message: String,

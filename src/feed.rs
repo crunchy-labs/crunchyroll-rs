@@ -1,12 +1,13 @@
 use crate::common::{BulkResult, CrappyBulkResult};
 use crate::error::CrunchyrollError;
 use crate::media::MediaType;
-use crate::search::browse::{BrowseOptions, BrowseSortType};
+use crate::search::{BrowseOptions, BrowseSortType};
 use crate::{options, Crunchyroll, Executor, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
 
+/// Item of [`HomeFeedType`]. Contains a title and description with matching media to it.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -49,6 +50,8 @@ pub struct CarouselFeedImages {
     pub portrait_poster: String,
 }
 
+/// Item of [`HomeFeedType`]. Contains a feed which should be shown first to the user (the top feed
+/// which can be moved to the right and left at the top of the Crunchyroll index page).
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -84,6 +87,7 @@ impl CarouselFeed {
     }
 }
 
+/// Contains all feeds which can be obtained via [`HomeFeed`].
 pub enum HomeFeedType {
     /// The feed at the top of the Crunchyroll website. Call [`CarouselFeed::collection_from_id`]
     /// with the value of this field to get a collection of usable [`CarouselFeed`] structs.
@@ -125,6 +129,7 @@ pub struct HomeFeedBannerImages {
     pub desktop_large: String,
 }
 
+/// Feed which is shown when visiting the Crunchyroll index page.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -207,6 +212,7 @@ pub struct NewsFeedResult {
     pub latest_news: BulkResult<NewsFeed>,
 }
 
+/// Crunchyroll news like new library anime, dubs, etc... .
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -224,6 +230,7 @@ pub struct NewsFeed {
     pub news_link: String,
 }
 
+/// Suggested next episode or movie to watch.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -235,6 +242,7 @@ pub struct UpNextEntry {
     pub playhead: u32,
     pub fully_watched: bool,
 
+    /// Should be one of [`MediaCollection::Series`] or [`MediaCollection::Movie`].
     pub panel: MediaCollection,
 }
 
@@ -267,6 +275,7 @@ options! {
 }
 
 impl Crunchyroll {
+    /// Returns the home feed (shown when visiting the Crunchyroll index page).
     pub async fn home_feed(&self, options: HomeFeedOptions) -> Result<CrappyBulkResult<HomeFeed>> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/{}/home_feed",
@@ -280,6 +289,7 @@ impl Crunchyroll {
             .await
     }
 
+    /// Returns Crunchyroll news.
     pub async fn news_feed(&self, options: NewsFeedOptions) -> Result<NewsFeedResult> {
         let endpoint = "https://beta.crunchyroll.com/content/v1/news_feed";
         self.executor
@@ -290,6 +300,7 @@ impl Crunchyroll {
             .await
     }
 
+    /// Returns recommended series or movies to watch.
     pub async fn recommendations(
         &self,
         options: RecommendationOptions,
@@ -306,6 +317,7 @@ impl Crunchyroll {
             .await
     }
 
+    /// Suggests next episode or movie to watch.
     pub async fn up_next(&self, options: UpNextOptions) -> Result<BulkResult<UpNextEntry>> {
         let endpoint = format!(
             "	https://beta.crunchyroll.com/content/v1/{}/up_next_account",

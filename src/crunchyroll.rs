@@ -2,6 +2,7 @@ use crate::enum_values;
 use std::sync::Arc;
 
 enum_values! {
+    /// Enum of supported languages by Crunchyroll.
     #[allow(non_camel_case_types)]
     #[derive(Hash)]
     pub enum Locale {

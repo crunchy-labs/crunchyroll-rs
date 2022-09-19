@@ -16,16 +16,17 @@ pub trait Video: Default + DeserializeOwned + Request {}
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SearchMetadata {
-    // `None` if queried by `Crunchyroll::by_query`
+    /// `None` if queried by [`Crunchyroll::by_query`].
     pub last_public: Option<DateTime<Utc>>,
-    // `None` if queried by `Crunchyroll::by_query`
+    /// `None` if queried by [`Crunchyroll::by_query`].
     pub rank: Option<u32>,
 
     pub score: f64,
-    // `None` if not queried by `Series::similar` or `MovieListing::similar`
+    /// `None` if not queried by [`Series::similar`] or [`MovieListing::similar`].
     pub popularity_score: Option<f64>,
 }
 
+/// Metadata for a [`Media`] series.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -59,17 +60,18 @@ pub struct Series {
 }
 impl Video for Series {}
 
+/// Metadata for a [`Media`] season.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Season {
-    // always empty (currently)
+    /// Always empty (currently).
     pub audio_locales: Vec<Locale>,
-    // always empty (currently)
+    /// Always empty (currently).
     pub subtitle_locales: Vec<Locale>,
+    /// Always empty (currently).
     // i have no idea what the difference between `audio_locales` and `audio_locale` should be.
-    // they're both empty
     pub audio_locale: String,
 
     pub maturity_ratings: Vec<String>,
@@ -89,6 +91,7 @@ pub struct Season {
 }
 impl Video for Season {}
 
+/// Metadata for a [`Media`] episode.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -103,11 +106,11 @@ pub struct Episode {
     pub season_slug_title: String,
     pub season_number: u32,
 
-    // usually the same as episode_number, just as string
+    /// Usually the same as [`Episode::episode_number`], just as string.
     pub episode: String,
     #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     pub episode_number: u32,
-    // usually also the same as episode_number, I don't know the purpose of this
+    /// Usually the same as [`Episode::episode_number`], I don't know the purpose of this.
     pub sequence_number: u32,
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
@@ -116,7 +119,7 @@ pub struct Episode {
 
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub episode_air_date: DateTime<Utc>,
-    // the same as episode_air_date as far as I can see
+    /// The same as episode_air_date as far as I can see.
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub upload_date: DateTime<Utc>,
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
@@ -131,7 +134,7 @@ pub struct Episode {
     pub is_subbed: bool,
     pub is_dubbed: bool,
     pub closed_captions_available: bool,
-    // would be very useful, but is (currently) always empty
+    /// Would be very useful, but is (currently) always empty.
     #[serde(default)]
     pub audio_locale: String,
     pub subtitle_locales: Vec<Locale>,
@@ -165,6 +168,7 @@ pub struct Episode {
 }
 impl Video for Episode {}
 
+/// Metadata for a [`Media`] movie listing.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -214,6 +218,7 @@ pub struct MovieListing {
 
 impl Video for MovieListing {}
 
+/// Metadata for a [`Media`] movie.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -247,6 +252,8 @@ pub struct Movie {
 }
 impl Video for Movie {}
 
+/// Collection of all media types. Useful in situations where [`Media`] can contain more than one
+/// specific media.
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, Request)]
 pub enum MediaCollection {
@@ -356,6 +363,8 @@ pub struct MediaImages {
     pub promo_image: Option<Vec<Vec<Image>>>,
 }
 
+/// Base struct which stores all information about series, seasons, episodes, movie listings and
+/// movies. The generic this struct takes specifies which media type it actually contains.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(metadata))]
@@ -390,7 +399,7 @@ pub struct Media<M: Video> {
     #[serde(alias = "movie_metadata")]
     pub metadata: M,
 
-    // only populated if `Panel` results from search query 'src/search.rs'
+    /// only populated if `Panel` results from search query 'src/search.rs'
     pub search_metadata: Option<SearchMetadata>,
 
     pub images: Option<MediaImages>,
@@ -561,6 +570,7 @@ macro_rules! impl_from_id {
     ($($media:ident)*) => {
         $(
             impl $media {
+                /// Return a [`Media`] implementation of this type by its id.
                 pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Media<$media>> {
                     Media::from_id(crunchy, id).await
                 }
@@ -578,6 +588,7 @@ macro_rules! impl_media_video_collection {
     ($($media_video:ident)*) => {
         $(
             impl Media<$media_video> {
+                /// Similar series or movie listing to the current item.
                 pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<MediaCollection>> {
                     let endpoint = format!("https://beta.crunchyroll.com/content/v1/{}/similar_to", self.executor.details.account_id);
                     self.executor.get(endpoint)
@@ -600,6 +611,7 @@ macro_rules! impl_media_video {
     ($($media_video:ident)*) => {
         $(
             impl Media<$media_video> {
+                /// Streams for this episode / movie.
                 pub async fn streams(&self) -> Result<VideoStream> {
                     let endpoint = format!(
                         "https://beta.crunchyroll.com/cms/v2/{}/videos/{}/streams",

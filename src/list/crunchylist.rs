@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
+/// A [`Crunchylist`] entry.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -19,11 +20,13 @@ pub struct CrunchylistEntry {
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub modified_at: DateTime<Utc>,
 
+    /// Should only be [`MediaCollection::Series`] or [`MediaCollection::MovieListing`].
     pub panel: MediaCollection,
 }
 
 impl CrunchylistEntry {
-    pub async fn delete(&self, entry: &CrunchylistEntry) -> Result<()> {
+    /// Delete this entry from the parent crunchylist.
+    pub async fn delete(self, entry: &CrunchylistEntry) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}/{}",
             self.executor.details.account_id, entry.list_id, self.id
@@ -37,6 +40,7 @@ impl CrunchylistEntry {
     }
 }
 
+/// Representation of Crunchylists / custom lists you can create to store series or movies in.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -64,6 +68,9 @@ struct CrunchylistCreate {
 }
 
 impl Crunchylists {
+    /// Create a new crunchylist. If a error is thrown which says that the maximum of private list
+    /// is reached, check how many you currently have ([`Crunchylists::total_private`]) and how many
+    /// are allowed ([`Crunchylists::max_private`]; usually 10).
     pub async fn create(&self, title: String) -> Result<CrunchylistPreview> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}",
@@ -87,6 +94,7 @@ impl Crunchylists {
     }
 }
 
+/// A Crunchylist.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(items))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -111,6 +119,8 @@ pub struct Crunchylist {
 }
 
 impl Crunchylist {
+    /// Add a new entry to the current crunchylist. Note that [`MediaCollection::Season`] is not
+    /// supported to add and will return an error.
     pub async fn add(&self, media: MediaCollection) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
@@ -134,6 +144,7 @@ impl Crunchylist {
         Ok(())
     }
 
+    /// Rename the current crunchylist.
     pub async fn rename(&self, name: String) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
@@ -148,6 +159,7 @@ impl Crunchylist {
         Ok(())
     }
 
+    /// Delete the current crunchylist.
     pub async fn delete(self) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
@@ -162,6 +174,8 @@ impl Crunchylist {
     }
 }
 
+/// Abstraction of [`Crunchylist`]. Use [`CrunchylistPreview::crunchylist`] to get the "real"
+/// [`Crunchylist`].
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -181,6 +195,7 @@ pub struct CrunchylistPreview {
 }
 
 impl CrunchylistPreview {
+    /// Return the "real" [`Crunchylist`].
     pub async fn crunchylist(&self) -> Result<Crunchylist> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
@@ -198,6 +213,7 @@ impl CrunchylistPreview {
 }
 
 impl Crunchyroll {
+    /// Return your crunchylists.
     pub async fn crunchylists(&self) -> Result<Crunchylists> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}",

@@ -38,6 +38,7 @@ pub struct TenantCategoryImages {
     pub low: Vec<Image>,
 }
 
+/// Human readable text about a category.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -47,6 +48,7 @@ pub struct TenantCategoryLocalization {
     pub locale: Locale,
 }
 
+/// Just like [`TenantCategory`] and sub category of it.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -60,6 +62,7 @@ pub struct SubTenantCategory {
     pub localization: TenantCategoryLocalization,
 }
 
+/// A anime category / genre.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]

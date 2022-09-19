@@ -7,6 +7,8 @@ use serde_json::json;
 use std::sync::Arc;
 
 enum_values! {
+    /// Starts a rating can have. Crunchyroll does not use simple numbers which would be much easier
+    /// to work with but own names for every star.
     pub enum RatingStar {
         OneStar = "1s"
         TwoStars = "2s"
@@ -16,6 +18,7 @@ enum_values! {
     }
 }
 
+/// Details about a star rating of [`Rating`].
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct RatingStarDetails {
     /// The amount of user ratings.
@@ -30,6 +33,7 @@ pub struct RatingStarDetails {
     pub percentage: Option<u8>,
 }
 
+/// Overview about rating statistics for a series or movie listing.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -53,6 +57,7 @@ pub struct Rating {
     pub rating: Option<RatingStar>,
 }
 
+/// Ratings for a review a user has made about a series or movie listing.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -66,6 +71,7 @@ pub struct ReviewRatings {
     pub helpful: Option<bool>,
 }
 
+/// Content of a review a user has made about a series or movie listing.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -86,6 +92,7 @@ pub struct ReviewContent {
     pub authored_reviews: u32,
 }
 
+/// Author of a review.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -97,6 +104,7 @@ pub struct ReviewAuthor {
     pub avatar: String,
 }
 
+/// A review a user has made about a series or movie listing.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -150,6 +158,7 @@ impl Review {
     }
 }
 
+/// Review which were made by your account.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -168,6 +177,7 @@ pub struct SelfReview {
 }
 
 impl SelfReview {
+    /// Edit your review.
     pub async fn edit(&mut self, title: String, body: String, spoiler: bool) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
@@ -186,6 +196,7 @@ impl SelfReview {
         Ok(())
     }
 
+    /// Delete your review.
     pub async fn delete(&self) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",

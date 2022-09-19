@@ -22,6 +22,7 @@ pub struct CommentUserAttributes {
     pub avatar: CommentUserAttributesAvatar,
 }
 
+/// Information about a user which wrote a [`Comment`].
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -32,6 +33,7 @@ pub struct CommentUser {
     pub user_flags: Vec<String>,
 }
 
+/// Number of votes users gave a [`Comment`].
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -52,6 +54,7 @@ enum_values! {
     }
 }
 
+/// Comment about a episode or movie.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -71,6 +74,9 @@ pub struct Comment {
     #[serde(rename = "flags")]
     #[serde(deserialize_with = "deserialize_flags_to_spoiler")]
     pub is_spoiler: bool,
+    /// If populated, this comment is deleted. Crunchyroll still stores deletes comments but without
+    /// information what the content was (which means that [`Comment::message`] is not populated if
+    /// it's flagged as deleted).
     pub delete_reason: Option<String>,
 
     pub votes: CommentVotes,

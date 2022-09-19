@@ -3,6 +3,7 @@ use crate::{options, Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Resu
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
+/// Entry of your watchlist.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -15,6 +16,7 @@ pub struct WatchHistoryEntry {
     pub playhead: u32,
     pub fullywatched: bool,
 
+    /// Should always be [`MediaCollection::Episode`] or [`MediaCollection::Movie`].
     pub panel: MediaCollection,
 }
 
@@ -39,6 +41,7 @@ options! {
 }
 
 impl Crunchyroll {
+    /// Get the history which episodes / movies you've watched.
     pub async fn watch_history(
         &self,
         options: WatchHistoryOptions,
@@ -59,6 +62,7 @@ impl Crunchyroll {
         })
     }
 
+    /// Clear your watch history.
     pub async fn clear_watch_history(&self) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/watch-history/{}",

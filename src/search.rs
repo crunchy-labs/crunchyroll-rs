@@ -1,4 +1,4 @@
-pub mod browse {
+mod browse {
     use crate::categories::Category;
     use crate::common::BulkResult;
     use crate::media::MediaType;
@@ -21,7 +21,7 @@ pub mod browse {
         /// Specifies whether the entries should be subbed.
         is_subbed(bool, "is_subbed") = None,
         /// Specifies a particular simulcast season by id in which the entries have been aired.
-        simulcast(String, "season_tag") = None,
+        simulcast_season(String, "season_tag") = None,
         /// Specifies how the entries should be sorted.
         sort(BrowseSortType, "sort") = Some(BrowseSortType::NewlyAdded),
         /// Specifies the media type of the entries.
@@ -48,7 +48,7 @@ pub mod browse {
     }
 }
 
-pub mod query {
+mod query {
     use crate::common::{BulkResult, Request};
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
     use crate::media::{Episode, MovieListing, Series};
@@ -56,6 +56,10 @@ pub mod query {
     use serde::Deserialize;
     use std::sync::Arc;
 
+    /// Results when querying Crunchyroll. Results depending on the input which was given via
+    /// [`QueryOptions::result_type`]. If not specified, every field is populated, if one specific
+    /// type, for example [`QueryType::series`], were provided, only [`QueryResults::series`] will
+    /// be populated.
     #[derive(Clone, Debug, Default, Deserialize, Request)]
     #[request(executor(top_results, series, movie_listing, episode))]
     #[serde(try_from = "BulkResult<QueryBulkResult>")]
@@ -179,3 +183,6 @@ pub mod query {
         }
     }
 }
+
+pub use browse::*;
+pub use query::*;

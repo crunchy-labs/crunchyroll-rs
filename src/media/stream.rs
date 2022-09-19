@@ -95,6 +95,7 @@ impl VideoStream {
     }
 }
 
+/// A playback stream. Similar to [`VideoStream`] but with and without certain fields.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(subtitles))]
@@ -116,6 +117,7 @@ pub struct PlaybackStream {
     qos: crate::StrictValue,
 }
 
+/// Subtitle for streams.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -133,11 +135,12 @@ impl StreamSubtitle {
         let resp = self.executor.client.get(self.url).send().await?;
         let body = resp.bytes().await?;
         w.write_all(body.as_ref())
-            .map_err(|e| CrunchyrollError::External(e.to_string().into()))?;
+            .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
         Ok(())
     }
 }
 
+/// A [`VideoStream`] variant.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -150,6 +153,7 @@ pub struct VideoVariant {
     pub url: String,
 }
 
+/// A [`PlaybackStream`] variant.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -165,6 +169,7 @@ pub struct PlaybackVariant {
     pub vcodec: String,
 }
 
+/// Stream variants for a [`VideoStream`].
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -193,6 +198,7 @@ impl FixStream for VideoVariants {
     type Variant = VideoVariant;
 }
 
+/// Stream variants for a [`PlaybackStream`].
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]

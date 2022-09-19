@@ -77,6 +77,7 @@ impl From<m3u8_rs::Resolution> for Resolution {
     }
 }
 
+/// Streaming data for a variant.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Request)]
 #[request(executor(segments))]
@@ -220,10 +221,10 @@ impl VariantSegment {
                 )
                 .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
             w.write(decrypted)
-                .map_err(|e| CrunchyrollError::External(e.to_string().into()))?;
+                .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
         } else {
             w.write(segment.as_ref())
-                .map_err(|e| CrunchyrollError::External(e.to_string().into()))?;
+                .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
         }
         Ok(())
     }
