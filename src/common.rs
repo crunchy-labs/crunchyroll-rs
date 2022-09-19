@@ -8,7 +8,7 @@ pub(crate) use proc_macro::Request;
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
-#[derive(Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -27,7 +27,7 @@ impl<T: Default + DeserializeOwned + Request> Request for BulkResult<T> {
 
 /// Just like [`BulkResult`] but without [`BulkResult::total`] because some request does not have
 /// this field (but should?!).
-#[derive(Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]

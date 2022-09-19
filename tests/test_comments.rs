@@ -2,18 +2,16 @@ use crate::utils::{Store, SESSION};
 use crunchyroll_rs::common::BulkResult;
 use crunchyroll_rs::rating::{Comment, CommentFlag, CommentsOptions};
 use crunchyroll_rs::{Episode, Media};
-use tokio::sync::Mutex;
 
 mod utils;
 
-static COMMENTS: Store<Mutex<BulkResult<Comment>>> = Store::new(|| {
+static COMMENTS: Store<BulkResult<Comment>> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
         let episode: Media<Episode> = Media::from_id(crunchy, "GRDKJZ81Y".to_string())
             .await
             .unwrap();
-        let comments = episode.comments(CommentsOptions::default()).await?;
-        Ok(Mutex::new(comments))
+        Ok(episode.comments(CommentsOptions::default()).await?)
     })
 });
 
@@ -24,7 +22,7 @@ async fn comments() {
 
 #[tokio::test]
 async fn comment_flag() {
-    let mut comments = COMMENTS.get().await.unwrap().lock().await;
+    let mut comments = COMMENTS.get().await.unwrap().clone();
     let comment = comments.items.get_mut(0).unwrap();
 
     assert_result!(

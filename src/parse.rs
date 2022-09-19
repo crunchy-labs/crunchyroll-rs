@@ -4,7 +4,7 @@ use crate::error::CrunchyrollError;
 use crate::{Crunchyroll, Result};
 use regex::Regex;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum UrlType {
     /// The parsed url points to a beta episode or movie. You can either try [`Episode::from_id`]
     /// and [`Movie::from_id`] to guess if it's a episode or movie (in 99.9% of the time it will be

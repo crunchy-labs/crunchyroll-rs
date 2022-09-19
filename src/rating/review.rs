@@ -7,7 +7,6 @@ use serde_json::json;
 use std::sync::Arc;
 
 enum_values! {
-    #[derive(Debug)]
     pub enum RatingStar {
         OneStar = "1s"
         TwoStars = "2s"
@@ -17,7 +16,7 @@ enum_values! {
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 pub struct RatingStarDetails {
     /// The amount of user ratings.
     pub displayed: String,
@@ -31,7 +30,7 @@ pub struct RatingStarDetails {
     pub percentage: Option<u8>,
 }
 
-#[derive(Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Rating {
@@ -54,7 +53,7 @@ pub struct Rating {
     pub rating: Option<RatingStar>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ReviewRatings {
@@ -67,7 +66,7 @@ pub struct ReviewRatings {
     pub helpful: Option<bool>,
 }
 
-#[derive(Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ReviewContent {
@@ -87,7 +86,7 @@ pub struct ReviewContent {
     pub authored_reviews: u32,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ReviewAuthor {
@@ -98,7 +97,7 @@ pub struct ReviewAuthor {
     pub avatar: String,
 }
 
-#[derive(Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Review {
@@ -151,7 +150,7 @@ impl Review {
     }
 }
 
-#[derive(Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SelfReview {

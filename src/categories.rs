@@ -4,8 +4,7 @@ use crate::{options, Result};
 use serde::Deserialize;
 
 enum_values! {
-    #[doc = "Video categories / genres"]
-    #[derive(Debug)]
+    /// Video categories / genres
     pub enum Category {
         Action = "action"
         Adventure = "adventure"
@@ -82,7 +81,7 @@ pub struct TenantCategory {
 
 options! {
     TenantCategoryOptions;
-    #[doc = "If tenant categories should contains subcategories."]
+    /// If tenant categories should contains subcategories.
     include_subcategories(bool, "include_subcategories") = Some(false)
 }
 

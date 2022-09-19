@@ -3,7 +3,7 @@ use crate::{options, Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Resu
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct WatchHistoryEntry {
@@ -19,7 +19,7 @@ pub struct WatchHistoryEntry {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 struct BulkWatchHistoryResult {

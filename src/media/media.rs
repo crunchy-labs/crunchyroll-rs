@@ -553,7 +553,7 @@ impl Media<Movie> {
 
 options! {
     SimilarOptions;
-    #[doc = "Limit of results to return."]
+    /// Limit of results to return.
     limit(u32, "n") = Some(20)
 }
 

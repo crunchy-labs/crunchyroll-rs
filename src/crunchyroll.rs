@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 enum_values! {
     #[allow(non_camel_case_types)]
-    #[derive(Debug, Hash)]
+    #[derive(Hash)]
     pub enum Locale {
         ar_ME = "ar-ME"
         ar_SA = "ar-SA"
@@ -21,7 +21,6 @@ enum_values! {
 }
 
 enum_values! {
-    #[derive(Debug)]
     pub enum MaturityRating {
         NotMature = "M2"
         Mature = "M3"
@@ -29,7 +28,7 @@ enum_values! {
 }
 
 /// Starting point of this whole library.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Crunchyroll {
     pub(crate) executor: Arc<Executor>,
 }
@@ -69,7 +68,7 @@ mod auth {
     use tokio::sync::Mutex;
 
     /// Stores either the refresh token or etp-rt cookie used for internal login.
-    #[derive(Debug, Clone)]
+    #[derive(Clone, Debug)]
     pub enum SessionToken {
         RefreshToken(String),
         EtpRt(String),

@@ -14,7 +14,7 @@ macro_rules! enum_values {
         $(
             #[$attribute]
         )*
-        #[derive(Clone, Eq, PartialEq)]
+        #[derive(Clone, Debug, Eq, PartialEq)]
         $v enum $name {
             $(
                 $field
@@ -124,9 +124,8 @@ macro_rules! enum_values {
 /// }
 /// ```
 macro_rules! options {
-    // `$(#[$attribute:meta])*` should generally only be used for `#[doc = "..."]`
     ($name:ident; $($(#[$attribute:meta])* $field:ident($t:ty, $query_name:literal) = $default:expr),*) => {
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         pub struct $name {
             $(
                 $(

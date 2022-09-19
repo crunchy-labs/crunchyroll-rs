@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use std::sync::Arc;
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentUserAttributesAvatar {
@@ -14,7 +14,7 @@ pub struct CommentUserAttributesAvatar {
     pub unlocked: Vec<Image>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentUserAttributes {
@@ -22,7 +22,7 @@ pub struct CommentUserAttributes {
     pub avatar: CommentUserAttributesAvatar,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentUser {
@@ -32,7 +32,7 @@ pub struct CommentUser {
     pub user_flags: Vec<String>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentVotes {
@@ -45,7 +45,6 @@ pub struct CommentVotes {
 }
 
 enum_values! {
-    #[derive(Debug)]
     pub enum CommentFlag {
         Like = "like"
         Spoiler = "spoiler"
@@ -53,7 +52,7 @@ enum_values! {
     }
 }
 
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Comment {

@@ -44,7 +44,7 @@ fn deserialize_streams<'de, D: Deserializer<'de>, T: FixStream>(
 
 /// A video stream.
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(subtitles))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -96,7 +96,7 @@ impl VideoStream {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(subtitles))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -116,7 +116,7 @@ pub struct PlaybackStream {
     qos: crate::StrictValue,
 }
 
-#[derive(Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct StreamSubtitle {
@@ -138,7 +138,7 @@ impl StreamSubtitle {
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct VideoVariant {
@@ -150,7 +150,7 @@ pub struct VideoVariant {
     pub url: String,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct PlaybackVariant {
@@ -166,7 +166,7 @@ pub struct PlaybackVariant {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct VideoVariants {
@@ -193,7 +193,7 @@ impl FixStream for VideoVariants {
     type Variant = VideoVariant;
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct PlaybackVariants {

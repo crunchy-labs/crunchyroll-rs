@@ -256,7 +256,7 @@ mod wallpaper {
         pub name: String,
     }
 
-    #[derive(Debug, Default, Deserialize, Request)]
+    #[derive(Clone, Debug, Default, Deserialize, Request)]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     struct AllWallpapers {

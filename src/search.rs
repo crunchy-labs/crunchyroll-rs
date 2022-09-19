@@ -14,22 +14,22 @@ pub mod browse {
 
     options! {
         BrowseOptions;
-        #[doc = "Specifies the categories of the entries."]
+        /// Specifies the categories of the entries.
         categories(Vec<Category>, "categories") = None,
-        #[doc = "Specifies whether the entries should be dubbed."]
+        /// Specifies whether the entries should be dubbed.
         is_dubbed(bool, "is_dubbed") = None,
-        #[doc = "Specifies whether the entries should be subbed."]
+        /// Specifies whether the entries should be subbed.
         is_subbed(bool, "is_subbed") = None,
-        #[doc = "Specifies a particular simulcast season by id in which the entries have been aired."]
+        /// Specifies a particular simulcast season by id in which the entries have been aired.
         simulcast(String, "season_tag") = None,
-        #[doc = "Specifies how the entries should be sorted."]
+        /// Specifies how the entries should be sorted.
         sort(BrowseSortType, "sort") = Some(BrowseSortType::NewlyAdded),
-        #[doc = "Specifies the media type of the entries."]
+        /// Specifies the media type of the entries.
         media_type(MediaType, "type") = None,
 
-        #[doc = "Limit of results to return."]
+        /// Limit of results to return.
         limit(u32, "n") = Some(20),
-        #[doc = "Specifies the index from which the entries should be returned."]
+        /// Specifies the index from which the entries should be returned.
         start(u32, "start") = None
     }
 
@@ -56,7 +56,7 @@ pub mod query {
     use serde::Deserialize;
     use std::sync::Arc;
 
-    #[derive(Debug, Default, Deserialize, Request)]
+    #[derive(Clone, Debug, Default, Deserialize, Request)]
     #[request(executor(top_results, series, movie_listing, episode))]
     #[serde(try_from = "BulkResult<QueryBulkResult>")]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -150,7 +150,6 @@ pub mod query {
     }
 
     enum_values! {
-        #[derive(Debug)]
         pub enum QueryType {
             Series = "series"
             MovieListing = "movie_listing"
@@ -160,9 +159,9 @@ pub mod query {
 
     options! {
         QueryOptions;
-        #[doc = "Limit of results to return."]
+        /// Limit of results to return.
         limit(u32, "n") = Some(20),
-        #[doc = "Type of result to return."]
+        /// "Type of result to return.
         result_type(QueryType, "type") = None
     }
 

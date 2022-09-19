@@ -7,7 +7,7 @@ use std::fmt::{Debug, Display, Formatter};
 
 pub(crate) type Result<T, E = CrunchyrollError> = core::result::Result<T, E>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum CrunchyrollError {
     Internal(CrunchyrollErrorContext),
     External(CrunchyrollErrorContext),
@@ -69,7 +69,7 @@ impl From<reqwest::Error> for CrunchyrollError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct CrunchyrollErrorContext {
     pub message: String,
     pub url: Option<Url>,

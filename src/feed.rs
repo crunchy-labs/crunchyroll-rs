@@ -41,7 +41,7 @@ impl CuratedFeed {
     }
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CarouselFeedImages {
@@ -50,7 +50,7 @@ pub struct CarouselFeedImages {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CarouselFeed {
@@ -126,7 +126,7 @@ pub struct HomeFeedBannerImages {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct HomeFeed {
@@ -199,7 +199,7 @@ impl HomeFeed {
     }
 }
 
-#[derive(Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct NewsFeedResult {
@@ -207,7 +207,7 @@ pub struct NewsFeedResult {
     pub latest_news: BulkResult<NewsFeed>,
 }
 
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct NewsFeed {
@@ -224,7 +224,7 @@ pub struct NewsFeed {
     pub news_link: String,
 }
 
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -240,29 +240,29 @@ pub struct UpNextEntry {
 
 options! {
     HomeFeedOptions;
-    #[doc = "Limit of results to return."]
+    /// Limit of results to return.
     limit(u32, "n") = Some(20),
-    #[doc = "Specifies the index from which the entries should be returned."]
+    /// Specifies the index from which the entries should be returned.
     start(u32, "start") = None
 }
 
 options! {
     NewsFeedOptions;
-    #[doc = "Limit number of top news."]
+    /// Limit number of top news.
     top_limit(u32, "top_news_n") = Some(20),
-    #[doc = "Limit number of latest news."]
+    /// Limit number of latest news.
     latest_limit(u32, "latest_news_n") = Some(20)
 }
 
 options! {
     RecommendationOptions;
-    #[doc = "Limit of results to return."]
+    /// Limit of results to return.
     limit(u32, "n") = Some(20)
 }
 
 options! {
     UpNextOptions;
-    #[doc = "Limit of results to return."]
+    /// Limit of results to return.
     limit(u32, "n") = Some(20)
 }
 
