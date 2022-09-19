@@ -2,7 +2,26 @@ mod browse {
     use crate::categories::Category;
     use crate::common::BulkResult;
     use crate::media::MediaType;
-    use crate::{enum_values, options, Crunchyroll, MediaCollection, Result};
+    use crate::{enum_values, options, Crunchyroll, MediaCollection, Request, Result};
+    use serde::Deserialize;
+
+    /// Human readable implementation of [`Season`].
+    #[derive(Clone, Debug, Default, Deserialize)]
+    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
+    pub struct SimulcastSeasonLocalization {
+        pub title: String,
+        pub description: String,
+    }
+
+    /// A simulcast season.
+    #[derive(Clone, Debug, Default, Deserialize, Request)]
+    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
+    pub struct SimulcastSeason {
+        pub id: String,
+        pub localization: SimulcastSeasonLocalization,
+    }
 
     enum_values! {
         pub enum BrowseSortType {
@@ -20,7 +39,8 @@ mod browse {
         is_dubbed(bool, "is_dubbed") = None,
         /// Specifies whether the entries should be subbed.
         is_subbed(bool, "is_subbed") = None,
-        /// Specifies a particular simulcast season by id in which the entries have been aired.
+        /// Specifies a particular simulcast season in which the entries should have been aired. Use
+        /// [`Crunchyroll::simulcast_seasons`] to get all seasons and then [`Simulcast::id`] as argument.
         simulcast_season(String, "season_tag") = None,
         /// Specifies how the entries should be sorted.
         sort(BrowseSortType, "sort") = Some(BrowseSortType::NewlyAdded),
@@ -41,6 +61,16 @@ mod browse {
             self.executor
                 .get(endpoint)
                 .query(&options.to_query())
+                .apply_locale_query()
+                .request()
+                .await
+        }
+
+        /// Returns all simulcast seasons.
+        pub async fn simulcast_seasons(&self) -> Result<BulkResult<SimulcastSeason>> {
+            let endpoint = "https://beta.crunchyroll.com/content/v1/season_list";
+            self.executor
+                .get(endpoint)
                 .apply_locale_query()
                 .request()
                 .await
