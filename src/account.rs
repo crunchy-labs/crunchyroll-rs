@@ -1,4 +1,4 @@
-use crate::{Crunchyroll, EmptyJsonProxy, Executor, Locale, Request, Result};
+use crate::{options, Crunchyroll, EmptyJsonProxy, Executor, Locale, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Account {
@@ -39,11 +39,14 @@ pub struct Account {
     pub opt_out_android_in_app_marketing: bool,
     pub opt_out_free_trials: bool,
     pub opt_out_new_media_queue_updates: bool,
-    pub opt_out_newsletters: bool,
     pub opt_out_pm_updates: bool,
-    pub opt_out_promotional_updates: bool,
     pub opt_out_queue_updates: bool,
-    pub opt_out_store_deals: bool,
+    #[serde(rename = "opt_out_store_deals")]
+    pub email_store_details: bool,
+    #[serde(rename = "opt_out_newsletters")]
+    pub email_newsletter: bool,
+    #[serde(rename = "opt_out_promotional_updates")]
+    pub email_promotion_details: bool,
 
     pub cr_beta_opt_in: bool,
     pub qa_user: bool,
@@ -53,69 +56,105 @@ pub struct Account {
     crleg_email_verified: crate::StrictValue,
 }
 
+options! {
+    UpdatePreferences;
+    /// Updates the language in which emails are sent to your account.
+    email_language(Locale, "preferred_communication_language") = None,
+    /// Updates if store details should be sent to your email.
+    email_store_details(bool, "opt_out_store_deals") = None,
+    /// Updates if newsletters should be sent to your email.
+    email_newsletter(bool, "opt_out_newsletters") = None,
+    /// Updates if promotions for products and offers should be sent to your email.
+    email_promotion_details(bool, "opt_out_promotional_updates") = None,
+    /// Updates the language in which subtitles should be shown if available.
+    subtitle_language(Locale, "preferred_content_subtitle_language") = None,
+    /// Updates if / how mature video content should be shown / be available. I do not know the use
+    /// case of this tbh.
+    mature_video_content(MaturityRating, "maturity_rating") = None,
+    /// Updates if / how mature manga content should be shown / be available. I do not know the use
+    /// case of this tbh.
+    mature_manga_content(MaturityRating, "mature_content_flag_manga") = None
+}
+
 /// The [`Account`] struct is actually not required to perform this actions ([`Crunchyroll`] itself
 /// would be enough) but to keep it clean it's only available here.
 impl Account {
-    /// Updates the language in which emails are sent to your account.
-    pub async fn update_email_language(&mut self, locale: Locale) -> Result<()> {
-        self.update_preferences(
-            "preferred_communication_language".into(),
-            locale.to_string(),
-        )
-        .await?;
-        self.email_language = locale;
-        Ok(())
-    }
+    /// Update preferences for your account.
+    pub async fn update_preferences(&mut self, preferences: UpdatePreferences) -> Result<()> {
+        let profile_endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
+        let notification_endpoint =
+            "https://beta.crunchyroll.com/accounts/v1/me/notification_settings";
 
-    /// Updates the language in which subtitles should be shown if available.
-    pub async fn update_preferred_subtitle_language(&mut self, locale: Locale) -> Result<()> {
-        self.update_preferences(
-            "preferred_content_subtitle_language".into(),
-            locale.to_string(),
-        )
-        .await?;
-        self.preferred_subtitle_language = locale;
-        Ok(())
-    }
+        let mut updated_self = self.clone();
 
-    /// Updates if / how mature video content should be shown / be available. I do not know the use
-    /// case of this tbh.
-    pub async fn update_mature_video_content(
-        &mut self,
-        maturity_rating: MaturityRating,
-    ) -> Result<()> {
-        self.update_preferences("maturity_rating".into(), maturity_rating.to_string())
-            .await?;
-        self.video_maturity_rating = maturity_rating;
-        Ok(())
-    }
+        let mut profile_update = serde_json::Map::new();
+        let mut notification_update = serde_json::Map::new();
 
-    /// Updates if / how mature manga content should be shown / be available. I do not know the use
-    /// case of this tbh.
-    pub async fn update_mature_manga_content(
-        &mut self,
-        maturity_rating: MaturityRating,
-    ) -> Result<()> {
-        self.update_preferences(
-            "mature_content_flag_manga".into(),
-            match &maturity_rating {
-                MaturityRating::NotMature => "0".to_string(),
-                MaturityRating::Mature => "1".to_string(),
-                MaturityRating::Custom(custom) => custom.clone(),
-            },
-        )
-        .await?;
-        self.manga_maturity_rating = maturity_rating;
-        Ok(())
-    }
+        if let Some(email_language) = preferences.email_language {
+            profile_update.insert(
+                "preferred_communication_language".into(),
+                email_language.to_string().into(),
+            );
+            updated_self.preferred_subtitle_language = email_language;
+        }
+        if let Some(subtitle_language) = preferences.subtitle_language {
+            profile_update.insert(
+                "preferred_content_subtitle_language".into(),
+                subtitle_language.to_string().into(),
+            );
+            updated_self.preferred_subtitle_language = subtitle_language;
+        }
+        if let Some(mature_video_content) = preferences.mature_video_content {
+            profile_update.insert(
+                "maturity_rating".into(),
+                mature_video_content.to_string().into(),
+            );
+            updated_self.video_maturity_rating = mature_video_content;
+        }
+        if let Some(mature_manga_content) = preferences.mature_manga_content {
+            profile_update.insert(
+                "mature_content_flag_manga".into(),
+                match &mature_manga_content {
+                    MaturityRating::NotMature => "0".to_string().into(),
+                    MaturityRating::Mature => "1".to_string().into(),
+                    MaturityRating::Custom(custom) => custom.clone().into(),
+                },
+            );
+            updated_self.manga_maturity_rating = mature_manga_content;
+        }
 
-    async fn update_preferences(&self, name: String, value: String) -> Result<()> {
-        let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
-        self.executor
-            .patch(endpoint)
-            .json(&json!({ name: value }))
-            .request::<EmptyJsonProxy>()
-            .await?;
+        if let Some(email_store_details) = preferences.email_store_details {
+            notification_update.insert("opt_out_store_deals".into(), email_store_details.into());
+            updated_self.email_store_details = email_store_details;
+        }
+        if let Some(email_newsletter) = preferences.email_newsletter {
+            notification_update.insert("opt_out_newsletters".into(), email_newsletter.into());
+            updated_self.email_newsletter = email_newsletter;
+        }
+        if let Some(email_promotion_details) = preferences.email_promotion_details {
+            notification_update.insert(
+                "opt_out_promotional_updates".into(),
+                email_promotion_details.into(),
+            );
+            updated_self.email_promotion_details = email_promotion_details
+        }
+
+        if !profile_update.is_empty() {
+            self.executor
+                .patch(profile_endpoint)
+                .json(&serde_json::to_value(profile_update)?)
+                .request::<EmptyJsonProxy>()
+                .await?;
+        }
+        if !notification_update.is_empty() {
+            self.executor
+                .patch(notification_endpoint)
+                .json(&serde_json::to_value(notification_update)?)
+                .request::<EmptyJsonProxy>()
+                .await?;
+        }
+
+        *self = updated_self;
         Ok(())
     }
 
@@ -187,7 +226,10 @@ impl Crunchyroll {
                 .await?,
         );
 
-        Ok(serde_json::from_value(serde_json::to_value(result)?)?)
+        let mut account: Account = serde_json::from_value(serde_json::to_value(result)?)?;
+        account.executor = self.executor.clone();
+
+        Ok(account)
     }
 }
 
@@ -207,7 +249,7 @@ mod wallpaper {
     use crate::{Crunchyroll, Request, Result};
     use serde::Deserialize;
 
-    #[derive(Debug, Default, Deserialize)]
+    #[derive(Clone, Debug, Default, Deserialize)]
     #[serde(from = "String")]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct Wallpaper {
