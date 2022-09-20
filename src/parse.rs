@@ -7,18 +7,19 @@ use regex::Regex;
 /// Types of Crunchyroll urls, pointing to series, episodes or movies.
 #[derive(Clone, Debug)]
 pub enum UrlType {
-    /// The parsed url points to a beta episode or movie. You can either try [`Episode::from_id`]
-    /// and [`Movie::from_id`] to guess if it's a episode or movie (in 99.9% of the time it will be
-    /// a episode, because (at the time of writing) Crunchyroll has only 3 movies which are listed
-    /// as movies. All other movies are listed as episodes. Makes sense I know) or use
-    /// [`Panel::from_id`]. The value of this field is the id you have to use in all shown methods.
+    /// The parsed url points to a beta episode or movie. You can either try
+    /// [`Crunchyroll::episode_from_id`] and [`Crunchyroll::movie_from_id`] to guess if it's a
+    /// episode or movie (in 99.9% of the time it will be a episode, because (at the time of writing)
+    /// Crunchyroll has only 3 movies which are listed as movies. All other movies are listed as
+    /// episodes. Makes sense I know) or use [`crate::Media::from_id`]. The value of this field is
+    /// the id you have to use in all shown methods.
     BetaEpisodeOrMovie(String),
-    /// The parsed url points to a beta series. Use [`Series::from_id`] with the value of this field
-    /// to get a usable struct out of it.
+    /// The parsed url points to a beta series. Use [`Crunchyroll::series_from_id`] with the value
+    /// of this field to get a usable struct out of it.
     BetaSeries(String),
-    /// The parsed url points to a beta movie listing. Use [`MovieListing::from_id`] with the value
-    /// of this field to get a usable struct out of it. This kind of url might not exist in
-    /// Crunchyroll beta at all but to be api compatible it's included anyway.
+    /// The parsed url points to a beta movie listing. Use [`Crunchyroll::movie_listing_from_id`]
+    /// with the value of this field to get a usable struct out of it. This kind of url might not
+    /// exist in Crunchyroll beta at all but to be api compatible it's included anyway.
     BetaMovieListing(String),
 
     /// The parsed url points to a classic series or movie listing. Because classic urls are
@@ -30,12 +31,12 @@ pub enum UrlType {
     ClassicSeriesOrMovieListing(String),
     /// The parsed url points to a classic episode. Because classic urls are structured poorly they
     /// cannot be parsed very accurate. You have to search for the
-    /// [`ClassicEpisodeOrMovie::series_name`] series and then look up the episode which has
-    /// [`ClassicEpisodeOrMovie::episode_name`] in one of the episode name fields. You can also
-    /// (in addition) check if [`ClassicEpisodeOrMovie::number`] which represents the episode number
-    /// matches with the episode number you got from the looked up episodes. But
-    /// [`ClassicEpisodeOrMovie::number`] is not so accurate as it seems, for example episode number
-    /// 24.9 gets converted to 249.
+    /// [`UrlType::ClassicEpisodeOrMovie::series_name`] series and then look up the episode which has
+    /// [`UrlType::ClassicEpisodeOrMovie::episode_name`] in one of the episode name fields. You can
+    /// also (in addition) check if [`UrlType::ClassicEpisodeOrMovie::number`] which represents the
+    /// episode number matches with the episode number you got from the looked up episodes. But
+    /// [`UrlType::ClassicEpisodeOrMovie::number`] is not so accurate as it seems, for example
+    /// episode number 24.9 gets converted to 249.
     ///
     /// _Please just use Crunchyroll beta urls_.
     ClassicEpisode {
@@ -43,7 +44,7 @@ pub enum UrlType {
         episode_name: String,
         number: String,
     },
-    /// Just like [`ClassicEpisode`] but without episode number and movie instead of episode.
+    /// Just like [`UrlType::ClassicEpisode`] but without episode number and movie instead of episode.
     ///
     /// _Please just use Crunchyroll beta urls_.
     ClassicMovie {

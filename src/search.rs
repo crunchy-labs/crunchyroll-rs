@@ -5,7 +5,7 @@ mod browse {
     use crate::{enum_values, options, Crunchyroll, MediaCollection, Request, Result};
     use serde::Deserialize;
 
-    /// Human readable implementation of [`Season`].
+    /// Human readable implementation of [`SimulcastSeason`].
     #[derive(Clone, Debug, Default, Deserialize)]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -88,7 +88,7 @@ mod query {
 
     /// Results when querying Crunchyroll. Results depending on the input which was given via
     /// [`QueryOptions::result_type`]. If not specified, every field is populated, if one specific
-    /// type, for example [`QueryType::series`], were provided, only [`QueryResults::series`] will
+    /// type, for example [`QueryType::Series`], were provided, only [`QueryResults::series`] will
     /// be populated.
     #[derive(Clone, Debug, Default, Deserialize, Request)]
     #[request(executor(top_results, series, movie_listing, episode))]

@@ -560,6 +560,33 @@ impl Media<Movie> {
     }
 }
 
+impl Crunchyroll {
+    /// Get a series by its id.
+    pub async fn series_from_id(&self, id: String) -> Result<Media<Series>> {
+        Series::from_id(self, id).await
+    }
+
+    /// Get a series season by its id.
+    pub async fn season_from_id(&self, id: String) -> Result<Media<Season>> {
+        Season::from_id(self, id).await
+    }
+
+    /// Get a episode by its id.
+    pub async fn episode_from_id(&self, id: String) -> Result<Media<Episode>> {
+        Episode::from_id(self, id).await
+    }
+
+    /// Get a movie listing by its id.
+    pub async fn movie_listing_from_id(&self, id: String) -> Result<Media<MovieListing>> {
+        MovieListing::from_id(self, id).await
+    }
+
+    /// Get a movie by its id.
+    pub async fn movie_from_id(&self, id: String) -> Result<Media<Movie>> {
+        Movie::from_id(self, id).await
+    }
+}
+
 options! {
     SimilarOptions;
     /// Limit of results to return.

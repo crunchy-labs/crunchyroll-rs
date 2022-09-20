@@ -12,6 +12,94 @@
 //! - Full [Tokio](https://tokio.rs/) compatibility.
 //! - Solid tests to [ensure api compatability](#implementation).
 //!
+//! # Getting started
+//!
+//! Before you can do anything, you have to instantiate a new [`Crunchyroll`] struct at first. This
+//! internally creates a new [`CrunchyrollBuilder`] instance. All functions of this struct are
+//! chaining, which means you can build a working Crunchyroll instance in one expression.
+//!
+//! ```
+//! use crunchyroll_rs::{Crunchyroll, Locale};
+//!
+//! let crunchy = Crunchyroll::builder()
+//!     // set the language in which results should be returned
+//!     .locale(Locale::en_US)
+//!     // login with user credentials (other login options are also available)
+//!     .login_with_credentials("username".into(), "password".into())
+//!     .await?;
+//! ```
+//!
+//! ## Request media
+//!
+//! You can request media like series, episodes, movies, ... with their corresponding function in
+//! the [`Crunchyroll`] struct. Use `Crunchyroll::*_from_id` to get them while `*` is the media type.
+//!
+//! Every media type has the parent struct [`Media`] which takes a generic that represents the type
+//! of the media. [`Media<Season>`] would represent a season for example.
+//!
+//! ```
+//! let series = crunchy
+//!     // get the series with the id 'GY8VEQ95Y'
+//!     .series_from_id("GY8VEQ95Y".into())
+//!     .await?;
+//!
+//! let episode = crunchy
+//!     // get the episode with the id 'GRDKJZ81Y'
+//!     .episode_from_id("GRDKJZ81Y".into())
+//!     .await?;
+//!
+//! ```
+//!
+//! If you want to get the children of a "container" media like a series or season, these types
+//! implements the appropriate functions to archive this.
+//!
+//! ```
+//! let seasons = series
+//!     // get the seasons of this episode
+//!     .seasons()
+//!     .await?;
+//! ```
+//!
+//! ## Streaming
+//!
+//! This crate allows you to get the actual video streams behind episodes and movies. With
+//! [`Media<Episode>::streams`] and [`Media<Movie>::streams`] you get access to the streams. The
+//! returning struct [`media::VideoStream`] has all required information to access the streams.
+//!
+//! ```
+//! let streams = episode
+//!     .streams()
+//!     .await?;
+//! ```
+//!
+//! Crunchyroll uses the [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) and
+//! [MPEG-DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP) video streaming
+//! formats to distribute their streams. The logic to work with this formats is already implemented
+//! into this crate (it uses the _HLS_ stream backend).
+//!
+//! ```
+//! let default_streams = streams
+//!     .default_streams()
+//!     .await?;
+//!
+//! // sort the streams to get the stream with the best resolution at first
+//! default_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width).reverse());
+//!
+//! let sink = &mut std::io::sink();
+//!
+//! // get the segments / video chunks of the first stream (which is the best after it got sorted
+//! // above)
+//! let segments = default_streams[0].segments().await?;
+//! // iterate through every segment and write it to the provided writer (which is a sink in this
+//! // case; it drops its input immediately). writer can be anything which implements `std::io::Write`
+//! // like a file, a pipe, ...
+//! for segment in segments {
+//!     segment.write_to(sink).await?;
+//! }
+//! ```
+//!
+//! **Note:** The `stream` feature must be enable to process / write streams (enabled by default).
+//!
 //! # Implementation
 //! Because Crunchyroll does not have a fixed api versioning and is currently in its beta phase,
 //! changes are likely to happen (even though they weren't very radical in the past) so keep an eye

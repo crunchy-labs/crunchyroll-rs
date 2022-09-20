@@ -68,7 +68,9 @@ mod auth {
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
-    /// Stores either the refresh token or etp-rt cookie used for internal login.
+    /// Stores if the refresh token or etp-rt cookie was used for login. Extract the token and use
+    /// it as argument in their associated function ([`CrunchyrollBuilder::login_with_refresh_token`]
+    /// or [`CrunchyrollBuilder::login_with_etp_rt`]) if you want to re-login into the account again.
     #[derive(Clone, Debug)]
     pub enum SessionToken {
         RefreshToken(String),
@@ -312,11 +314,14 @@ mod auth {
     }
 
     impl CrunchyrollBuilder {
+        /// Set a custom client over which all request to the api are made.
         pub fn client(&mut self, client: reqwest::Client) -> &Self {
             self.client = client;
             self
         }
 
+        /// Set in which languages all results which have human readable text in it should be
+        /// returned.
         pub fn locale(&mut self, locale: Locale) -> &Self {
             self.locale = locale;
             self
@@ -356,7 +361,12 @@ mod auth {
             self.post_login(login_response, session_token).await
         }
 
-        /// Logs in with a refresh token.
+        /// Logs in with a refresh token. This token is obtained when logging in with
+        /// [`CrunchyrollBuilder::login_with_credentials`].
+        /// Note: Even though the tokens used in [`CrunchyrollBuilder::login_with_refresh_token`] and
+        /// [`CrunchyrollBuilder::login_with_etp_rt`] are having the same syntax, Crunchyroll
+        /// internal they're different. I had issues when I tried to log in with the refresh token
+        /// on [`CrunchyrollBuilder::login_with_etp_rt`] and vice versa.
         pub async fn login_with_refresh_token(self, refresh_token: String) -> Result<Crunchyroll> {
             let login_response =
                 Executor::auth_with_refresh_token(self.client.clone(), refresh_token).await?;
@@ -368,7 +378,10 @@ mod auth {
         /// Logs in with a etp rt cookie and returns a new `Crunchyroll` instance.
         /// This cookie can be extracted if you activate crunchyroll beta and then copy the `etp_rt`
         /// cookie from your browser.
-        /// Note that the cookie value changes all 24 hours or so.
+        /// Note: Even though the tokens used in [`CrunchyrollBuilder::login_with_etp_rt`] and
+        /// [`CrunchyrollBuilder::login_with_refresh_token`] are having the same syntax, Crunchyroll
+        /// internal they're different. I had issues when I tried to log in with the `etp_rt`
+        /// cookie on [`CrunchyrollBuilder::login_with_refresh_token`] and vice versa.
         pub async fn login_with_etp_rt(self, etp_rt: String) -> Result<Crunchyroll> {
             let login_response = Executor::auth_with_etp_rt(self.client.clone(), etp_rt).await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone());
