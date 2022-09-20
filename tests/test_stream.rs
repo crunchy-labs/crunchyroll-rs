@@ -10,7 +10,7 @@ mod utils;
 static STREAM: Store<VideoStream> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let stream = VideoStream::from_id(crunchy, "G4GFQP0WM".to_string()).await?;
+        let stream = VideoStream::from_id(crunchy, "G4GFQP0WM".into()).await?;
         Ok(stream)
     })
 });
@@ -19,7 +19,7 @@ static STREAM_DATA: Store<VariantData> = Store::new(|| {
         let stream = STREAM.get().await?;
         let mut default_streams = stream.default_streams().await?;
 
-        default_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.height).reverse());
+        default_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
 
         Ok(default_streams.get(0).unwrap().clone())
     })
