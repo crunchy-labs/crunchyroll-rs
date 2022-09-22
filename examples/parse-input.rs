@@ -1,8 +1,8 @@
 #![cfg(feature = "parse")]
 
 use anyhow::Result;
-use crunchyroll_rs::parse::UrlType;
-use crunchyroll_rs::Crunchyroll;
+use crunchyroll::parse::UrlType;
+use crunchyroll::Crunchyroll;
 use std::env;
 
 #[tokio::main]

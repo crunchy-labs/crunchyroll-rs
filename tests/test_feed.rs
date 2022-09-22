@@ -1,7 +1,5 @@
 use crate::utils::SESSION;
-use crunchyroll_rs::feed::{
-    HomeFeedOptions, NewsFeedOptions, RecommendationOptions, UpNextOptions,
-};
+use crunchyroll::feed::{HomeFeedOptions, NewsFeedOptions, RecommendationOptions, UpNextOptions};
 
 mod utils;
 

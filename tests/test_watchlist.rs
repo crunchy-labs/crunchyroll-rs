@@ -1,6 +1,6 @@
 use crate::utils::{Store, SESSION};
-use crunchyroll_rs::list::WatchlistOptions;
-use crunchyroll_rs::{Media, Series};
+use crunchyroll::list::WatchlistOptions;
+use crunchyroll::{Media, Series};
 
 mod utils;
 

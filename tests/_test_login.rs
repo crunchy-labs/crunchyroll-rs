@@ -1,7 +1,7 @@
 /// Begins with an underscore because this must be the first file to be called
 mod utils;
 
-use crunchyroll_rs::Crunchyroll;
+use crunchyroll::Crunchyroll;
 use std::env;
 
 #[tokio::test]

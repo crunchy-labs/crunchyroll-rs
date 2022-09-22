@@ -1,7 +1,7 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::media::SimilarOptions;
-use crunchyroll_rs::{Media, Series};
+use crunchyroll::media::SimilarOptions;
+use crunchyroll::{Media, Series};
 
 mod utils;
 

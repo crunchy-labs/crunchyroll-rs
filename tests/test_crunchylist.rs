@@ -1,5 +1,5 @@
 use crate::utils::{Store, SESSION};
-use crunchyroll_rs::list::Crunchylists;
+use crunchyroll::list::Crunchylists;
 
 mod utils;
 

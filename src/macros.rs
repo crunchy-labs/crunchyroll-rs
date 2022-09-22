@@ -2,7 +2,7 @@
 /// enum with numerics values, just with strings instead of numbers.
 /// Every created enum has a `Custom(String)`
 /// field which can be used to represent custom values of the enums purpose (in case the enum
-/// holds some static variables, like [`crunchyroll_rs::categories::Category`], and Crunchyroll
+/// holds some static variables, like [`crunchyroll::categories::Category`], and Crunchyroll
 /// decides to add a additional variable) which reduces the chance of breaking something.
 ///
 /// The generated enum implements [`std::fmt::Display`] (for a representation of the values),
@@ -73,7 +73,7 @@ macro_rules! enum_values {
 /// # Examples
 ///
 /// ```
-/// use crunchyroll_rs::options;
+/// use crunchyroll::options;
 ///
 /// options! {
 ///     PaginationOptions;

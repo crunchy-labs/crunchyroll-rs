@@ -1,5 +1,5 @@
 use crate::utils::SESSION;
-use crunchyroll_rs::list::WatchHistoryOptions;
+use crunchyroll::list::WatchHistoryOptions;
 
 mod utils;
 

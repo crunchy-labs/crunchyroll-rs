@@ -1,7 +1,7 @@
 use anyhow::Result;
-use crunchyroll_rs::categories::Category;
-use crunchyroll_rs::search::BrowseOptions;
-use crunchyroll_rs::{Crunchyroll, MediaCollection};
+use crunchyroll::categories::Category;
+use crunchyroll::search::BrowseOptions;
+use crunchyroll::{Crunchyroll, MediaCollection};
 use std::env;
 
 #[tokio::main]

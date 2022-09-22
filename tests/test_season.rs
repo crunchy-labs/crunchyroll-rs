@@ -1,7 +1,7 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::media::Season;
-use crunchyroll_rs::Media;
+use crunchyroll::media::Season;
+use crunchyroll::Media;
 
 mod utils;
 

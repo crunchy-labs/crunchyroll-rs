@@ -1,6 +1,6 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::{Episode, Media};
+use crunchyroll::{Episode, Media};
 
 mod utils;
 

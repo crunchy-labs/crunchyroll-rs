@@ -1,7 +1,7 @@
 #![cfg(feature = "stream")]
 
 use anyhow::Result;
-use crunchyroll_rs::Crunchyroll;
+use crunchyroll::Crunchyroll;
 use std::env;
 
 #[tokio::main]

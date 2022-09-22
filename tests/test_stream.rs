@@ -2,7 +2,7 @@
 
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::media::{VariantData, VariantSegment, VideoStream};
+use crunchyroll::media::{VariantData, VariantSegment, VideoStream};
 use rand::seq::SliceRandom;
 
 mod utils;
