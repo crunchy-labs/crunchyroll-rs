@@ -11,55 +11,41 @@ use std::time::Duration;
 
 type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
 
-#[async_trait::async_trait]
-pub trait DefaultStreams {
-    async fn default_streams(&self) -> Result<Vec<VariantData>>;
-}
-
-#[async_trait::async_trait]
-impl DefaultStreams for VideoStream {
-    async fn default_streams(&self) -> Result<Vec<VariantData>> {
-        if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
-            VariantData::from_hls_master(
-                self.executor.clone(),
-                raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
-            )
-            .await
-        } else if let Some(raw_streams) = self.variants.get(&Locale::Custom(":".into())) {
-            VariantData::from_hls_master(
-                self.executor.clone(),
-                raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
-            )
-            .await
-        } else {
-            Err(CrunchyrollError::Internal(
-                "could not find default stream".into(),
-            ))
-        }
+macro_rules! impl_streaming {
+    ($($stream:ident)*) => {
+        $(
+            impl $stream {
+                /// Returns data which can be used to get the literal stream data and process it
+                /// further (e.g. write them to a file which than can be played).
+                /// Note that this is only the implementation of this crate to stream data. You can
+                /// still manually use the variants in [`VideoStream::variants`] /
+                /// [`PlaybackStream::variants`] and implement the streaming on your own.
+                pub async fn streaming_data(&self)-> Result<Vec<VariantData>> {
+                    if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
+                        VariantData::from_hls_master(
+                            self.executor.clone(),
+                            raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
+                        )
+                        .await
+                    } else if let Some(raw_streams) = self.variants.get(&Locale::Custom(":".into())) {
+                        VariantData::from_hls_master(
+                            self.executor.clone(),
+                            raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
+                        )
+                        .await
+                    } else {
+                        Err(CrunchyrollError::Internal(
+                            "could not find supported stream".into(),
+                        ))
+                    }
+                }
+            }
+        )*
     }
 }
 
-#[async_trait::async_trait]
-impl DefaultStreams for PlaybackStream {
-    async fn default_streams(&self) -> Result<Vec<VariantData>> {
-        if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
-            VariantData::from_hls_master(
-                self.executor.clone(),
-                raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
-            )
-            .await
-        } else if let Some(raw_streams) = self.variants.get(&Locale::Custom(":".into())) {
-            VariantData::from_hls_master(
-                self.executor.clone(),
-                raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
-            )
-            .await
-        } else {
-            Err(CrunchyrollError::Internal(
-                "could not find default stream".into(),
-            ))
-        }
-    }
+impl_streaming! {
+    VideoStream PlaybackStream
 }
 
 #[derive(Clone, Debug)]

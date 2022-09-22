@@ -2,7 +2,7 @@
 
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::media::{DefaultStreams, VariantData, VariantSegment, VideoStream};
+use crunchyroll_rs::media::{VariantData, VariantSegment, VideoStream};
 use rand::seq::SliceRandom;
 
 mod utils;
@@ -17,7 +17,7 @@ static STREAM: Store<VideoStream> = Store::new(|| {
 static STREAM_DATA: Store<VariantData> = Store::new(|| {
     Box::pin(async {
         let stream = STREAM.get().await?;
-        let mut default_streams = stream.default_streams().await?;
+        let mut default_streams = stream.streaming_data().await?;
 
         default_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
 

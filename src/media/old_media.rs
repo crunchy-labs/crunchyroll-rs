@@ -229,13 +229,9 @@ pub(crate) struct OldSeason {
     is_subbed: bool,
     is_dubbed: bool,
     is_simulcast: bool,
-    // always empty (currently)
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_broken_locale_vec")]
     audio_locales: Vec<Locale>,
-    // always empty (currently)
     subtitle_locales: Vec<Locale>,
-    // i have no idea what the difference between `audio_locales` and `audio_locale` should be.
-    // they're both empty
-    audio_locale: String,
 
     maturity_ratings: Vec<String>,
     is_mature: bool,
@@ -243,6 +239,8 @@ pub(crate) struct OldSeason {
 
     availability_notes: String,
 
+    #[cfg(feature = "__test_strict")]
+    audio_locale: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     // currently empty (on all of my tests) but its might be filled in the future
     images: crate::StrictValue,
@@ -277,10 +275,12 @@ impl Into<Media<Season>> for OldSeason {
             metadata: Season {
                 audio_locales: self.audio_locales,
                 subtitle_locales: self.subtitle_locales,
-                audio_locale: self.audio_locale,
+                season_number: self.season_number,
                 maturity_ratings: self.maturity_ratings,
                 is_mature: self.is_mature,
                 mature_blocked: self.mature_blocked,
+                #[cfg(feature = "__test_strict")]
+                audio_locale: self.audio_locale,
                 #[cfg(feature = "__test_strict")]
                 season_display_number: self.season_display_number,
                 #[cfg(feature = "__test_strict")]

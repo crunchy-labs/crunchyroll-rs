@@ -1,4 +1,4 @@
-use crate::Request;
+use crate::{Locale, Request};
 use chrono::Duration;
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
@@ -34,6 +34,50 @@ where
     D: Deserializer<'de>,
 {
     Ok(Duration::milliseconds(i64::deserialize(deserializer)?))
+}
+
+/// Some locales are not delivered in the appropriate ISO format (as they should) but in some crappy
+/// version of it. The correct format would be, for example `ja-JP` (for japanese) but some requests
+/// send it as `jaJP`. This currently only occurs in [`Vec`] results which contains
+/// [`crate::Locale`].
+pub(crate) fn deserialize_maybe_broken_locale_vec<'de, D>(
+    deserializer: D,
+) -> Result<Vec<Locale>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let mut locales = vec![];
+
+    let values: Vec<String> = Vec::deserialize(deserializer)?;
+    for value in values {
+        match Locale::from(value.clone()) {
+            Locale::Custom(_) => (),
+            _ => {
+                locales.push(Locale::from(value));
+                continue;
+            }
+        };
+
+        for locale in vec![
+            Locale::ar_ME,
+            Locale::ar_SA,
+            Locale::de_DE,
+            Locale::es_419,
+            Locale::es_ES,
+            Locale::fr_FR,
+            Locale::it_IT,
+            Locale::ja_JP,
+            Locale::pt_BR,
+            Locale::ru_RU,
+        ] {
+            if locale.to_string().replace('-', "") == value {
+                locales.push(locale);
+                continue;
+            }
+        }
+        locales.push(Locale::Custom(value));
+    }
+    Ok(locales)
 }
 
 pub(crate) fn deserialize_try_from_string<'de, D, T: FromStr>(

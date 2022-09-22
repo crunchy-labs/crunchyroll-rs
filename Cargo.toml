@@ -8,15 +8,16 @@ edition = "2021"
 [features]
 default = ["stream", "parse"]
 
+# Add functionality to stream episodes / movies so you can process the unencrypted streaming data further, e.g. write it
+# to a file and then play it.
 stream = ["aes", "cbc", "m3u8-rs"]
-
+# Add functionality to parse Crunchyroll urls.
 parse = ["regex"]
 
 # Internal! Do not use it outside of testing
 __test_strict = []
 
 [dependencies]
-async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 reqwest = { version = "0.11", features = ["cookies", "json", "gzip"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -37,4 +38,4 @@ regex = { version = "1.6", default-features = false, features = ["std"], optiona
 anyhow = "1.0"
 once_cell = "1.13"
 rand = "0.8"
-tokio = { version = "1.21", features = ["rt", "macros"] }
+tokio = { version = "1.21", features = ["macros", "rt", "rt-multi-thread"] }
