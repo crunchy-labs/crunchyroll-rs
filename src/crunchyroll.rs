@@ -367,9 +367,15 @@ mod auth {
         /// [`CrunchyrollBuilder::login_with_etp_rt`] are having the same syntax, Crunchyroll
         /// internal they're different. I had issues when I tried to log in with the refresh token
         /// on [`CrunchyrollBuilder::login_with_etp_rt`] and vice versa.
-        pub async fn login_with_refresh_token<S: AsRef<str>>(self, refresh_token: S) -> Result<Crunchyroll> {
-            let login_response =
-                Executor::auth_with_refresh_token(self.client.clone(), refresh_token.as_ref().to_string()).await?;
+        pub async fn login_with_refresh_token<S: AsRef<str>>(
+            self,
+            refresh_token: S,
+        ) -> Result<Crunchyroll> {
+            let login_response = Executor::auth_with_refresh_token(
+                self.client.clone(),
+                refresh_token.as_ref().to_string(),
+            )
+            .await?;
             let session_token = SessionToken::RefreshToken(login_response.refresh_token.clone());
 
             self.post_login(login_response, session_token).await
@@ -383,7 +389,9 @@ mod auth {
         /// internal they're different. I had issues when I tried to log in with the `etp_rt`
         /// cookie on [`CrunchyrollBuilder::login_with_refresh_token`] and vice versa.
         pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
-            let login_response = Executor::auth_with_etp_rt(self.client.clone(), etp_rt.as_ref().to_string()).await?;
+            let login_response =
+                Executor::auth_with_etp_rt(self.client.clone(), etp_rt.as_ref().to_string())
+                    .await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone());
 
             self.post_login(login_response, session_token).await
@@ -394,7 +402,10 @@ mod auth {
         /// `session_id` cookie from your browser.
         /// This login method made some trouble in the past (login failed even though the session id was
         /// valid and the user logged in) and is therefore not very reliable.
-        pub async fn login_with_session_id<S: AsRef<str>>(self, session_id: S) -> Result<Crunchyroll> {
+        pub async fn login_with_session_id<S: AsRef<str>>(
+            self,
+            session_id: S,
+        ) -> Result<Crunchyroll> {
             let endpoint = format!(
                 "https://api.crunchyroll.com/start_session.0.json?session_id={}",
                 session_id.as_ref()

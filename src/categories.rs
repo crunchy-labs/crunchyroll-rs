@@ -97,7 +97,7 @@ impl Crunchyroll {
         let endpoint = "https://beta.crunchyroll.com/content/v1/tenant_categories";
         self.executor
             .get(endpoint)
-            .query(&options.to_query())
+            .query(&options.into_query())
             .apply_locale_query()
             .request()
             .await

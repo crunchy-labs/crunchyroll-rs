@@ -158,7 +158,7 @@ impl Crunchyroll {
         let bulk_watchlist_result: BulkWatchlistResult = self
             .executor
             .get(endpoint)
-            .query(&options.to_query())
+            .query(&options.into_query())
             .query(&[language_field])
             .apply_locale_query()
             .request()

@@ -107,7 +107,7 @@ impl Comment {
         );
         self.executor
             .get(endpoint)
-            .query(&options.to_query())
+            .query(&options.into_query())
             .apply_locale_query()
             .request()
             .await
@@ -242,7 +242,7 @@ macro_rules! impl_comment {
                     let endpoint = format!("https://beta.crunchyroll.com/talkbox/guestbooks/{}/comments", self.id);
                     self.executor
                         .get(endpoint)
-                        .query(&options.to_query())
+                        .query(&options.into_query())
                         .apply_locale_query()
                         .request()
                         .await

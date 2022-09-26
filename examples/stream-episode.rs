@@ -23,8 +23,9 @@ async fn main() -> Result<()> {
     let segments = default_streams[0].segments().await?;
 
     let sink = &mut std::io::sink();
-    for segment in segments {
-        segment.write_to(sink).await?;
+    for (i, segment) in segments.iter().enumerate() {
+        println!("Writing segment {} of {}", i + 1, segments.len() + 1);
+        segment.clone().write_to(sink).await?;
     }
 
     Ok(())

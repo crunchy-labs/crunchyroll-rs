@@ -110,16 +110,11 @@ macro_rules! enum_values {
 ///         self
 ///     }
 ///
-///     pub(crate) fn to_query(&self, extra_params: &[(String, String)]) -> Vec<(String, String)> {
-///         [
-///             extra_params,
-///             &[
-///                 // this `unwrap` code does not exactly gets generated, it checks if the value
-///                 // is `Some` or `None`, but to show it in a simple way `.unwrap()` should be ok
-///                 ("n", self.limit.unwrap()),
-///                 ("start", self.start.unwrap())
-///             ]
-///         ].concat().to_vec()
+///     pub(crate) fn into_query(self) -> Vec<(String, String)> {
+///         let encoded = serde_urlencoded::to_string([
+///             ("n", if let Some(field) = self.limit { Some(serde_json::to_value(field).unwrap()) } else { None }),
+///             ("start", if let Some(field) = self.start { Some(serde_json::to_value(field).unwrap()) } else { None })
+///         ]).unwrap();
 ///     }
 /// }
 /// ```
@@ -155,15 +150,14 @@ macro_rules! options {
             )*
 
             #[allow(dead_code)]
-            pub(crate) fn to_query(&self) -> Vec<(String, String)> {
-                let encoded = serde_urlencoded::to_string([
+            pub(crate) fn into_query(self) -> Vec<(String, String)> {
+                crate::internal::serde::query_to_urlencoded([
                     $(
-                        ($query_name, if let Some(field) = &self.$field {
+                        ($query_name, if let Some(field) = self.$field {
                             Some(serde_json::to_value(field).unwrap())
                         } else { None })
                     ),*
-                ]).unwrap();
-                serde_urlencoded::from_str(encoded.as_str()).unwrap()
+                ].to_vec()).unwrap()
             }
         }
     }

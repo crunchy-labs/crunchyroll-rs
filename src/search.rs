@@ -60,7 +60,7 @@ mod browse {
             let endpoint = "https://beta.crunchyroll.com/content/v1/browse";
             self.executor
                 .get(endpoint)
-                .query(&options.to_query())
+                .query(&options.into_query())
                 .apply_locale_query()
                 .request()
                 .await
@@ -201,11 +201,15 @@ mod query {
 
     impl Crunchyroll {
         /// Search the Crunchyroll catalog by a given query / string.
-        pub async fn query<S: AsRef<str>>(&self, query: S, options: QueryOptions) -> Result<QueryResults> {
+        pub async fn query<S: AsRef<str>>(
+            &self,
+            query: S,
+            options: QueryOptions,
+        ) -> Result<QueryResults> {
             let endpoint = "https://beta.crunchyroll.com/content/v1/search";
             self.executor
                 .get(endpoint)
-                .query(&options.to_query())
+                .query(&options.into_query())
                 .query(&[("q", query.as_ref())])
                 .apply_locale_query()
                 .request()

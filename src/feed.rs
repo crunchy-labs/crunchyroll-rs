@@ -174,9 +174,9 @@ impl HomeFeed {
             )),
             "panel" => Ok(HomeFeedType::Series(self.id.clone())),
             "dynamic_collection" => {
-                if (&self.resource).contains("recommendations") {
+                if self.resource.contains("recommendations") {
                     Ok(HomeFeedType::Recommendation)
-                } else if (&self.resource).contains("similar_to") {
+                } else if self.resource.contains("similar_to") {
                     Ok(HomeFeedType::SimilarTo(self.id.clone()))
                 } else {
                     Err(CrunchyrollError::Internal(
@@ -283,7 +283,7 @@ impl Crunchyroll {
         );
         self.executor
             .get(endpoint)
-            .query(&options.to_query())
+            .query(&options.into_query())
             .apply_locale_query()
             .request()
             .await
@@ -294,7 +294,7 @@ impl Crunchyroll {
         let endpoint = "https://beta.crunchyroll.com/content/v1/news_feed";
         self.executor
             .get(endpoint)
-            .query(&options.to_query())
+            .query(&options.into_query())
             .apply_locale_query()
             .request()
             .await
@@ -311,7 +311,7 @@ impl Crunchyroll {
         );
         self.executor
             .get(endpoint)
-            .query(&options.to_query())
+            .query(&options.into_query())
             .apply_locale_query()
             .request()
             .await
@@ -325,7 +325,7 @@ impl Crunchyroll {
         );
         self.executor
             .get(endpoint)
-            .query(&options.to_query())
+            .query(&options.into_query())
             .apply_locale_query()
             .request()
             .await

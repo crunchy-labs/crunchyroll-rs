@@ -258,7 +258,7 @@ macro_rules! impl_rating {
                         "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/review/{}/{}/list",
                         self.executor.details.locale, self.executor.details.account_id, $endpoint, self.id
                     );
-                    self.executor.get(endpoint).query(&options.to_query()).request().await
+                    self.executor.get(endpoint).query(&options.into_query()).request().await
                 }
 
                 pub async fn rate(&self, stars: RatingStar) -> Result<Rating> {

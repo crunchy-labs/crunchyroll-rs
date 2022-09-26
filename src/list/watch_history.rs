@@ -53,7 +53,7 @@ impl Crunchyroll {
         let bulk_watch_history_result: BulkWatchHistoryResult = self
             .executor
             .get(endpoint)
-            .query(&options.to_query())
+            .query(&options.into_query())
             .apply_locale_query()
             .request()
             .await?;

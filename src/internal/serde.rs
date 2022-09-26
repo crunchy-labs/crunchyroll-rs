@@ -1,4 +1,5 @@
-use crate::{Locale, Request};
+use crate::error::{CrunchyrollError, CrunchyrollErrorContext};
+use crate::{Locale, Request, Result};
 use chrono::Duration;
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
@@ -27,6 +28,59 @@ impl<'de> Deserialize<'de> for EmptyJsonProxy {
 }
 impl From<EmptyJsonProxy> for () {
     fn from(_: EmptyJsonProxy) -> Self {}
+}
+
+pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
+    query: Vec<(K, V)>,
+) -> Result<Vec<(String, String)>> {
+    let mut q = vec![];
+
+    for (k, v) in query.into_iter() {
+        let key = serde_json::to_value(k)?;
+        let value = serde_json::to_value(v)?;
+
+        let key_as_string = match key {
+            Value::Bool(bool) => bool.to_string(),
+            Value::Number(number) => number.to_string(),
+            Value::String(string) => string,
+            Value::Null => continue,
+            _ => {
+                return Err(CrunchyrollError::Internal(
+                    CrunchyrollErrorContext::new("value is not supported to urlencode")
+                        .with_value(key.to_string().as_bytes()),
+                ))
+            }
+        };
+        let value_as_string = match value {
+            Value::Bool(bool) => bool.to_string(),
+            Value::Number(number) => number.to_string(),
+            Value::String(string) => string,
+            Value::Array(arr) => arr
+                .into_iter()
+                .map(|vv| match vv {
+                    Value::Number(number) => Ok(number.to_string()),
+                    Value::String(string) => Ok(string),
+                    _ => {
+                        return Err(CrunchyrollError::Internal(
+                            CrunchyrollErrorContext::new("value is not supported to urlencode")
+                                .with_value(vv.to_string().as_bytes()),
+                        ))
+                    }
+                })
+                .collect::<Result<Vec<String>>>()?
+                .join(","),
+            Value::Null => continue,
+            _ => {
+                return Err(CrunchyrollError::Internal(
+                    CrunchyrollErrorContext::new("value is not supported to urlencode")
+                        .with_value(value.to_string().as_bytes()),
+                ))
+            }
+        };
+        q.push((key_as_string, value_as_string));
+    }
+
+    Ok(q)
 }
 
 pub(crate) fn deserialize_millis_to_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
@@ -58,12 +112,16 @@ where
             }
         };
 
+        let len = locales.len();
+
         for locale in vec![
             Locale::ar_ME,
             Locale::ar_SA,
             Locale::de_DE,
+            Locale::en_US,
             Locale::es_419,
             Locale::es_ES,
+            Locale::es_LA,
             Locale::fr_FR,
             Locale::it_IT,
             Locale::ja_JP,
@@ -72,10 +130,13 @@ where
         ] {
             if locale.to_string().replace('-', "") == value {
                 locales.push(locale);
-                continue;
+                break;
             }
         }
-        locales.push(Locale::Custom(value));
+
+        if len == locales.len() {
+            locales.push(Locale::Custom(value))
+        }
     }
     Ok(locales)
 }
