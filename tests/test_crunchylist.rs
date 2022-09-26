@@ -1,5 +1,6 @@
 use crate::utils::{Store, SESSION};
 use crunchyroll::list::Crunchylists;
+use crunchyroll::Series;
 
 mod utils;
 
@@ -32,7 +33,7 @@ async fn modify_crunchylist() {
         .get()
         .await
         .unwrap()
-        .series_from_id("GY8VEQ95Y".to_string())
+        .media_from_id::<Series>("GY8VEQ95Y".to_string())
         .await
         .unwrap();
     let crunchylist_add_result = crunchylist.add(series.into()).await;

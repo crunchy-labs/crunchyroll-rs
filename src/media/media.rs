@@ -310,6 +310,35 @@ impl<'de> Deserialize<'de> for MediaCollection {
     }
 }
 
+impl MediaCollection {
+    pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<MediaCollection> {
+        let endpoint = format!(
+            "https://beta.crunchyroll.com/cms/v2/{}/objects/{}",
+            crunchy.executor.details.bucket, &id
+        );
+        let result: BulkResult<MediaCollection> = crunchy
+            .executor
+            .get(endpoint)
+            .apply_media_query()
+            .apply_locale_query()
+            .request()
+            .await?;
+
+        if result.items.is_empty() {
+            Err(CrunchyrollError::Input(
+                format!("no media could be found for id '{}'", id).into(),
+            ))
+        } else if result.items.len() >= 2 {
+            // if this ever gets fired, crunchyroll hopefully unified episode and movie on the api
+            // level (this functions was only implemented so `Crunchyroll::parse_url` can work
+            // easily)
+            Err(CrunchyrollError::Internal(format!("multiple media were found for id '{}'. this shouldn't happen, please report it immediately!", id).into()))
+        } else {
+            Ok(result.items.into_iter().next().unwrap())
+        }
+    }
+}
+
 macro_rules! impl_try_into_media {
     ($($generic:path = $enum_field:ident)*) => {
         $(
@@ -564,29 +593,14 @@ impl Media<Movie> {
 }
 
 impl Crunchyroll {
-    /// Get a series by its id.
-    pub async fn series_from_id(&self, id: String) -> Result<Media<Series>> {
-        Series::from_id(self, id).await
+    /// Get a media by its id. The `M` generic says what media exactly should be requested. Available
+    /// options are [`Series`], [`Season`], [`Episode`], [`MovieListing`] and [`Movie`].
+    pub async fn media_from_id<M: Video>(&self, id: String) -> Result<Media<M>> {
+        Media::from_id(self, id).await
     }
 
-    /// Get a series season by its id.
-    pub async fn season_from_id(&self, id: String) -> Result<Media<Season>> {
-        Season::from_id(self, id).await
-    }
-
-    /// Get a episode by its id.
-    pub async fn episode_from_id(&self, id: String) -> Result<Media<Episode>> {
-        Episode::from_id(self, id).await
-    }
-
-    /// Get a movie listing by its id.
-    pub async fn movie_listing_from_id(&self, id: String) -> Result<Media<MovieListing>> {
-        MovieListing::from_id(self, id).await
-    }
-
-    /// Get a movie by its id.
-    pub async fn movie_from_id(&self, id: String) -> Result<Media<Movie>> {
-        Movie::from_id(self, id).await
+    pub async fn media_collection_from_id(&self, id: String) -> Result<MediaCollection> {
+        MediaCollection::from_id(self, id).await
     }
 }
 

@@ -8,7 +8,7 @@ mod utils;
 static SEASON: Store<Media<Season>> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        Ok(crunchy.season_from_id("GRZX8KNGY".into()).await?)
+        Ok(crunchy.media_from_id("GRZX8KNGY".into()).await?)
     })
 });
 

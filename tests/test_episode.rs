@@ -7,7 +7,7 @@ mod utils;
 static EPISODE: Store<Media<Episode>> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let episode = crunchy.episode_from_id("GRDKJZ81Y".into()).await?;
+        let episode = crunchy.media_from_id("GRDKJZ81Y".into()).await?;
         Ok(episode)
     })
 });
