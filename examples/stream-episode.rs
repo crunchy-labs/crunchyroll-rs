@@ -1,7 +1,7 @@
 #![cfg(feature = "stream")]
 
 use anyhow::Result;
-use crunchyroll::Crunchyroll;
+use crunchyroll::{Crunchyroll, Episode, Media};
 use std::env;
 
 #[tokio::main]
@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
         .login_with_credentials(user, password)
         .await?;
 
-    let episode = crunchyroll.episode_from_id("GRDKJZ81Y".into()).await?;
+    let episode: Media<Episode> = crunchyroll.media_from_id("GRDKJZ81Y").await?;
     let streams = episode.streams().await?;
     let mut default_streams = streams.streaming_data().await?;
     // sort after resolutions; best to worst

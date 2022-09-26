@@ -329,10 +329,10 @@ mod auth {
 
         /// Logs in with credentials (username or email and password) and returns a new `Crunchyroll`
         /// instance.
-        pub async fn login_with_credentials(
+        pub async fn login_with_credentials<S: AsRef<str>>(
             self,
-            user: String,
-            password: String,
+            user: S,
+            password: S,
         ) -> Result<Crunchyroll> {
             let endpoint = "https://beta.crunchyroll.com/auth/v1/token";
             let resp = self
@@ -345,8 +345,8 @@ mod auth {
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .body(
                     serde_urlencoded::to_string(&[
-                        ("username", user.as_str()),
-                        ("password", password.as_str()),
+                        ("username", user.as_ref()),
+                        ("password", password.as_ref()),
                         ("grant_type", "password"),
                         ("scope", "offline_access"),
                     ])
@@ -367,9 +367,9 @@ mod auth {
         /// [`CrunchyrollBuilder::login_with_etp_rt`] are having the same syntax, Crunchyroll
         /// internal they're different. I had issues when I tried to log in with the refresh token
         /// on [`CrunchyrollBuilder::login_with_etp_rt`] and vice versa.
-        pub async fn login_with_refresh_token(self, refresh_token: String) -> Result<Crunchyroll> {
+        pub async fn login_with_refresh_token<S: AsRef<str>>(self, refresh_token: S) -> Result<Crunchyroll> {
             let login_response =
-                Executor::auth_with_refresh_token(self.client.clone(), refresh_token).await?;
+                Executor::auth_with_refresh_token(self.client.clone(), refresh_token.as_ref().to_string()).await?;
             let session_token = SessionToken::RefreshToken(login_response.refresh_token.clone());
 
             self.post_login(login_response, session_token).await
@@ -382,8 +382,8 @@ mod auth {
         /// [`CrunchyrollBuilder::login_with_refresh_token`] are having the same syntax, Crunchyroll
         /// internal they're different. I had issues when I tried to log in with the `etp_rt`
         /// cookie on [`CrunchyrollBuilder::login_with_refresh_token`] and vice versa.
-        pub async fn login_with_etp_rt(self, etp_rt: String) -> Result<Crunchyroll> {
-            let login_response = Executor::auth_with_etp_rt(self.client.clone(), etp_rt).await?;
+        pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
+            let login_response = Executor::auth_with_etp_rt(self.client.clone(), etp_rt.as_ref().to_string()).await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone());
 
             self.post_login(login_response, session_token).await
@@ -394,10 +394,10 @@ mod auth {
         /// `session_id` cookie from your browser.
         /// This login method made some trouble in the past (login failed even though the session id was
         /// valid and the user logged in) and is therefore not very reliable.
-        pub async fn login_with_session_id(self, session_id: String) -> Result<Crunchyroll> {
+        pub async fn login_with_session_id<S: AsRef<str>>(self, session_id: S) -> Result<Crunchyroll> {
             let endpoint = format!(
                 "https://api.crunchyroll.com/start_session.0.json?session_id={}",
-                session_id
+                session_id.as_ref()
             );
             let resp = self.client.get(endpoint).send().await?;
 

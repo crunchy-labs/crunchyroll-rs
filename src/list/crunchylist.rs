@@ -71,7 +71,7 @@ impl Crunchylists {
     /// Create a new crunchylist. If a error is thrown which says that the maximum of private list
     /// is reached, check how many you currently have ([`Crunchylists::total_private`]) and how many
     /// are allowed ([`Crunchylists::max_private`]; usually 10).
-    pub async fn create(&self, title: String) -> Result<CrunchylistPreview> {
+    pub async fn create<S: AsRef<str>>(&self, title: S) -> Result<CrunchylistPreview> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}",
             self.executor.details.account_id
@@ -79,14 +79,14 @@ impl Crunchylists {
         let create_result: CrunchylistCreate = self
             .executor
             .post(endpoint)
-            .json(&json!({ "title": &title }))
+            .json(&json!({ "title": title.as_ref() }))
             .apply_locale_query()
             .request()
             .await?;
         Ok(CrunchylistPreview {
             executor: self.executor.clone(),
             list_id: create_result.list_id,
-            title,
+            title: title.as_ref().to_string(),
             modified_at: create_result.modified_at,
             is_public: false,
             total: create_result.total,
@@ -145,14 +145,14 @@ impl Crunchylist {
     }
 
     /// Rename the current crunchylist.
-    pub async fn rename(&self, name: String) -> Result<()> {
+    pub async fn rename<S: AsRef<str>>(&self, name: S) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
             self.executor.details.account_id, self.id
         );
         self.executor
             .patch(endpoint)
-            .json(&json!({ "title": name }))
+            .json(&json!({ "title": name.as_ref() }))
             .apply_locale_query()
             .request::<EmptyJsonProxy>()
             .await?;

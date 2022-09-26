@@ -178,7 +178,7 @@ pub struct SelfReview {
 
 impl SelfReview {
     /// Edit your review.
-    pub async fn edit(&mut self, title: String, body: String, spoiler: bool) -> Result<()> {
+    pub async fn edit<S: AsRef<str>>(&mut self, title: S, body: S, spoiler: bool) -> Result<()> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
             self.executor.details.account_id,
@@ -189,7 +189,7 @@ impl SelfReview {
         *self = self
             .executor
             .patch(endpoint)
-            .json(&json!({"title": title, "body": body, "spoiler": spoiler}))
+            .json(&json!({"title": title.as_ref(), "body": body.as_ref(), "spoiler": spoiler}))
             .request()
             .await?;
 
@@ -272,13 +272,13 @@ macro_rules! impl_rating {
                         .await
                 }
 
-                pub async fn create_review(&self, title: String, body: String, spoiler: bool) -> Result<SelfReview> {
+                pub async fn create_review<S: AsRef<str>>(&self, title: S, body: S, spoiler: bool) -> Result<SelfReview> {
                     let endpoint = format!(
                         "https://beta.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
                         self.executor.details.account_id, $endpoint, self.id
                     );
                     self.executor.post(endpoint)
-                        .json(&json!({"title": title, "body": body, "spoiler": spoiler}))
+                        .json(&json!({"title": title.as_ref(), "body": body.as_ref(), "spoiler": spoiler}))
                         .request()
                         .await
                 }

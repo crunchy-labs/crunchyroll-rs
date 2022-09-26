@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
     let options = QueryOptions::default()
         // return 2o items max
         .limit(20);
-    let result = crunchyroll.query("darling".into(), options).await?;
+    let result = crunchyroll.query("darling", options).await?;
 
     let series = result.series.unwrap();
     for s in series.items {

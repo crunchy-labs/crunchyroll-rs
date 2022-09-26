@@ -10,11 +10,11 @@ pub static SESSION: Store<Crunchyroll> = Store::new(|| {
         let (token_type, token) = raw_session.split_once(':').unwrap_or(("", ""));
         let crunchy = match token_type {
             "refresh_token" => Crunchyroll::builder()
-                .login_with_refresh_token(token.into())
+                .login_with_refresh_token(token)
                 .await
                 .unwrap(),
             "etp_rt" => Crunchyroll::builder()
-                .login_with_etp_rt(token.into())
+                .login_with_etp_rt(token)
                 .await
                 .unwrap(),
             _ => panic!("invalid session '{}'", raw_session),

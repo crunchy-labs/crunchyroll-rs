@@ -13,7 +13,7 @@ async fn login_with_credentials() {
         .login_with_credentials(user, password)
         .await;
 
-    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
+    assert_result!(crunchy);
 
     if !utils::session::has_session() {
         utils::session::set_session(crunchy.unwrap()).await.unwrap()
@@ -29,7 +29,7 @@ async fn login_with_refresh_token() {
         .login_with_refresh_token(refresh_token)
         .await;
 
-    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
+    assert_result!(crunchy);
 
     if !utils::session::has_session() {
         utils::session::set_session(crunchy.unwrap()).await.unwrap()
@@ -42,7 +42,7 @@ async fn login_with_etp_rt() {
 
     let crunchy = Crunchyroll::builder().login_with_etp_rt(etp_rt).await;
 
-    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
+    assert_result!(crunchy);
 
     if !utils::session::has_session() {
         utils::session::set_session(crunchy.unwrap()).await.unwrap()
@@ -57,7 +57,7 @@ async fn login_with_session_id() {
         .login_with_session_id(session_id)
         .await;
 
-    assert!(crunchy.is_ok(), "{}", crunchy.unwrap_err().to_string());
+    assert_result!(crunchy);
 
     if !utils::session::has_session() {
         utils::session::set_session(crunchy.unwrap()).await.unwrap()

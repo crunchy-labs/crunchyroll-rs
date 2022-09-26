@@ -595,12 +595,12 @@ impl Media<Movie> {
 impl Crunchyroll {
     /// Get a media by its id. The `M` generic says what media exactly should be requested. Available
     /// options are [`Series`], [`Season`], [`Episode`], [`MovieListing`] and [`Movie`].
-    pub async fn media_from_id<M: Video>(&self, id: String) -> Result<Media<M>> {
-        Media::from_id(self, id).await
+    pub async fn media_from_id<M: Video>(&self, id: impl AsRef<str>) -> Result<Media<M>> {
+        Media::from_id(self, id.as_ref().to_string()).await
     }
 
-    pub async fn media_collection_from_id(&self, id: String) -> Result<MediaCollection> {
-        MediaCollection::from_id(self, id).await
+    pub async fn media_collection_from_id<S: AsRef<str>>(&self, id: S) -> Result<MediaCollection> {
+        MediaCollection::from_id(self, id.as_ref().to_string()).await
     }
 }
 

@@ -114,11 +114,11 @@ impl Comment {
     }
 
     /// Reply to this comment.
-    pub async fn reply(&self, message: String, is_spoiler: bool) -> Result<Comment> {
+    pub async fn reply<S: AsRef<str>>(&self, message: S, is_spoiler: bool) -> Result<Comment> {
         create_comment(
             &self.executor,
             &self.guestbook_key,
-            message,
+            message.as_ref().to_string(),
             is_spoiler,
             &self.locale,
             Some(&self.comment_id),
@@ -248,8 +248,8 @@ macro_rules! impl_comment {
                         .await
                 }
 
-                pub async fn comment(&self, message: String, is_spoiler: bool) -> Result<Comment> {
-                    create_comment(&self.executor, &self.id, message, is_spoiler, &self.executor.details.locale, None).await
+                pub async fn comment<S: AsRef<str>>(&self, message: S, is_spoiler: bool) -> Result<Comment> {
+                    create_comment(&self.executor, &self.id, message.as_ref().to_string(), is_spoiler, &self.executor.details.locale, None).await
                 }
             }
         )*
@@ -260,10 +260,10 @@ impl_comment! {
     crate::Media<crate::media::Episode> crate::Media<crate::media::Movie>
 }
 
-async fn create_comment(
+async fn create_comment<S: AsRef<str>>(
     executor: &Arc<Executor>,
     video_id: &String,
-    message: String,
+    message: S,
     is_spoiler: bool,
     locale: &Locale,
     parent_id: Option<&String>,
@@ -276,9 +276,9 @@ async fn create_comment(
     executor
         .post(endpoint)
         .json(&if let Some(p_id) = parent_id {
-            json!({"message": message, "flags": flags, "locale": locale, "parent_id": p_id})
+            json!({"message": message.as_ref(), "flags": flags, "locale": locale, "parent_id": p_id})
         } else {
-            json!({"message": message, "flags": flags, "locale": locale})
+            json!({"message": message.as_ref(), "flags": flags, "locale": locale})
         })
         .apply_locale_query()
         .request()
