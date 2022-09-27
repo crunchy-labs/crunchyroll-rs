@@ -3,14 +3,12 @@ name = "crunchyroll"
 version = "0.1.0"
 authors = ["ByteDream"]
 edition = "2021"
-description = "Pure Rust implementation of the crunchyroll beta api"
+description = "Pure Rust implementation of the crunchyroll beta api."
 readme = "README.md"
 repository = "https://github.com/crunchy-labs/crunchyroll-rs"
 license = "MIT OR Apache-2.0"
 keywords = ["crunchyroll", "anime", "downloader"]
 categories = ["api-bindings"]
-
-include = ["proc-macro/*"]
 
 [features]
 default = ["stream", "parse"]
@@ -33,7 +31,7 @@ serde_urlencoded = "0.7"
 smart-default = "0.6"
 tokio = "1.21"
 
-proc-macro = { version = "^0.1", path = "./proc-macro" }
+crunchyroll-rs-internal = { version = "0.1", path = "internal" }
 
 # Optional / required from features
 aes = { version = "0.8", optional = true }
@@ -46,3 +44,6 @@ anyhow = "1.0"
 once_cell = "1.13"
 rand = "0.8"
 tokio = { version = "1.21", features = ["macros", "rt", "rt-multi-thread"] }
+
+[workspace]
+members = ["internal"]
