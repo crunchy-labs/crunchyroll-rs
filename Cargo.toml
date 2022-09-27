@@ -26,7 +26,7 @@ serde_urlencoded = "0.7"
 smart-default = "0.6"
 tokio = "1.21"
 
-proc-macro = { path = "proc-macro" }
+proc-macro = { path = "proc-macro", version = "0.1" }
 
 # Optional / required from features
 aes = { version = "0.8", optional = true }
