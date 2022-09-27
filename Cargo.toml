@@ -1,9 +1,16 @@
 [package]
 name = "crunchyroll"
 version = "0.1.0"
+authors = ["ByteDream"]
 edition = "2021"
+description = "Pure Rust implementation of the crunchyroll beta api"
+readme = "README.md"
+repository = "https://github.com/crunchy-labs/crunchyroll-rs"
+license = "MIT OR Apache-2.0"
+keywords = ["crunchyroll", "anime", "downloader"]
+categories = ["api-bindings"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+include = ["proc-macro/*"]
 
 [features]
 default = ["stream", "parse"]
@@ -26,7 +33,7 @@ serde_urlencoded = "0.7"
 smart-default = "0.6"
 tokio = "1.21"
 
-proc-macro = { path = "proc-macro", version = "0.1" }
+proc-macro = { version = "^0.1", path = "./proc-macro" }
 
 # Optional / required from features
 aes = { version = "0.8", optional = true }
