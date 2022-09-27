@@ -1,7 +1,7 @@
 use crate::utils::{Store, SESSION};
-use crunchyroll::common::BulkResult;
-use crunchyroll::rating::{Comment, CommentFlag, CommentsOptions};
-use crunchyroll::{Episode, Media};
+use crunchyroll_rs::common::BulkResult;
+use crunchyroll_rs::rating::{Comment, CommentFlag, CommentsOptions};
+use crunchyroll_rs::{Episode, Media};
 
 mod utils;
 

@@ -19,7 +19,7 @@
 //! chaining, which means you can build a working Crunchyroll instance in one expression.
 //!
 //! ```
-//! use crunchyroll::{Crunchyroll, Locale};
+//! use crunchyroll_rs::{Crunchyroll, Locale};
 //!
 //! let crunchy = Crunchyroll::builder()
 //!     // set the language in which results should be returned

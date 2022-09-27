@@ -1,6 +1,6 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll::{Media, MovieListing};
+use crunchyroll_rs::{Media, MovieListing};
 
 mod utils;
 

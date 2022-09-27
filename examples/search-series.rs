@@ -1,6 +1,6 @@
 use anyhow::Result;
-use crunchyroll::search::QueryOptions;
-use crunchyroll::Crunchyroll;
+use crunchyroll_rs::search::QueryOptions;
+use crunchyroll_rs::Crunchyroll;
 use std::env;
 
 #[tokio::main]

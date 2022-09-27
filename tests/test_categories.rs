@@ -1,5 +1,5 @@
 use crate::utils::SESSION;
-use crunchyroll::categories::TenantCategoryOptions;
+use crunchyroll_rs::categories::TenantCategoryOptions;
 
 mod utils;
 

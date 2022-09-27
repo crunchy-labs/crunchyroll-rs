@@ -47,8 +47,8 @@ tokio = { version = "1.21", features = ["full"] }
 The following code prints the data of the episode behind the given url:
 
 ```rust
-use crunchyroll::{Crunchyroll, MediaCollection};
-use crunchyroll::parse::UrlType;
+use crunchyroll_rs::{Crunchyroll, MediaCollection};
+use crunchyroll_rs::parse::UrlType;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

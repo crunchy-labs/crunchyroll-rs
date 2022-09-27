@@ -1,5 +1,5 @@
 [package]
-name = "crunchyroll"
+name = "crunchyroll-rs"
 version = "0.1.0"
 authors = ["ByteDream"]
 edition = "2021"

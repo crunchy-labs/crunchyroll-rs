@@ -73,7 +73,7 @@ macro_rules! enum_values {
 /// # Examples
 ///
 /// ```
-/// use crunchyroll::options;
+/// use crunchyroll_rs::options;
 ///
 /// options! {
 ///     PaginationOptions;

@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use crate::utils::store::{get_store, has_store, set_store, Store};
-use crunchyroll::crunchyroll::SessionToken;
-use crunchyroll::Crunchyroll;
+use crunchyroll_rs::crunchyroll::SessionToken;
+use crunchyroll_rs::Crunchyroll;
 
 pub static SESSION: Store<Crunchyroll> = Store::new(|| {
     Box::pin(async {

@@ -1,7 +1,7 @@
 use crate::utils::{Store, SESSION};
-use crunchyroll::account::{Account, UpdatePreferences, Wallpaper};
-use crunchyroll::crunchyroll::MaturityRating;
-use crunchyroll::Locale;
+use crunchyroll_rs::account::{Account, UpdatePreferences, Wallpaper};
+use crunchyroll_rs::crunchyroll::MaturityRating;
+use crunchyroll_rs::Locale;
 
 mod utils;
 
