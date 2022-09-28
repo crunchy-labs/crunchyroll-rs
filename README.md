@@ -54,7 +54,7 @@ use crunchyroll_rs::parse::UrlType;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // log in to crunchyroll with your username and password
     let crunchyroll = Crunchyroll::builder()
-        .login_with_credentials("<username>".into(), "<password>".into())
+        .login_with_credentials("<username>", "<password>")
         .await?;
 
     let url = Crunchyroll::parse_url("https://beta.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome")?;
