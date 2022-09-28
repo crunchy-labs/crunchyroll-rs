@@ -652,6 +652,32 @@ impl_media_video_collection! {
     Series MovieListing
 }
 
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+struct VideoIntroResult {
+    media_id: String,
+
+    #[serde(rename = "startTime")]
+    start_time: f64,
+    #[serde(rename = "endTime")]
+    end_time: f64,
+    duration: f64,
+
+    /// Id of the next episode.
+    #[serde(rename = "comparedWith")]
+    compared_with: String,
+
+    /// It seems that this represents the episode number relative to the season the episode is part
+    /// of. But in a weird way. It is, for example, '0003.00' instead of simply 3 if it's the third
+    /// episode in a season.
+    ordering: String,
+
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    last_updated: DateTime<Utc>,
+}
+
 macro_rules! impl_media_video {
     ($($media_video:ident)*) => {
         $(
@@ -669,8 +695,26 @@ macro_rules! impl_media_video {
                         .await
                 }
 
+                /// Check if the episode / movie can be watched.
                 pub async fn available(&self) -> bool {
                     self.executor.details.premium || !self.metadata.is_premium_only
+                }
+
+                /// Get time _in seconds_ when the episode / movie intro begins and ends.
+                pub async fn intro(&self) -> Result<Option<(f64, f64)>> {
+                    let endpoint = format!(
+                        "https://static.crunchyroll.com/datalab-intro-v2/{}.json",
+                        self.id
+                    );
+                    let result: serde_json::Value = self.executor.get(endpoint)
+                        .request()
+                        .await?;
+                    if result.to_string().contains("</Error>") {
+                        Ok(None)
+                    } else {
+                        let video_intro_result: VideoIntroResult = serde_json::from_value(result)?;
+                        Ok(Some((video_intro_result.start_time, video_intro_result.end_time)))
+                    }
                 }
             }
         )*
