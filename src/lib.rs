@@ -15,8 +15,8 @@
 //! # Getting started
 //!
 //! Before you can do anything, you have to instantiate a new [`Crunchyroll`] struct at first. This
-//! internally creates a new [`CrunchyrollBuilder`] instance. All functions of this struct are
-//! chaining, which means you can build a working Crunchyroll instance in one expression.
+//! internally creates a new [`crunchyroll::CrunchyrollBuilder`] instance. All functions of this
+//! struct are chaining, which means you can build a working Crunchyroll instance in one expression.
 //!
 //! ```
 //! use crunchyroll_rs::{Crunchyroll, Locale};
@@ -25,7 +25,7 @@
 //!     // set the language in which results should be returned
 //!     .locale(Locale::en_US)
 //!     // login with user credentials (other login options are also available)
-//!     .login_with_credentials("username".into(), "password".into())
+//!     .login_with_credentials("username", "password")
 //!     .await?;
 //! ```
 //!
@@ -40,12 +40,12 @@
 //! ```
 //! let series = crunchy
 //!     // get the series with the id 'GY8VEQ95Y'
-//!     .series_from_id("GY8VEQ95Y".into())
+//!     .series_from_id("GY8VEQ95Y")
 //!     .await?;
 //!
 //! let episode = crunchy
 //!     // get the episode with the id 'GRDKJZ81Y'
-//!     .episode_from_id("GRDKJZ81Y".into())
+//!     .episode_from_id("GRDKJZ81Y")
 //!     .await?;
 //!
 //! ```
@@ -78,18 +78,18 @@
 //! into this crate (it uses the _HLS_ stream backend).
 //!
 //! ```
-//! let default_streams = streams
-//!     .default_streams()
+//! let streaming_data = streams
+//!     .streaming_data()
 //!     .await?;
 //!
 //! // sort the streams to get the stream with the best resolution at first
-//! default_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width).reverse());
+//! streaming_data.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width).reverse());
 //!
 //! let sink = &mut std::io::sink();
 //!
 //! // get the segments / video chunks of the first stream (which is the best after it got sorted
 //! // above)
-//! let segments = default_streams[0].segments().await?;
+//! let segments = streaming_data[0].segments().await?;
 //! // iterate through every segment and write it to the provided writer (which is a sink in this
 //! // case; it drops its input immediately). writer can be anything which implements `std::io::Write`
 //! // like a file, a pipe, ...
