@@ -1,7 +1,7 @@
 #![cfg(feature = "parse")]
 
 use crate::error::CrunchyrollError;
-use crate::{Crunchyroll, Result};
+use crate::Result;
 use regex::Regex;
 
 /// Types of Crunchyroll urls, pointing to series, episodes or movies.
@@ -53,58 +53,56 @@ pub enum UrlType {
     },
 }
 
-impl Crunchyroll {
-    /// Extract information out of Crunchyroll urls which are pointing to episodes / movies /
-    /// series.
-    ///
-    /// Note: It is recommended to use only Crunchyroll beta urls (`beta.crunchyroll.com`) for this
-    /// function. Classic urls cannot be parsed properly to guarantee that the results this function
-    /// delivers really is what the url points to.
-    pub fn parse_url<S: AsRef<str>>(url: S) -> Result<UrlType> {
-        // the regex calls are pretty ugly but for performance reasons it's the best to define them
-        // only if needed. once the std lazy api is stabilized they can be moved to the root of this
-        // file to make it look cleaner. an external crate to call the regexes lazy would also be an
-        // option but it would a little overload if it's only used here
+/// Extract information out of Crunchyroll urls which are pointing to episodes / movies /
+/// series.
+///
+/// Note: It is recommended to use only Crunchyroll beta urls (`beta.crunchyroll.com`) for this
+/// function. Classic urls cannot be parsed properly to guarantee that the results this function
+/// delivers really is what the url points to.
+pub fn parse_url<S: AsRef<str>>(url: S) -> Result<UrlType> {
+    // the regex calls are pretty ugly but for performance reasons it's the best to define them
+    // only if needed. once the std lazy api is stabilized they can be moved to the root of this
+    // file to make it look cleaner. an external crate to call the regexes lazy would also be an
+    // option but it would a little overload if it's only used here
 
-        if let Some(capture) = Regex::new(r"^https?://beta\.crunchyroll\.com/([a-zA-Z]{2}/)?(?P<type>series|movie_listing)/(?P<id>[a-zA-Z]+).*$")
-            .unwrap()
-            .captures(url.as_ref())
-        {
-            let id = capture.name("id").unwrap().as_str().to_string();
-            match capture.name("type").unwrap().as_str() {
-                "series" => Ok(UrlType::BetaSeries(id)),
-                "movie_listing" => Ok(UrlType::BetaMovieListing(id)),
-                _ => Err(CrunchyrollError::Internal("could not get url type. this should never happen".into()))
-            }
-        } else if let Some(capture) = Regex::new(r"^https?://beta\.crunchyroll\.com/([a-zA-Z]{2}/)?watch/(?P<id>[a-zA-Z]+).*$")
-            .unwrap()
-            .captures(url.as_ref())
-        {
-            Ok(UrlType::BetaEpisodeOrMovie(capture.name("id").unwrap().as_str().to_string()))
-        } else if let Some(aaargh_please_just_use_beta_urls) = Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<series_or_movie_name>[^/]+)(/videos)?/?$")
-            .unwrap()
-            .captures(url.as_ref())
-        {
-            Ok(UrlType::ClassicSeriesOrMovieListing(aaargh_please_just_use_beta_urls.name("series_or_movie_name").unwrap().as_str().to_string()))
-        } else if let Some(why_do_i_have_to_still_support_this) = Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<series_name>[^/]+)/episode-(?P<number>[0-9]+)-(?P<episode_name>.+)-.*$")
-            .unwrap()
-            .captures(url.as_ref())
-        {
-            Ok(UrlType::ClassicEpisode {
-                series_name: why_do_i_have_to_still_support_this.name("series_name").unwrap().as_str().to_string(),
-                episode_name: why_do_i_have_to_still_support_this.name("episode_name").unwrap().as_str().to_string(),
-                number: why_do_i_have_to_still_support_this.name("number").unwrap().as_str().to_string(),
-            })
-        } else if let Some(plsss) = Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<movie_listing_name>[^/]+)/(?P<movie_name>.+)-.*$")
-            .unwrap()
-            .captures(url.as_ref())
-        {
-            Ok(UrlType::ClassicMovie {
-                movie_listing_name: plsss.name("movie_listing_name").unwrap().as_str().to_string(),
-                movie_name: plsss.name("movie_name").unwrap().as_str().to_string(),
-            })
-        } else {
-            Err(CrunchyrollError::Input("invalid url".into()))
+    if let Some(capture) = Regex::new(r"^https?://beta\.crunchyroll\.com/([a-zA-Z]{2}/)?(?P<type>series|movie_listing)/(?P<id>[a-zA-Z]+).*$")
+        .unwrap()
+        .captures(url.as_ref())
+    {
+        let id = capture.name("id").unwrap().as_str().to_string();
+        match capture.name("type").unwrap().as_str() {
+            "series" => Ok(UrlType::BetaSeries(id)),
+            "movie_listing" => Ok(UrlType::BetaMovieListing(id)),
+            _ => Err(CrunchyrollError::Internal("could not get url type. this should never happen".into()))
         }
+    } else if let Some(capture) = Regex::new(r"^https?://beta\.crunchyroll\.com/([a-zA-Z]{2}/)?watch/(?P<id>[a-zA-Z]+).*$")
+        .unwrap()
+        .captures(url.as_ref())
+    {
+        Ok(UrlType::BetaEpisodeOrMovie(capture.name("id").unwrap().as_str().to_string()))
+    } else if let Some(aaargh_please_just_use_beta_urls) = Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<series_or_movie_name>[^/]+)(/videos)?/?$")
+        .unwrap()
+        .captures(url.as_ref())
+    {
+        Ok(UrlType::ClassicSeriesOrMovieListing(aaargh_please_just_use_beta_urls.name("series_or_movie_name").unwrap().as_str().to_string()))
+    } else if let Some(why_do_i_have_to_still_support_this) = Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<series_name>[^/]+)/episode-(?P<number>[0-9]+)-(?P<episode_name>.+)-.*$")
+        .unwrap()
+        .captures(url.as_ref())
+    {
+        Ok(UrlType::ClassicEpisode {
+            series_name: why_do_i_have_to_still_support_this.name("series_name").unwrap().as_str().to_string(),
+            episode_name: why_do_i_have_to_still_support_this.name("episode_name").unwrap().as_str().to_string(),
+            number: why_do_i_have_to_still_support_this.name("number").unwrap().as_str().to_string(),
+        })
+    } else if let Some(plsss) = Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<movie_listing_name>[^/]+)/(?P<movie_name>.+)-.*$")
+        .unwrap()
+        .captures(url.as_ref())
+    {
+        Ok(UrlType::ClassicMovie {
+            movie_listing_name: plsss.name("movie_listing_name").unwrap().as_str().to_string(),
+            movie_name: plsss.name("movie_name").unwrap().as_str().to_string(),
+        })
+    } else {
+        Err(CrunchyrollError::Input("invalid url".into()))
     }
 }

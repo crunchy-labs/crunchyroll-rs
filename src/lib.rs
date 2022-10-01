@@ -136,6 +136,8 @@ pub(crate) use macros::{enum_values, options};
 
 pub use crunchyroll::{Crunchyroll, Locale};
 pub use media::{Episode, Media, MediaCollection, Movie, MovieListing, Season, Series};
+#[cfg(feature = "parse")]
+pub use parse::{parse_url, UrlType};
 
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;
