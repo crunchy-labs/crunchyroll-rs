@@ -259,7 +259,7 @@ impl Video for Movie {}
 /// Collection of all media types. Useful in situations where [`Media`] can contain more than one
 /// specific media.
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, Request)]
+#[derive(Clone, Debug, Eq, PartialEq, Request)]
 pub enum MediaCollection {
     Series(Media<Series>),
     Season(Media<Season>),
@@ -449,6 +449,14 @@ pub struct Media<M: Video> {
     #[cfg(feature = "__test_strict")]
     pub(crate) linked_resource_key: crate::StrictValue,
 }
+
+impl<M: Video> PartialEq for Media<M> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl<M: Video> Eq for Media<M> {}
 
 impl<M: Video> Media<M> {
     pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Media<M>> {
