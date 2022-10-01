@@ -1,4 +1,3 @@
-use crate::common::CrappyBulkResult;
 use crate::{options, Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -36,8 +35,8 @@ struct BulkWatchHistoryResult {
 
 options! {
     WatchHistoryOptions;
-    size(u32, "size") = None,
-    page(u32, "page") = Some(100)
+    size(u32, "page_size") = Some(100),
+    page(u32, "page") = None
 }
 
 impl Crunchyroll {
@@ -45,21 +44,19 @@ impl Crunchyroll {
     pub async fn watch_history(
         &self,
         options: WatchHistoryOptions,
-    ) -> Result<CrappyBulkResult<WatchHistoryEntry>> {
+    ) -> Result<Vec<WatchHistoryEntry>> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/watch-history/{}",
             self.executor.details.account_id
         );
-        let bulk_watch_history_result: BulkWatchHistoryResult = self
+        Ok(self
             .executor
             .get(endpoint)
             .query(&options.into_query())
             .apply_locale_query()
-            .request()
-            .await?;
-        Ok(CrappyBulkResult {
-            items: bulk_watch_history_result.items,
-        })
+            .request::<BulkWatchHistoryResult>()
+            .await?
+            .items)
     }
 
     /// Clear your watch history.

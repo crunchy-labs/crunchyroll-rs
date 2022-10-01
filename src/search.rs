@@ -67,13 +67,15 @@ mod browse {
         }
 
         /// Returns all simulcast seasons.
-        pub async fn simulcast_seasons(&self) -> Result<BulkResult<SimulcastSeason>> {
+        pub async fn simulcast_seasons(&self) -> Result<Vec<SimulcastSeason>> {
             let endpoint = "https://beta.crunchyroll.com/content/v1/season_list";
-            self.executor
+            Ok(self
+                .executor
                 .get(endpoint)
                 .apply_locale_query()
-                .request()
-                .await
+                .request::<BulkResult<SimulcastSeason>>()
+                .await?
+                .items)
         }
     }
 }

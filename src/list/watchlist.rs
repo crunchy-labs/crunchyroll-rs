@@ -1,4 +1,3 @@
-use crate::common::BulkResult;
 use crate::error::CrunchyrollError;
 use crate::{
     enum_values, options, Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result,
@@ -135,10 +134,7 @@ options! {
 
 impl Crunchyroll {
     /// Returns your watchlist.
-    pub async fn watchlist(
-        &self,
-        mut options: WatchlistOptions,
-    ) -> Result<BulkResult<WatchlistEntry>> {
+    pub async fn watchlist(&self, mut options: WatchlistOptions) -> Result<Vec<WatchlistEntry>> {
         let true_string = true.to_string();
         let language_field = if let Some(language) = options.language {
             match language {
@@ -155,18 +151,15 @@ impl Crunchyroll {
             "https://beta.crunchyroll.com/content/v1/{}/watchlist",
             self.executor.details.account_id
         );
-        let bulk_watchlist_result: BulkWatchlistResult = self
+        Ok(self
             .executor
             .get(endpoint)
             .query(&options.into_query())
             .query(&[language_field])
             .apply_locale_query()
-            .request()
-            .await?;
-        Ok(BulkResult {
-            items: bulk_watchlist_result.items,
-            total: bulk_watchlist_result.total,
-        })
+            .request::<BulkWatchlistResult>()
+            .await?
+            .items)
     }
 }
 

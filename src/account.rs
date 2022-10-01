@@ -267,11 +267,14 @@ mod wallpaper {
 
     impl Wallpaper {
         /// Returns all available wallpapers
-        pub async fn all_wallpapers(
-            crunchyroll: &Crunchyroll,
-        ) -> Result<CrappyBulkResult<Wallpaper>> {
+        pub async fn all_wallpapers(crunchyroll: &Crunchyroll) -> Result<Vec<Wallpaper>> {
             let endpoint = "https://beta.crunchyroll.com/assets/v1/wallpaper";
-            crunchyroll.executor.get(endpoint).request().await
+            Ok(crunchyroll
+                .executor
+                .get(endpoint)
+                .request::<CrappyBulkResult<Wallpaper>>()
+                .await?
+                .items)
         }
 
         /// Link to a low resolution image of the wallpaper.

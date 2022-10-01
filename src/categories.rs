@@ -93,13 +93,15 @@ impl Crunchyroll {
     pub async fn tenant_categories(
         &self,
         options: TenantCategoryOptions,
-    ) -> Result<BulkResult<TenantCategory>> {
+    ) -> Result<Vec<TenantCategory>> {
         let endpoint = "https://beta.crunchyroll.com/content/v1/tenant_categories";
-        self.executor
+        Ok(self
+            .executor
             .get(endpoint)
             .query(&options.into_query())
             .apply_locale_query()
-            .request()
-            .await
+            .request::<BulkResult<TenantCategory>>()
+            .await?
+            .items)
     }
 }

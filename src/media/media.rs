@@ -488,7 +488,7 @@ impl<M: Video> Media<M> {
 }
 
 impl Media<Series> {
-    pub async fn seasons(&self) -> Result<BulkResult<Media<Season>>> {
+    pub async fn seasons(&self) -> Result<Vec<Media<Season>>> {
         Media::<Season>::from_series_id(
             &Crunchyroll {
                 executor: self.executor.clone(),
@@ -503,7 +503,7 @@ impl Media<Season> {
     pub async fn from_series_id(
         crunchy: &Crunchyroll,
         series_id: String,
-    ) -> Result<BulkResult<Media<Season>>> {
+    ) -> Result<Vec<Media<Season>>> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/cms/v2/{}/seasons",
             crunchy.executor.details.bucket
@@ -516,13 +516,10 @@ impl Media<Season> {
             .apply_locale_query()
             .request()
             .await?;
-        Ok(BulkResult {
-            items: result.items.into_iter().map(|i| i.into()).collect(),
-            total: result.total,
-        })
+        Ok(result.items.into_iter().map(|i| i.into()).collect())
     }
 
-    pub async fn episodes(&self) -> Result<BulkResult<Media<Episode>>> {
+    pub async fn episodes(&self) -> Result<Vec<Media<Episode>>> {
         Media::<Episode>::from_season_id(
             &Crunchyroll {
                 executor: self.executor.clone(),
@@ -537,7 +534,7 @@ impl Media<Episode> {
     pub async fn from_season_id(
         crunchy: &Crunchyroll,
         season_id: String,
-    ) -> Result<BulkResult<Media<Episode>>> {
+    ) -> Result<Vec<Media<Episode>>> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/cms/v2/{}/episodes",
             crunchy.executor.details.bucket
@@ -550,15 +547,12 @@ impl Media<Episode> {
             .apply_locale_query()
             .request()
             .await?;
-        Ok(BulkResult {
-            items: result.items.into_iter().map(|i| i.into()).collect(),
-            total: result.total,
-        })
+        Ok(result.items.into_iter().map(|i| i.into()).collect())
     }
 }
 
 impl Media<MovieListing> {
-    pub async fn movies(&self) -> Result<BulkResult<Media<Movie>>> {
+    pub async fn movies(&self) -> Result<Vec<Media<Movie>>> {
         Media::<Movie>::from_movie_listing_id(
             &Crunchyroll {
                 executor: self.executor.clone(),
@@ -573,7 +567,7 @@ impl Media<Movie> {
     pub async fn from_movie_listing_id(
         crunchy: &Crunchyroll,
         movie_listing_id: String,
-    ) -> Result<BulkResult<Media<Movie>>> {
+    ) -> Result<Vec<Media<Movie>>> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/cms/v2/{}/movies",
             crunchy.executor.details.bucket
@@ -586,10 +580,7 @@ impl Media<Movie> {
             .apply_locale_query()
             .request()
             .await?;
-        Ok(BulkResult {
-            items: result.items.into_iter().map(|i| i.into()).collect(),
-            total: result.total,
-        })
+        Ok(result.items.into_iter().map(|i| i.into()).collect())
     }
 }
 
@@ -608,7 +599,9 @@ impl Crunchyroll {
 options! {
     SimilarOptions;
     /// Limit of results to return.
-    limit(u32, "n") = Some(20)
+    limit(u32, "n") = Some(20),
+    /// Specifies the index from which the entries should be returned.
+    start(u32, "start") = None
 }
 
 macro_rules! impl_from_id {

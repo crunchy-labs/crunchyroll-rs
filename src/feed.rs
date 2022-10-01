@@ -76,14 +76,15 @@ impl CarouselFeed {
     pub async fn collection_from_id(
         crunchy: &Crunchyroll,
         id: String,
-    ) -> Result<BulkResult<CarouselFeed>> {
+    ) -> Result<Vec<CarouselFeed>> {
         let endpoint = format!("https://beta.crunchyroll.com/content/v1/carousel/{}", id);
-        crunchy
+        Ok(crunchy
             .executor
             .get(endpoint)
             .apply_locale_query()
-            .request()
-            .await
+            .request::<BulkResult<CarouselFeed>>()
+            .await?
+            .items)
     }
 }
 
@@ -258,35 +259,45 @@ options! {
     NewsFeedOptions;
     /// Limit number of top news.
     top_limit(u32, "top_news_n") = Some(20),
+    /// Specifies the index from which top news should be returned.
+    top_start(u32, "top_news_start") = None,
     /// Limit number of latest news.
-    latest_limit(u32, "latest_news_n") = Some(20)
+    latest_limit(u32, "latest_news_n") = Some(20),
+    /// Specifies the index from which latest news should be returned.
+    latest_start(u32, "latest_news_start") = None
 }
 
 options! {
     RecommendationOptions;
     /// Limit of results to return.
-    limit(u32, "n") = Some(20)
+    limit(u32, "n") = Some(20),
+    /// Specifies the index from which the entries should be returned.
+    start(u32, "start") = None
 }
 
 options! {
     UpNextOptions;
     /// Limit of results to return.
-    limit(u32, "n") = Some(20)
+    limit(u32, "n") = Some(20),
+    /// Specifies the index from which the entries should be returned.
+    start(u32, "start") = None
 }
 
 impl Crunchyroll {
     /// Returns the home feed (shown when visiting the Crunchyroll index page).
-    pub async fn home_feed(&self, options: HomeFeedOptions) -> Result<CrappyBulkResult<HomeFeed>> {
+    pub async fn home_feed(&self, options: HomeFeedOptions) -> Result<Vec<HomeFeed>> {
         let endpoint = format!(
             "https://beta.crunchyroll.com/content/v1/{}/home_feed",
             self.executor.details.account_id
         );
-        self.executor
+        Ok(self
+            .executor
             .get(endpoint)
             .query(&options.into_query())
             .apply_locale_query()
-            .request()
-            .await
+            .request::<CrappyBulkResult<HomeFeed>>()
+            .await?
+            .items)
     }
 
     /// Returns Crunchyroll news.
@@ -320,7 +331,7 @@ impl Crunchyroll {
     /// Suggests next episode or movie to watch.
     pub async fn up_next(&self, options: UpNextOptions) -> Result<BulkResult<UpNextEntry>> {
         let endpoint = format!(
-            "	https://beta.crunchyroll.com/content/v1/{}/up_next_account",
+            "https://beta.crunchyroll.com/content/v1/{}/up_next_account",
             self.executor.details.account_id
         );
         self.executor
