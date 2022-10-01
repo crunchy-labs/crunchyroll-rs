@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
 
     let episode: Media<Episode> = crunchyroll.media_from_id("GRDKJZ81Y").await?;
     let streams = episode.streams().await?;
-    let mut default_streams = streams.streaming_data().await?;
+    let mut default_streams = streams.streaming_data(None).await?;
     // sort after resolutions; best to worst
     default_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width).reverse());
 

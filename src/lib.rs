@@ -79,7 +79,7 @@
 //!
 //! ```
 //! let streaming_data = streams
-//!     .streaming_data()
+//!     .streaming_data(None)
 //!     .await?;
 //!
 //! // sort the streams to get the stream with the best resolution at first

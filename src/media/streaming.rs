@@ -17,11 +17,27 @@ macro_rules! impl_streaming {
             impl $stream {
                 /// Returns data which can be used to get the literal stream data and process it
                 /// further (e.g. write them to a file which than can be played).
+                /// The locale argument specifies which hardsub (subtitles which are "burned" into
+                /// the video) the returned data should have. You can get a list of supported locales
+                /// by calling [`VideoStream::streaming_hardsub_locale`] /
+                /// [`PlaybackStream::streaming_hardsub_locale`].
                 /// Note that this is only the implementation of this crate to stream data. You can
                 /// still manually use the variants in [`VideoStream::variants`] /
                 /// [`PlaybackStream::variants`] and implement the streaming on your own.
-                pub async fn streaming_data(&self)-> Result<Vec<VariantData>> {
-                    if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
+                pub async fn streaming_data(&self, hardsub: Option<Locale>) -> Result<Vec<VariantData>> {
+                    if let Some(locale) = hardsub {
+                        if let Some(raw_streams) = self.variants.get(&locale) {
+                            VariantData::from_hls_master(
+                                self.executor.clone(),
+                                raw_streams.adaptive_hls.as_ref().unwrap().url.clone()
+                            )
+                            .await
+                        } else {
+                            Err(CrunchyrollError::Input(
+                                format!("could not find any stream with hardsub locale '{}'", locale).into()
+                            ))
+                        }
+                    } else if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
                         VariantData::from_hls_master(
                             self.executor.clone(),
                             raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
@@ -38,6 +54,16 @@ macro_rules! impl_streaming {
                             "could not find supported stream".into(),
                         ))
                     }
+                }
+
+                /// Return all supported hardsub locales which can be used as argument in
+                /// [`VideoStream::streaming_data`] / [`PlaybackStream::streaming_data`].
+                pub fn streaming_hardsub_locale(&self) -> Vec<Locale> {
+                    self.variants.iter().filter_map(|(locale, variant)| if variant.adaptive_hls.is_some() {
+                        Some(locale.clone())
+                    } else {
+                        None
+                    }).collect()
                 }
             }
         )*

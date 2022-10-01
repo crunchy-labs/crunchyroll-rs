@@ -21,7 +21,7 @@ pub enum UrlType {
     BetaEpisodeOrMovie(String),
 
     /// The parsed url points to a classic series or movie listing. Because classic urls are
-    /// structured poorly they cannot be parsed very accurate. You gave to search for the series /
+    /// structured poorly they cannot be parsed very accurate. You have to search for the series /
     /// movie listing which is the value of this field and hope that the Crunchyroll api returns the
     /// correct series / movie listing.
     ///

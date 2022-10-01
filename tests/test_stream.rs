@@ -17,7 +17,7 @@ static STREAM: Store<VideoStream> = Store::new(|| {
 static STREAM_DATA: Store<VariantData> = Store::new(|| {
     Box::pin(async {
         let stream = STREAM.get().await?;
-        let mut default_streams = stream.streaming_data().await?;
+        let mut default_streams = stream.streaming_data(None).await?;
 
         default_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
 
