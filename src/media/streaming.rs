@@ -58,7 +58,7 @@ macro_rules! impl_streaming {
 
                 /// Return all supported hardsub locales which can be used as argument in
                 /// [`VideoStream::streaming_data`] / [`PlaybackStream::streaming_data`].
-                pub fn streaming_hardsub_locale(&self) -> Vec<Locale> {
+                pub fn streaming_hardsub_locales(&self) -> Vec<Locale> {
                     self.variants.iter().filter_map(|(locale, variant)| if variant.adaptive_hls.is_some() {
                         Some(locale.clone())
                     } else {
