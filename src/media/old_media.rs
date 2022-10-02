@@ -77,8 +77,9 @@ pub(crate) struct OldEpisode {
     is_subbed: bool,
     is_dubbed: bool,
     closed_captions_available: bool,
-    // would be very useful, but is (currently) always empty
-    audio_locale: String,
+
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_broken_locale")]
+    audio_locale: Locale,
     subtitle_locales: Vec<Locale>,
 
     #[serde(default)]

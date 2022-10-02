@@ -138,9 +138,9 @@ pub struct Episode {
     pub is_subbed: bool,
     pub is_dubbed: bool,
     pub closed_captions_available: bool,
-    /// Would be very useful, but is (currently) always empty.
-    #[serde(default)]
-    pub audio_locale: String,
+
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_broken_locale")]
+    pub audio_locale: Locale,
     pub subtitle_locales: Vec<Locale>,
 
     pub is_clip: bool,
