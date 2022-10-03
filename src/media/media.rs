@@ -496,6 +496,7 @@ impl<M: Video> Media<M> {
 }
 
 impl Media<Series> {
+    /// Return the season of the series.
     pub async fn seasons(&self) -> Result<Vec<Media<Season>>> {
         Media::<Season>::from_series_id(
             &Crunchyroll {
@@ -527,6 +528,7 @@ impl Media<Season> {
         Ok(result.items.into_iter().map(|i| i.into()).collect())
     }
 
+    /// Returns the episodes of the season.
     pub async fn episodes(&self) -> Result<Vec<Media<Episode>>> {
         Media::<Episode>::from_season_id(
             &Crunchyroll {
@@ -556,6 +558,28 @@ impl Media<Episode> {
             .request()
             .await?;
         Ok(result.items.into_iter().map(|i| i.into()).collect())
+    }
+
+    /// Returns the season the episode belongs to.
+    pub async fn season(&self) -> Result<Media<Season>> {
+        Season::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            self.metadata.season_id.clone(),
+        )
+        .await
+    }
+
+    /// Returns the series the episode belongs to.
+    pub async fn series(&self) -> Result<Media<Series>> {
+        Series::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            self.metadata.series_id.clone(),
+        )
+        .await
     }
 }
 
@@ -589,6 +613,17 @@ impl Media<Movie> {
             .request()
             .await?;
         Ok(result.items.into_iter().map(|i| i.into()).collect())
+    }
+
+    /// Returns the movie listing this movie belongs to.
+    pub async fn movie_listing(&self) -> Result<Media<MovieListing>> {
+        MovieListing::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            self.metadata.movie_listing_id.clone(),
+        )
+        .await
     }
 }
 
