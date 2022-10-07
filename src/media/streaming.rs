@@ -5,7 +5,9 @@ use crate::media::{PlaybackStream, VideoStream};
 use crate::{Executor, Locale, Request, Result};
 use aes::cipher::{BlockDecryptMut, KeyIvInit};
 use std::borrow::BorrowMut;
+use std::fmt::Formatter;
 use std::io::Write;
+use std::path::Display;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -78,6 +80,12 @@ impl_streaming! {
 pub struct Resolution {
     pub width: u64,
     pub height: u64,
+}
+
+impl std::fmt::Display for Resolution {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}x{}", self.width, self.height)
+    }
 }
 
 impl From<m3u8_rs::Resolution> for Resolution {
