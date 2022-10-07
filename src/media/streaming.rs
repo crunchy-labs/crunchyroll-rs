@@ -219,24 +219,30 @@ pub struct VariantSegment {
 }
 
 impl VariantSegment {
-    #[allow(dead_code)]
+    /// Decrypt a raw segment and return the decrypted raw bytes back. Useful if you want to
+    /// implement the full segment download yourself and [`VariantSegment::write_to`] has too many
+    /// limitation for your use case (e.g. a if you want to get the download speed of each segment).
+    pub fn decrypt(segment_bytes: &mut [u8], key: Option<Aes128CbcDec>) -> Result<&[u8]> {
+        if let Some(key) = key {
+            let decrypted = key
+                .decrypt_padded_mut::<aes::cipher::block_padding::Pkcs7>(
+                    segment_bytes,
+                )
+                .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
+            Ok(decrypted)
+        } else {
+            Ok(segment_bytes)
+        }
+    }
+
+    /// Write this segment to a writer.
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
         let resp = self.executor.client.get(self.url).send().await?;
         let segment = resp.bytes().await?;
 
-        if let Some(key) = self.key {
-            let mut temp_encrypted = segment.to_vec();
-            let decrypted = key
-                .decrypt_padded_mut::<aes::cipher::block_padding::Pkcs7>(
-                    temp_encrypted.borrow_mut(),
-                )
-                .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
-            w.write(decrypted)
-                .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
-        } else {
-            w.write(segment.as_ref())
-                .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
-        }
+        w.write(VariantSegment::decrypt(segment.to_vec().borrow_mut(), self.key.clone())?)
+            .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
+
         Ok(())
     }
 }
