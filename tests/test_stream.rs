@@ -21,12 +21,12 @@ static STREAM_DATA: Store<VariantData> = Store::new(|| {
 
         default_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
 
-        Ok(default_streams.get(0).unwrap().clone())
+        Ok(default_streams[0].clone())
     })
 });
 static STREAM_SEGMENTS: Store<Vec<VariantSegment>> = Store::new(|| {
     Box::pin(async {
-        let stream_data = &mut STREAM_DATA.get().await?.clone();
+        let stream_data = STREAM_DATA.get().await?;
         let segments = stream_data.segments().await?;
 
         Ok(segments)

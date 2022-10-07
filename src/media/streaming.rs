@@ -102,8 +102,6 @@ pub struct VariantData {
     pub codecs: String,
 
     url: String,
-    key: Option<Aes128CbcDec>,
-    segments: Option<Vec<VariantSegment>>,
 }
 
 impl VariantData {
@@ -130,8 +128,6 @@ impl VariantData {
                 codecs: variant.codecs.unwrap(),
 
                 url: variant.uri,
-                key: None,
-                segments: None,
             });
 
             #[cfg(not(feature = "__test_strict"))]
@@ -150,8 +146,6 @@ impl VariantData {
                 codecs: variant.codecs.unwrap_or_else(|| "".into()),
 
                 url: variant.uri,
-                key: None,
-                segments: None,
             });
         }
 
@@ -160,44 +154,41 @@ impl VariantData {
 
     /// Return all segments in order the variant stream is made of.
     #[allow(dead_code)]
-    pub async fn segments(&mut self) -> Result<Vec<VariantSegment>> {
-        if let Some(segments) = &self.segments {
-            Ok(segments.clone())
-        } else {
-            let resp = self.executor.client.get(self.url.clone()).send().await?;
-            let raw_media_playlist = resp.text().await?;
-            let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_bytes())
-                .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
+    pub async fn segments(&self) -> Result<Vec<VariantSegment>> {
+        let resp = self.executor.client.get(self.url.clone()).send().await?;
+        let raw_media_playlist = resp.text().await?;
+        let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_bytes())
+            .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
 
-            let mut segments: Vec<VariantSegment> = vec![];
-            for segment in media_playlist.segments {
-                if let Some(key) = segment.key {
-                    if let Some(url) = key.uri {
-                        let resp = self.executor.client.get(url).send().await?;
-                        let raw_key = resp.bytes().await?;
+        let mut segments: Vec<VariantSegment> = vec![];
+        let mut key: Option<Aes128CbcDec> = None;
 
-                        let temp_iv = key.iv.unwrap_or_else(|| "".to_string());
-                        let iv = if !temp_iv.is_empty() {
-                            temp_iv.as_bytes()
-                        } else {
-                            raw_key.as_ref()
-                        };
+        for segment in media_playlist.segments {
+            if let Some(k) = segment.key {
+                if let Some(url) = k.uri {
+                    let resp = self.executor.client.get(url).send().await?;
+                    let raw_key = resp.bytes().await?;
 
-                        self.key = Some(Aes128CbcDec::new(raw_key.as_ref().into(), iv.into()));
-                    }
+                    let temp_iv = k.iv.unwrap_or_else(|| "".to_string());
+                    let iv = if !temp_iv.is_empty() {
+                        temp_iv.as_bytes()
+                    } else {
+                        raw_key.as_ref()
+                    };
+
+                    key = Some(Aes128CbcDec::new(raw_key.as_ref().into(), iv.into()));
                 }
-
-                segments.push(VariantSegment {
-                    executor: self.executor.clone(),
-                    key: self.key.clone(),
-                    url: segment.uri,
-                    length: Duration::from_secs_f32(segment.duration),
-                })
             }
 
-            self.segments = Some(segments.clone());
-            Ok(segments)
+            segments.push(VariantSegment {
+                executor: self.executor.clone(),
+                key: key.clone(),
+                url: segment.uri,
+                length: Duration::from_secs_f32(segment.duration),
+            })
         }
+
+        Ok(segments)
     }
 }
 
