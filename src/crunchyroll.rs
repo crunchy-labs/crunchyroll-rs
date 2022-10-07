@@ -14,6 +14,7 @@ enum_values! {
         es_ES = "es-ES"
         es_LA = "es-LA"
         fr_FR = "fr-FR"
+        hi_IN = "hi-IN"
         it_IT = "it-IT"
         ja_JP = "ja-JP"
         pt_BR = "pt-BR"

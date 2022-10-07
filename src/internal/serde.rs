@@ -121,6 +121,7 @@ where
         Locale::es_ES,
         Locale::es_LA,
         Locale::fr_FR,
+        Locale::hi_IN,
         Locale::it_IT,
         Locale::ja_JP,
         Locale::pt_BR,
