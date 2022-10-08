@@ -74,7 +74,7 @@ pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
             "movie_listing" => Some(UrlType::BetaMovieListing(id)),
             _ => None // should never happen
         }
-    } else if let Some(capture) = Regex::new(r"^https?://beta\.crunchyroll\.com/([a-zA-Z]{2}/)?watch/(?P<id>[a-zA-Z]+).*$")
+    } else if let Some(capture) = Regex::new(r"^https?://beta\.crunchyroll\.com/([a-zA-Z]{2}/)?watch/(?P<id>.+)/.*$")
         .unwrap()
         .captures(url.as_ref())
     {

@@ -7,7 +7,6 @@ use aes::cipher::{BlockDecryptMut, KeyIvInit};
 use std::borrow::BorrowMut;
 use std::fmt::Formatter;
 use std::io::Write;
-use std::path::Display;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -225,9 +224,7 @@ impl VariantSegment {
     pub fn decrypt(segment_bytes: &mut [u8], key: Option<Aes128CbcDec>) -> Result<&[u8]> {
         if let Some(key) = key {
             let decrypted = key
-                .decrypt_padded_mut::<aes::cipher::block_padding::Pkcs7>(
-                    segment_bytes,
-                )
+                .decrypt_padded_mut::<aes::cipher::block_padding::Pkcs7>(segment_bytes)
                 .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
             Ok(decrypted)
         } else {
@@ -240,8 +237,11 @@ impl VariantSegment {
         let resp = self.executor.client.get(self.url).send().await?;
         let segment = resp.bytes().await?;
 
-        w.write(VariantSegment::decrypt(segment.to_vec().borrow_mut(), self.key.clone())?)
-            .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
+        w.write(VariantSegment::decrypt(
+            segment.to_vec().borrow_mut(),
+            self.key.clone(),
+        )?)
+        .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
 
         Ok(())
     }
