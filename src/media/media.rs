@@ -259,7 +259,7 @@ impl Video for Movie {}
 /// Collection of all media types. Useful in situations where [`Media`] can contain more than one
 /// specific media.
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, Eq, PartialEq, Request)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MediaCollection {
     Series(Media<Series>),
     Season(Media<Season>),
@@ -271,6 +271,18 @@ pub enum MediaCollection {
 impl Default for MediaCollection {
     fn default() -> Self {
         Self::Series(Media::default())
+    }
+}
+
+impl Request for MediaCollection {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
+        match self {
+            MediaCollection::Series(series) => series.executor = executor,
+            MediaCollection::Season(season) => season.executor = executor,
+            MediaCollection::Episode(episode) => episode.executor = executor,
+            MediaCollection::MovieListing(movie_listing) => movie_listing.executor = executor,
+            MediaCollection::Movie(movie) => movie.executor = executor,
+        }
     }
 }
 
