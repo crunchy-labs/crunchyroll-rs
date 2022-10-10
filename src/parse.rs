@@ -64,7 +64,7 @@ pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
     // option but it would a little overload if it's only used here
 
     #[allow(clippy::manual_map)]
-    if let Some(capture) = Regex::new(r"^https?://beta\.crunchyroll\.com/([a-zA-Z]{2}/)?(?P<type>series|movie_listing)/(?P<id>[a-zA-Z]+).*$")
+    if let Some(capture) = Regex::new(r"^https?://beta\.crunchyroll\.com/([a-zA-Z]{2}/)?(?P<type>series|movie_listing)/(?P<id>.+)/.*$")
         .unwrap()
         .captures(url.as_ref())
     {
