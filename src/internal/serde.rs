@@ -126,6 +126,7 @@ where
         Locale::ja_JP,
         Locale::pt_BR,
         Locale::ru_RU,
+        Locale::zh_CN,
     ] {
         if locale.to_string().replace('-', "") == value {
             return Ok(locale);

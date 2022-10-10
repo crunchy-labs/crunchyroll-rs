@@ -19,6 +19,7 @@ enum_values! {
         ja_JP = "ja-JP"
         pt_BR = "pt-BR"
         ru_RU = "ru-RU"
+        zh_CN = "zh-CN"
     }
 }
 
