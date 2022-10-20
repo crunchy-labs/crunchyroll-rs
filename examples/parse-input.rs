@@ -13,16 +13,9 @@ async fn main() -> Result<()> {
 
     let parsed = Crunchyroll::parse_url(url)?;
     match parsed {
-        UrlType::BetaSeries(_) => println!("url points to a curnchyroll beta series"),
-        UrlType::BetaMovieListing(_) => println!("url points to a crunchyroll beta movie listing"),
-        UrlType::BetaEpisodeOrMovie(_) => {
-            println!("url points to a crunchyroll beta episode or movie")
-        }
-        UrlType::ClassicSeriesOrMovieListing(_) => {
-            println!("url points to a crunchyroll classic series or movie listing")
-        }
-        UrlType::ClassicEpisode { .. } => println!("url points to a crunchyroll classic episode"),
-        UrlType::ClassicMovie { .. } => println!("url points to a crunchyroll classic movie"),
+        UrlType::Series(_) => println!("url points to a crunchyroll series"),
+        UrlType::MovieListing(_) => println!("url points to a crunchyroll movie listing"),
+        UrlType::EpisodeOrMovie(_) => println!("url points to a crunchyroll episode or movie"),
     }
 
     Ok(())
