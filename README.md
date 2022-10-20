@@ -31,6 +31,9 @@
 > We are in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
 > The official Crunchyroll website can be found at https://crunchyroll.com/.
 
+> As of 19.10.2022 Crunchyroll rolled out a breaking change for their website which makes this library unusable at the moment.
+> We try to find a fix for it, stay patient!
+
 ## Documentation
 
 The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).
@@ -57,8 +60,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .login_with_credentials("<username>", "<password>")
         .await?;
 
-    let url = Crunchyroll::parse_url("https://beta.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome")?;
-    if let UrlType::BetaEpisodeOrMovie(media_id) = url {
+    let url = Crunchyroll::parse_url("https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome")?;
+    if let UrlType::EpisodeOrMovie(media_id) = url {
         match crunchyroll.media_collection_from_id(media_id).await? {
             MediaCollection::Episode(episode) => {
                 println!(
@@ -72,7 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             _ => ()
         }
     } else {
-        panic!("Url is not a crunchyroll beta episode")
+        panic!("Url is not a episode")
     }
 
     Ok(())
@@ -83,7 +86,7 @@ _More examples can be found in the [examples/](examples) directory._
 
 ## Api Coverage
 
-Crunchyroll regularly updates their beta api but does not provide any documentation for it.
+Crunchyroll regularly updates their api but does not provide any documentation for it.
 Because we do not monitor the api constantly, so we cannot immediately say when a new endpoint is added or something has changed on already existing and implemented endpoints (which is semi-covered by the `__test-strict` feature, at least).
 If you find an endpoint which is not implemented or has changes feel free to open a new [issue](https://github.com/crunchy-labs/crunchyroll-rs/issues) and tell us, or fork the library and implement it yourself.
 
