@@ -94,7 +94,7 @@ impl Crunchyroll {
         &self,
         options: TenantCategoryOptions,
     ) -> Result<Vec<TenantCategory>> {
-        let endpoint = "https://beta.crunchyroll.com/content/v1/tenant_categories";
+        let endpoint = "https://www.crunchyroll.com/content/v1/tenant_categories";
         Ok(self
             .executor
             .get(endpoint)

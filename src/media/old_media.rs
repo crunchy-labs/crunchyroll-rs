@@ -78,7 +78,6 @@ pub(crate) struct OldEpisode {
     is_dubbed: bool,
     closed_captions_available: bool,
 
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_broken_locale")]
     audio_locale: Locale,
     subtitle_locales: Vec<Locale>,
 
@@ -230,7 +229,6 @@ pub(crate) struct OldSeason {
     is_subbed: bool,
     is_dubbed: bool,
     is_simulcast: bool,
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_broken_locale_vec")]
     audio_locales: Vec<Locale>,
     subtitle_locales: Vec<Locale>,
 

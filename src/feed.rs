@@ -30,7 +30,7 @@ pub struct CuratedFeed {
 impl CuratedFeed {
     pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/curated_feeds/{}",
+            "https://www.crunchyroll.com/content/v1/curated_feeds/{}",
             id
         );
         crunchy
@@ -77,7 +77,7 @@ impl CarouselFeed {
         crunchy: &Crunchyroll,
         id: String,
     ) -> Result<Vec<CarouselFeed>> {
-        let endpoint = format!("https://beta.crunchyroll.com/content/v1/carousel/{}", id);
+        let endpoint = format!("https://www.crunchyroll.com/content/v1/carousel/{}", id);
         Ok(crunchy
             .executor
             .get(endpoint)
@@ -287,7 +287,7 @@ impl Crunchyroll {
     /// Returns the home feed (shown when visiting the Crunchyroll index page).
     pub async fn home_feed(&self, options: HomeFeedOptions) -> Result<Vec<HomeFeed>> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/{}/home_feed",
+            "https://www.crunchyroll.com/content/v1/{}/home_feed",
             self.executor.details.account_id
         );
         Ok(self
@@ -302,7 +302,7 @@ impl Crunchyroll {
 
     /// Returns Crunchyroll news.
     pub async fn news_feed(&self, options: NewsFeedOptions) -> Result<NewsFeedResult> {
-        let endpoint = "https://beta.crunchyroll.com/content/v1/news_feed";
+        let endpoint = "https://www.crunchyroll.com/content/v1/news_feed";
         self.executor
             .get(endpoint)
             .query(&options.into_query())
@@ -317,7 +317,7 @@ impl Crunchyroll {
         options: RecommendationOptions,
     ) -> Result<BulkResult<MediaCollection>> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/{}/recommendations",
+            "https://www.crunchyroll.com/content/v1/{}/recommendations",
             self.executor.details.account_id
         );
         self.executor
@@ -331,7 +331,7 @@ impl Crunchyroll {
     /// Suggests next episode or movie to watch.
     pub async fn up_next(&self, options: UpNextOptions) -> Result<BulkResult<UpNextEntry>> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/{}/up_next_account",
+            "https://www.crunchyroll.com/content/v1/{}/up_next_account",
             self.executor.details.account_id
         );
         self.executor

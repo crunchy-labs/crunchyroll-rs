@@ -31,8 +31,7 @@
 > We are in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
 > The official Crunchyroll website can be found at https://crunchyroll.com/.
 
-> As of 19.10.2022 Crunchyroll rolled out a breaking change for their website which makes this library unusable at the moment.
-> We try to find a fix for it, stay patient!
+**Please use this library via git in your Rust project. We're relying on a [development branch](https://github.com/sagebind/isahc/tree/tls-api-refactor) of [isahc](https://crates.io/crates/isahc) which is why it currently can't be published to crates.io.**
 
 ## Documentation
 

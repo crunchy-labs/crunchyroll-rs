@@ -1,7 +1,7 @@
 //! # crunchyroll-rs
 //!
 //! A easy-to-use, batteries-included library for the undocumented
-//! [Crunchyroll](https://www.crunchyroll.com/) beta api, completely written in Rust.
+//! [Crunchyroll](https://www.crunchyroll.com/) api, completely written in Rust.
 //!
 //! You can use a premium account as well as a non-premium account to use this library, but you
 //! will be limited to your account tier access privileges (=> you can't access a premium-only
@@ -101,10 +101,6 @@
 //! **Note:** The `stream` feature must be enable to process / write streams (enabled by default).
 //!
 //! # Implementation
-//! Because Crunchyroll does not have a fixed api versioning and is currently in its beta phase,
-//! changes are likely to happen (even though they weren't very radical in the past) so keep an eye
-//! on the version of this library to get new updates and potential fixes.
-//!
 //! To ensure at least all existing parts of the library are working as expected, a special feature
 //! only for testing is implemented. When running tests with the `__test_strict` feature, it ensures
 //! that no fields were added or removed from an api response, otherwise the associated test will

@@ -28,7 +28,7 @@ impl CrunchylistEntry {
     /// Delete this entry from the parent crunchylist.
     pub async fn delete(self, entry: &CrunchylistEntry) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}/{}",
+            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}/{}",
             self.executor.details.account_id, entry.list_id, self.id
         );
         self.executor
@@ -73,7 +73,7 @@ impl Crunchylists {
     /// are allowed ([`Crunchylists::max_private`]; usually 10).
     pub async fn create<S: AsRef<str>>(&self, title: S) -> Result<CrunchylistPreview> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/custom-lists/{}",
+            "https://www.crunchyroll.com/content/v1/custom-lists/{}",
             self.executor.details.account_id
         );
         let create_result: CrunchylistCreate = self
@@ -123,7 +123,7 @@ impl Crunchylist {
     /// supported to add and will return an error.
     pub async fn add(&self, media: MediaCollection) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
+            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
             self.executor.details.account_id, self.id
         );
         let id = match media {
@@ -147,7 +147,7 @@ impl Crunchylist {
     /// Rename the current crunchylist.
     pub async fn rename<S: AsRef<str>>(&self, name: S) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
+            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
             self.executor.details.account_id, self.id
         );
         self.executor
@@ -162,7 +162,7 @@ impl Crunchylist {
     /// Delete the current crunchylist.
     pub async fn delete(self) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
+            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
             self.executor.details.account_id, self.id
         );
         self.executor
@@ -198,7 +198,7 @@ impl CrunchylistPreview {
     /// Return the "real" [`Crunchylist`].
     pub async fn crunchylist(&self) -> Result<Crunchylist> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/custom-lists/{}/{}",
+            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
             self.executor.details.account_id, self.list_id
         );
         let mut crunchylist: Crunchylist = self
@@ -216,7 +216,7 @@ impl Crunchyroll {
     /// Return your crunchylists.
     pub async fn crunchylists(&self) -> Result<Crunchylists> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/custom-lists/{}",
+            "https://www.crunchyroll.com/content/v1/custom-lists/{}",
             self.executor.details.account_id
         );
         self.executor

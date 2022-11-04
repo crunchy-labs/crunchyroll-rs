@@ -57,7 +57,7 @@ mod browse {
         /// Browses the crunchyroll catalog filtered by the specified options and returns all found
         /// series and movies.
         pub async fn browse(&self, options: BrowseOptions) -> Result<BulkResult<MediaCollection>> {
-            let endpoint = "https://beta.crunchyroll.com/content/v1/browse";
+            let endpoint = "https://www.crunchyroll.com/content/v1/browse";
             self.executor
                 .get(endpoint)
                 .query(&options.into_query())
@@ -68,7 +68,7 @@ mod browse {
 
         /// Returns all simulcast seasons.
         pub async fn simulcast_seasons(&self) -> Result<Vec<SimulcastSeason>> {
-            let endpoint = "https://beta.crunchyroll.com/content/v1/season_list";
+            let endpoint = "https://www.crunchyroll.com/content/v1/season_list";
             Ok(self
                 .executor
                 .get(endpoint)
@@ -208,7 +208,7 @@ mod query {
             query: S,
             options: QueryOptions,
         ) -> Result<QueryResults> {
-            let endpoint = "https://beta.crunchyroll.com/content/v1/search";
+            let endpoint = "https://www.crunchyroll.com/content/v1/search";
             self.executor
                 .get(endpoint)
                 .query(&options.into_query())

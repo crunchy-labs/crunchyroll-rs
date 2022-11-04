@@ -102,7 +102,7 @@ impl Comment {
     /// Return all replies to this comment.
     pub async fn replies(&self, options: CommentOptions) -> Result<BulkResult<Comment>> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/talkbox/guestbooks/{}/comments/{}/replies",
+            "https://www.crunchyroll.com/talkbox/guestbooks/{}/comments/{}/replies",
             self.guestbook_key, self.comment_id
         );
         self.executor
@@ -131,7 +131,7 @@ impl Comment {
     /// the flag you want to use.
     pub async fn flag(&mut self, flag: CommentFlag, add: bool) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/talkbox/guestbooks/{}/comments/{}/votes",
+            "https://www.crunchyroll.com/talkbox/guestbooks/{}/comments/{}/votes",
             self.guestbook_key, self.comment_id
         );
         if add {
@@ -178,7 +178,7 @@ impl Comment {
     /// argument has always be the opposite of [`Comment::is_spoiler`], else a error will occur.
     pub async fn edit(&mut self, spoiler: bool) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/talkbox/guestbooks/{}/comments/{}/flags",
+            "https://www.crunchyroll.com/talkbox/guestbooks/{}/comments/{}/flags",
             self.guestbook_key, self.comment_id
         );
         let comment: Comment = self
@@ -204,7 +204,7 @@ impl Comment {
     /// populated.
     pub async fn delete(&mut self) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/talkbox/guestbooks/{}/comments/{}",
+            "https://www.crunchyroll.com/talkbox/guestbooks/{}/comments/{}",
             self.guestbook_key, self.comment_id
         );
         let comment: Comment = self
@@ -239,7 +239,7 @@ macro_rules! impl_comment {
         $(
             impl $s {
                 pub async fn comments(&self, options: CommentsOptions) -> Result<BulkResult<Comment>> {
-                    let endpoint = format!("https://beta.crunchyroll.com/talkbox/guestbooks/{}/comments", self.id);
+                    let endpoint = format!("https://www.crunchyroll.com/talkbox/guestbooks/{}/comments", self.id);
                     self.executor
                         .get(endpoint)
                         .query(&options.into_query())
@@ -269,7 +269,7 @@ async fn create_comment<S: AsRef<str>>(
     parent_id: Option<&String>,
 ) -> Result<Comment> {
     let endpoint = format!(
-        "https://beta.crunchyroll.com/talkbox/guestbooks/{}/comments",
+        "https://www.crunchyroll.com/talkbox/guestbooks/{}/comments",
         video_id
     );
     let flags = if is_spoiler { vec!["spoiler"] } else { vec![] };

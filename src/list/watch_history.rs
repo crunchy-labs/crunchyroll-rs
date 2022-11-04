@@ -46,7 +46,7 @@ impl Crunchyroll {
         options: WatchHistoryOptions,
     ) -> Result<Vec<WatchHistoryEntry>> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/watch-history/{}",
+            "https://www.crunchyroll.com/content/v1/watch-history/{}",
             self.executor.details.account_id
         );
         Ok(self
@@ -62,7 +62,7 @@ impl Crunchyroll {
     /// Clear your watch history.
     pub async fn clear_watch_history(&self) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/watch-history/{}",
+            "https://www.crunchyroll.com/content/v1/watch-history/{}",
             self.executor.details.account_id
         );
         self.executor

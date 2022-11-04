@@ -24,12 +24,13 @@ __test_strict = []
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-reqwest = { version = "0.11", features = ["cookies", "json", "gzip"] }
+http = "0.2"
+isahc = { git = "https://github.com/sagebind/isahc", rev = "34f158ef", features = ["cookies", "static-curl"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 smart-default = "0.6"
-tokio = "1.21"
+tokio = { version = "1.21", features = ["sync"] }
 
 crunchyroll-rs-internal = { version = "0.1", path = "internal" }
 

@@ -19,10 +19,7 @@ fn parse_episode_url() {
     let parsed = crunchyroll_rs::parse_url(url);
 
     assert!(parsed.is_some());
-    assert!(matches!(
-        parsed.unwrap(),
-        UrlType::EpisodeOrMovie { .. }
-    ))
+    assert!(matches!(parsed.unwrap(), UrlType::EpisodeOrMovie { .. }))
 }
 
 #[test]
@@ -31,8 +28,5 @@ fn parse_movie_url() {
     let parsed = crunchyroll_rs::parse_url(url);
 
     assert!(parsed.is_some());
-    assert!(matches!(
-        parsed.unwrap(),
-        UrlType::EpisodeOrMovie { .. }
-    ))
+    assert!(matches!(parsed.unwrap(), UrlType::EpisodeOrMovie { .. }))
 }

@@ -67,7 +67,6 @@ impl Video for Series {}
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Season {
     /// Sometimes populated, sometimes not. idk why. Crunchyroll.
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_broken_locale_vec")]
     pub audio_locales: Vec<Locale>,
     /// Sometimes populated, sometimes not. idk why. Crunchyroll.
     pub subtitle_locales: Vec<Locale>,
@@ -139,7 +138,6 @@ pub struct Episode {
     pub is_dubbed: bool,
     pub closed_captions_available: bool,
 
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_broken_locale")]
     pub audio_locale: Locale,
     pub subtitle_locales: Vec<Locale>,
 
@@ -326,7 +324,7 @@ impl<'de> Deserialize<'de> for MediaCollection {
 impl MediaCollection {
     pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<MediaCollection> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/cms/v2/{}/objects/{}",
+            "https://www.crunchyroll.com/cms/v2/{}/objects/{}",
             crunchy.executor.details.bucket, &id
         );
         let result: BulkResult<MediaCollection> = crunchy
@@ -473,7 +471,7 @@ impl<M: Video> Eq for Media<M> {}
 impl<M: Video> Media<M> {
     pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Media<M>> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/cms/v2/{}/objects/{}",
+            "https://www.crunchyroll.com/cms/v2/{}/objects/{}",
             crunchy.executor.details.bucket, &id
         );
         let result: BulkResult<Media<M>> = crunchy
@@ -526,7 +524,7 @@ impl Media<Season> {
         series_id: String,
     ) -> Result<Vec<Media<Season>>> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/cms/v2/{}/seasons",
+            "https://www.crunchyroll.com/cms/v2/{}/seasons",
             crunchy.executor.details.bucket
         );
         let result: BulkResult<OldSeason> = crunchy
@@ -558,7 +556,7 @@ impl Media<Episode> {
         season_id: String,
     ) -> Result<Vec<Media<Episode>>> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/cms/v2/{}/episodes",
+            "https://www.crunchyroll.com/cms/v2/{}/episodes",
             crunchy.executor.details.bucket
         );
         let result: BulkResult<OldEpisode> = crunchy
@@ -613,7 +611,7 @@ impl Media<Movie> {
         movie_listing_id: String,
     ) -> Result<Vec<Media<Movie>>> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/cms/v2/{}/movies",
+            "https://www.crunchyroll.com/cms/v2/{}/movies",
             crunchy.executor.details.bucket
         );
         let result: BulkResult<OldMovie> = crunchy
@@ -683,7 +681,7 @@ macro_rules! impl_media_video_collection {
             impl Media<$media_video> {
                 /// Similar series or movie listing to the current item.
                 pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<MediaCollection>> {
-                    let endpoint = format!("https://beta.crunchyroll.com/content/v1/{}/similar_to", self.executor.details.account_id);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/{}/similar_to", self.executor.details.account_id);
                     self.executor.get(endpoint)
                         .query(&[("guid", &self.id)])
                         .query(&options.into_query())
@@ -733,7 +731,7 @@ macro_rules! impl_media_video {
                 /// Streams for this episode / movie.
                 pub async fn streams(&self) -> Result<VideoStream> {
                     let endpoint = format!(
-                        "https://beta.crunchyroll.com/cms/v2/{}/videos/{}/streams",
+                        "https://www.crunchyroll.com/cms/v2/{}/videos/{}/streams",
                         self.executor.details.bucket, self.stream_id.as_ref().unwrap_or(&self.id)
                     );
                     self.executor.get(endpoint)

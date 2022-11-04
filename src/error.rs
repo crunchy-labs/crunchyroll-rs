@@ -1,4 +1,4 @@
-use reqwest::{IntoUrl, Url};
+use isahc::{AsyncBody, AsyncReadResponseExt};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
@@ -47,24 +47,13 @@ impl From<serde_json::Error> for CrunchyrollError {
     }
 }
 
-impl From<reqwest::Error> for CrunchyrollError {
-    fn from(err: reqwest::Error) -> Self {
-        let mut context = CrunchyrollErrorContext::new(err.to_string());
-        if let Some(url) = err.url() {
-            context = context.with_url(url.clone());
-        }
+impl From<isahc::Error> for CrunchyrollError {
+    fn from(err: isahc::Error) -> Self {
+        let context = CrunchyrollErrorContext::new(err.to_string());
 
-        if err.is_request()
-            || err.is_redirect()
-            || err.is_timeout()
-            || err.is_connect()
-            || err.is_body()
-            || err.is_status()
-        {
+        if err.is_timeout() || err.is_server() || err.is_network() {
             CrunchyrollError::Request(context)
-        } else if err.is_decode() {
-            CrunchyrollError::Decode(context)
-        } else if err.is_builder() {
+        } else if err.is_client() || err.is_tls() {
             CrunchyrollError::Internal(context)
         } else {
             CrunchyrollError::Internal(CrunchyrollErrorContext::new(format!(
@@ -75,11 +64,17 @@ impl From<reqwest::Error> for CrunchyrollError {
     }
 }
 
+impl From<std::io::Error> for CrunchyrollError {
+    fn from(err: std::io::Error) -> Self {
+        CrunchyrollError::Request(CrunchyrollErrorContext::new(err.to_string()))
+    }
+}
+
 /// Information about a [`CrunchyrollError`].
 #[derive(Clone, Debug)]
 pub struct CrunchyrollErrorContext {
     pub message: String,
-    pub url: Option<Url>,
+    pub url: Option<String>,
     pub value: Option<Vec<u8>>,
 }
 
@@ -125,8 +120,8 @@ impl CrunchyrollErrorContext {
         }
     }
 
-    pub(crate) fn with_url<U: IntoUrl>(mut self, url: U) -> Self {
-        self.url = Some(url.into_url().unwrap());
+    pub(crate) fn with_url<S: AsRef<str>>(mut self, url: S) -> Self {
+        self.url = Some(url.as_ref().to_string());
 
         self
     }
@@ -158,12 +153,22 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
         #[serde(alias = "error")]
         message: Option<String>,
     }
+    #[derive(Debug, Deserialize)]
+    struct ConstraintsErrorContext {
+        code: String,
+        violated_constraints: Vec<(String, String)>,
+    }
+    #[derive(Debug, Deserialize)]
+    struct ConstraintsError {
+        code: String,
+        context: Vec<ConstraintsErrorContext>,
+    }
 
     if let Ok(err) = serde_json::from_value::<MessageType>(value.clone()) {
         return Err(CrunchyrollError::Request(
             format!("{} - {}", err.error_type, err.message).into(),
         ));
-    } else if let Ok(err) = serde_json::from_value::<CodeContextError>(value) {
+    } else if let Ok(err) = serde_json::from_value::<CodeContextError>(value.clone()) {
         let mut details: Vec<String> = vec![];
 
         for item in err.context.iter() {
@@ -179,31 +184,53 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
                 format!("({}) - {}", err.code, details.join(", ")).into(),
             ))
         };
+    } else if let Ok(err) = serde_json::from_value::<ConstraintsError>(value) {
+        let details = err
+            .context
+            .iter()
+            .map(|e| {
+                format!(
+                    "{}: ({})",
+                    e.code,
+                    e.violated_constraints
+                        .iter()
+                        .map(|(key, value)| format!("{}: {}", key, value))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+            })
+            .collect::<Vec<String>>();
+
+        return Err(CrunchyrollError::Request(
+            format!("{}: {}", err.code, details.join(", ")).into(),
+        ));
     }
     Ok(())
 }
 
-pub(crate) async fn check_request<T: DeserializeOwned>(resp: reqwest::Response) -> Result<T> {
-    let content_length = resp.content_length();
-    let url = resp.url().to_string();
-    let _raw = resp.bytes().await?;
-    let mut raw = _raw.as_ref();
+pub(crate) async fn check_request<T: DeserializeOwned>(
+    url: String,
+    mut resp: isahc::Response<AsyncBody>,
+) -> Result<T> {
+    let _raw = resp.bytes().await.unwrap();
+    let mut raw: &[u8] = _raw.as_ref();
+    let content_length = resp.headers().get(http::header::CONTENT_LENGTH);
 
     // to ensure compatibility with `T`, convert a empty response to {}
-    if raw.is_empty() && content_length.unwrap_or(1) == 0 {
+    if raw.is_empty() && (content_length.is_none() || content_length.unwrap() == "0") {
         raw = "{}".as_bytes();
     }
 
     let value: Value = serde_json::from_slice(raw).map_err(|e| {
         CrunchyrollError::Decode(
             CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
-                .with_url(url.clone())
+                .with_url(&url)
                 .with_value(raw),
         )
     })?;
     is_request_error(value.clone()).map_err(|e| {
         if let CrunchyrollError::Request(context) = e {
-            CrunchyrollError::Request(context.with_url(url.clone()))
+            CrunchyrollError::Request(context.with_url(&url))
         } else {
             e
         }
@@ -211,7 +238,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(resp: reqwest::Response) 
     serde_json::from_value::<T>(value).map_err(|e| {
         CrunchyrollError::Decode(
             CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
-                .with_url(url)
+                .with_url(&url)
                 .with_value(raw),
         )
     })

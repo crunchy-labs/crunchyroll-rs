@@ -127,7 +127,7 @@ impl Review {
     /// [`Review::review::helpful`] is [`Some`], a review were already made.
     pub async fn mark_helpful(&mut self, helpful: bool) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content-reviews/v2/user/{}/rating/review/{}",
+            "https://www.crunchyroll.com/content-reviews/v2/user/{}/rating/review/{}",
             self.executor.details.account_id, self.review.id
         );
         let rating = if helpful { "yes" } else { "no" };
@@ -144,7 +144,7 @@ impl Review {
     /// See [`Review::reported`] if the comment was already reported from your account or not.
     pub async fn report(&mut self, report: bool) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content-reviews/v2/user/{}/report/review/{}",
+            "https://www.crunchyroll.com/content-reviews/v2/user/{}/report/review/{}",
             self.executor.details.account_id, self.review.id
         );
         let builder = if report {
@@ -180,7 +180,7 @@ impl SelfReview {
     /// Edit your review.
     pub async fn edit<S: AsRef<str>>(&mut self, title: S, body: S, spoiler: bool) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
+            "https://www.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
             self.executor.details.account_id,
             self.executor.details.locale,
             self.endpoint,
@@ -199,7 +199,7 @@ impl SelfReview {
     /// Delete your review.
     pub async fn delete(&self) -> Result<()> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
+            "https://www.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
             self.executor.details.account_id,
             self.executor.details.locale,
             self.endpoint,
@@ -247,7 +247,7 @@ macro_rules! impl_rating {
             impl $s {
                 pub async fn rating(&self) -> Result<Rating> {
                     let endpoint = format!(
-                        "https://beta.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
+                        "https://www.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
                         self.executor.details.account_id, $endpoint, self.id
                     );
                     self.executor.get(endpoint).request().await
@@ -255,7 +255,7 @@ macro_rules! impl_rating {
 
                 pub async fn reviews(&self, options: ReviewOptions) -> Result<$crate::common::BulkResult<Review>> {
                     let endpoint = format!(
-                        "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/review/{}/{}/list",
+                        "https://www.crunchyroll.com/content-reviews/v2/{}/user/{}/review/{}/{}/list",
                         self.executor.details.locale, self.executor.details.account_id, $endpoint, self.id
                     );
                     self.executor.get(endpoint).query(&options.into_query()).request().await
@@ -263,7 +263,7 @@ macro_rules! impl_rating {
 
                 pub async fn rate(&self, stars: RatingStar) -> Result<Rating> {
                     let endpoint = format!(
-                        "https://beta.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
+                        "https://www.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
                         self.executor.details.account_id, $endpoint, self.id
                     );
                     self.executor.put(endpoint)
@@ -274,7 +274,7 @@ macro_rules! impl_rating {
 
                 pub async fn create_review<S: AsRef<str>>(&self, title: S, body: S, spoiler: bool) -> Result<SelfReview> {
                     let endpoint = format!(
-                        "https://beta.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
+                        "https://www.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
                         self.executor.details.account_id, $endpoint, self.id
                     );
                     self.executor.post(endpoint)
@@ -285,7 +285,7 @@ macro_rules! impl_rating {
 
                 pub async fn self_review(&self) -> Result<SelfReview> {
                     let endpoint = format!(
-                        "https://beta.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
+                        "https://www.crunchyroll.com/content-reviews/v2/{}/user/{}/rating/{}/{}",
                         self.executor.details.account_id, self.executor.details.locale, $endpoint, self.id
                     );
                     let mut self_review: SelfReview = self.executor.get(endpoint).request().await?;

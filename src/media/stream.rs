@@ -1,5 +1,6 @@
 use crate::error::CrunchyrollError;
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
+use isahc::AsyncReadResponseExt;
 use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -74,6 +75,8 @@ pub struct VideoStream {
     #[cfg(feature = "__test_strict")]
     captions: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
+    closed_captions: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
     bifs: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     versions: crate::StrictValue,
@@ -82,7 +85,7 @@ pub struct VideoStream {
 impl VideoStream {
     pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
         let endpoint = format!(
-            "https://beta.crunchyroll.com/cms/v2/{}/videos/{}/streams",
+            "https://www.crunchyroll.com/cms/v2/{}/videos/{}/streams",
             crunchy.executor.details.bucket, id
         );
         crunchy
@@ -132,7 +135,7 @@ pub struct StreamSubtitle {
 
 impl StreamSubtitle {
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        let resp = self.executor.client.get(self.url).send().await?;
+        let mut resp = self.executor.client.get_async(self.url).await?;
         let body = resp.bytes().await?;
         w.write_all(body.as_ref())
             .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;

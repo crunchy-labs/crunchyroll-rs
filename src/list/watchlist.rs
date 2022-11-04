@@ -148,7 +148,7 @@ impl Crunchyroll {
         options.language = None;
 
         let endpoint = format!(
-            "https://beta.crunchyroll.com/content/v1/{}/watchlist",
+            "https://www.crunchyroll.com/content/v1/{}/watchlist",
             self.executor.details.account_id
         );
         Ok(self
@@ -169,18 +169,19 @@ macro_rules! add_to_watchlist {
             impl $s {
                 #[doc = $add]
                 pub async fn add_to_watchlist(&self) -> Result<()> {
-                    let endpoint = format!("https://beta.crunchyroll.com/content/v1/watchlist/{}", self.executor.details.account_id);
-                    let builder = self.executor.client.post(endpoint)
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/watchlist/{}", self.executor.details.account_id);
+                    let _: EmptyJsonProxy = self.executor.post(endpoint)
                         .json(&json!({"content_id": &self.id}))
-                        .query(&[("locale", &self.executor.details.locale)]);
-                    self.executor.request::<EmptyJsonProxy>(builder).await?;
+                        .query(&[("locale", &self.executor.details.locale)])
+                        .request()
+                        .await?;
                     Ok(())
                 }
 
                 #[doc = $as]
                 pub async fn into_watchlist_entry(&self) -> Result<Option<SimpleWatchlistEntry>> {
-                    let endpoint = format!("https://beta.crunchyroll.com/content/v1/watchlist/{}/{}", self.executor.details.account_id, self.id);
-                    let builder = self.executor.client.get(endpoint);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/watchlist/{}/{}", self.executor.details.account_id, self.id);
+                    let builder = isahc::Request::get(endpoint).body(()).unwrap();
                     let result: serde_json::Value = self.executor.request(builder).await?;
                     let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
                     if as_map.is_empty() {
@@ -211,7 +212,7 @@ async fn mark_favorite_watchlist(
     favorite: bool,
 ) -> Result<()> {
     let endpoint = format!(
-        "https://beta.crunchyroll.com/content/v1/watchlist/{}/{}",
+        "https://www.crunchyroll.com/content/v1/watchlist/{}/{}",
         executor.details.account_id, id
     );
     executor
@@ -224,7 +225,7 @@ async fn mark_favorite_watchlist(
 
 async fn remove_from_watchlist(executor: Arc<Executor>, id: String) -> Result<()> {
     let endpoint = format!(
-        "https://beta.crunchyroll.com/content/v1/watchlist/{}/{}",
+        "https://www.crunchyroll.com/content/v1/watchlist/{}/{}",
         executor.details.account_id, id
     );
     executor

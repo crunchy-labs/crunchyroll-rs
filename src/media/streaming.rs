@@ -4,6 +4,7 @@ use crate::error::CrunchyrollError;
 use crate::media::{PlaybackStream, VideoStream};
 use crate::{Executor, Locale, Request, Result};
 use aes::cipher::{BlockDecryptMut, KeyIvInit};
+use isahc::AsyncReadResponseExt;
 use std::borrow::BorrowMut;
 use std::fmt::Formatter;
 use std::io::Write;
@@ -116,10 +117,10 @@ impl VariantData {
         executor: Arc<Executor>,
         url: String,
     ) -> Result<Vec<VariantData>> {
-        let resp = executor.client.get(url).send().await?;
-        let raw_master_playlist = resp.text().await?;
+        let mut resp = executor.client.get_async(url).await?;
+        let raw_master_playlist = resp.bytes().await?;
 
-        let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_bytes())
+        let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_slice())
             .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
 
         let mut stream_data: Vec<VariantData> = vec![];
@@ -162,9 +163,9 @@ impl VariantData {
     /// Return all segments in order the variant stream is made of.
     #[allow(dead_code)]
     pub async fn segments(&self) -> Result<Vec<VariantSegment>> {
-        let resp = self.executor.client.get(self.url.clone()).send().await?;
-        let raw_media_playlist = resp.text().await?;
-        let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_bytes())
+        let mut resp = self.executor.client.get_async(self.url.clone()).await?;
+        let raw_media_playlist = resp.bytes().await?;
+        let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_slice())
             .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
 
         let mut segments: Vec<VariantSegment> = vec![];
@@ -173,17 +174,17 @@ impl VariantData {
         for segment in media_playlist.segments {
             if let Some(k) = segment.key {
                 if let Some(url) = k.uri {
-                    let resp = self.executor.client.get(url).send().await?;
+                    let mut resp = self.executor.client.get_async(url).await?;
                     let raw_key = resp.bytes().await?;
 
-                    let temp_iv = k.iv.unwrap_or_else(|| "".to_string());
+                    let temp_iv = k.iv.unwrap_or_default();
                     let iv = if !temp_iv.is_empty() {
                         temp_iv.as_bytes()
                     } else {
                         raw_key.as_ref()
                     };
 
-                    key = Some(Aes128CbcDec::new(raw_key.as_ref().into(), iv.into()));
+                    key = Some(Aes128CbcDec::new(raw_key.as_slice().into(), iv.into()));
                 }
             }
 
@@ -234,7 +235,7 @@ impl VariantSegment {
 
     /// Write this segment to a writer.
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        let resp = self.executor.client.get(self.url).send().await?;
+        let mut resp = self.executor.client.get_async(self.url).await?;
         let segment = resp.bytes().await?;
 
         w.write(VariantSegment::decrypt(

@@ -82,9 +82,9 @@ options! {
 impl Account {
     /// Update preferences for your account.
     pub async fn update_preferences(&mut self, preferences: UpdatePreferences) -> Result<()> {
-        let profile_endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
+        let profile_endpoint = "https://www.crunchyroll.com/accounts/v1/me/profile";
         let notification_endpoint =
-            "https://beta.crunchyroll.com/accounts/v1/me/notification_settings";
+            "https://www.crunchyroll.com/accounts/v1/me/notification_settings";
 
         let mut updated_self = self.clone();
 
@@ -165,7 +165,7 @@ impl Account {
         current_password: String,
         new_password: String,
     ) -> Result<()> {
-        let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/credentials";
+        let endpoint = "https://www.crunchyroll.com/accounts/v1/me/credentials";
         self.executor
             .patch(endpoint)
             .json(&json!({
@@ -180,7 +180,7 @@ impl Account {
 
     /// Changes the current account email.
     pub async fn change_email(&self, current_password: String, new_email: String) -> Result<()> {
-        let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/credentials";
+        let endpoint = "https://www.crunchyroll.com/accounts/v1/me/credentials";
         self.executor
             .patch(endpoint)
             .json(&json!({
@@ -194,7 +194,7 @@ impl Account {
 
     /// Changes the current profile wallpaper.
     pub async fn change_wallpaper(&mut self, wallpaper: Wallpaper) -> Result<()> {
-        let endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
+        let endpoint = "https://www.crunchyroll.com/accounts/v1/me/profile";
         self.executor
             .patch(endpoint)
             .json(&json!({"wallpaper": &wallpaper.name}))
@@ -211,7 +211,7 @@ impl Crunchyroll {
     pub async fn account(&self) -> Result<Account> {
         let mut result: HashMap<String, Value> = HashMap::new();
 
-        let me_endpoint = "https://beta.crunchyroll.com/accounts/v1/me";
+        let me_endpoint = "https://www.crunchyroll.com/accounts/v1/me";
         result.extend(
             self.executor
                 .get(me_endpoint)
@@ -219,7 +219,7 @@ impl Crunchyroll {
                 .await?,
         );
 
-        let profile_endpoint = "https://beta.crunchyroll.com/accounts/v1/me/profile";
+        let profile_endpoint = "https://www.crunchyroll.com/accounts/v1/me/profile";
         result.extend(
             self.executor
                 .get(profile_endpoint)
@@ -268,7 +268,7 @@ mod wallpaper {
     impl Wallpaper {
         /// Returns all available wallpapers
         pub async fn all_wallpapers(crunchyroll: &Crunchyroll) -> Result<Vec<Wallpaper>> {
-            let endpoint = "https://beta.crunchyroll.com/assets/v1/wallpaper";
+            let endpoint = "https://www.crunchyroll.com/assets/v1/wallpaper";
             Ok(crunchyroll
                 .executor
                 .get(endpoint)
