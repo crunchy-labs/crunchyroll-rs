@@ -23,6 +23,27 @@ enum_values! {
     }
 }
 
+impl Locale {
+    pub fn all() -> Vec<Locale> {
+        vec![
+            Locale::ar_ME,
+            Locale::ar_SA,
+            Locale::de_DE,
+            Locale::en_US,
+            Locale::es_419,
+            Locale::es_ES,
+            Locale::es_LA,
+            Locale::fr_FR,
+            Locale::hi_IN,
+            Locale::it_IT,
+            Locale::ja_JP,
+            Locale::pt_BR,
+            Locale::ru_RU,
+            Locale::zh_CN
+        ]
+    }
+}
+
 enum_values! {
     pub enum MaturityRating {
         NotMature = "M2"
