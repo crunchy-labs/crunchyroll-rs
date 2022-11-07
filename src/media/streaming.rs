@@ -1,9 +1,11 @@
 #![cfg(feature = "stream")]
 
+use crate::crunchyroll::USER_AGENT;
 use crate::error::CrunchyrollError;
 use crate::media::{PlaybackStream, VideoStream};
 use crate::{Executor, Locale, Request, Result};
 use aes::cipher::{BlockDecryptMut, KeyIvInit};
+use http::header;
 use isahc::AsyncReadResponseExt;
 use std::borrow::BorrowMut;
 use std::fmt::Formatter;
@@ -174,7 +176,11 @@ impl VariantData {
         for segment in media_playlist.segments {
             if let Some(k) = segment.key {
                 if let Some(url) = k.uri {
-                    let mut resp = self.executor.client.get_async(url).await?;
+                    let req = isahc::Request::get(url)
+                        .header(header::USER_AGENT, USER_AGENT)
+                        .body(())
+                        .unwrap();
+                    let mut resp = isahc::send_async(req).await?;
                     let raw_key = resp.bytes().await?;
 
                     let temp_iv = k.iv.unwrap_or_default();
@@ -235,7 +241,14 @@ impl VariantSegment {
 
     /// Write this segment to a writer.
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        let mut resp = self.executor.client.get_async(self.url).await?;
+        // The default isahc client the crate uses cannot be used here because it's configured to
+        // only accept TLSv1.3 connections (to bypass the cloudflare bot check) but the servers where
+        // the stream segments are stored only accept TLS up to v1.2 (but have no cloudflare bot check)
+        let req = isahc::Request::get(self.url)
+            .header(header::USER_AGENT, USER_AGENT)
+            .body(())
+            .unwrap();
+        let mut resp = isahc::send_async(req).await?;
         let segment = resp.bytes().await?;
 
         w.write(VariantSegment::decrypt(

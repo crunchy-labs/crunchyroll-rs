@@ -39,7 +39,7 @@ impl Locale {
             Locale::ja_JP,
             Locale::pt_BR,
             Locale::ru_RU,
-            Locale::zh_CN
+            Locale::zh_CN,
         ]
     }
 }
@@ -50,6 +50,9 @@ enum_values! {
         Mature = "M3"
     }
 }
+
+pub(crate) const USER_AGENT: &str =
+    "Mozilla/5.0 (X11; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0";
 
 /// Starting point of this whole library.
 #[derive(Clone, Debug)]
@@ -77,6 +80,7 @@ impl Crunchyroll {
 }
 
 mod auth {
+    use crate::crunchyroll::USER_AGENT;
     use crate::error::{check_request, CrunchyrollError, CrunchyrollErrorContext};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
@@ -420,11 +424,8 @@ mod auth {
                 .min_version(ProtocolVersion::Tlsv13)
                 .build();
             let client = HttpClientBuilder::new()
-                .default_header(
-                    "User-Agent",
-                    "Mozilla/5.0 (X11; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0",
-                )
-                .default_header("Accept", "*")
+                .default_header(header::USER_AGENT, USER_AGENT)
+                .default_header(header::ACCEPT, "*")
                 .proxy_tls_config(tls) // TODO: Change this to `tls_config` when https://github.com/sagebind/isahc/pull/388#discussion_r1014010929 is fixed
                 .cookie_jar(isahc::cookies::CookieJar::new())
                 .build()
