@@ -18,6 +18,7 @@ enum_values! {
         it_IT = "it-IT"
         ja_JP = "ja-JP"
         pt_BR = "pt-BR"
+        pt_PT = "pt-PT"
         ru_RU = "ru-RU"
         zh_CN = "zh-CN"
     }
@@ -38,9 +39,31 @@ impl Locale {
             Locale::it_IT,
             Locale::ja_JP,
             Locale::pt_BR,
+            Locale::pt_PT,
             Locale::ru_RU,
             Locale::zh_CN,
         ]
+    }
+
+    pub fn to_human_readable(&self) -> String {
+        match self {
+            Locale::ar_ME => "Arabic",
+            Locale::ar_SA => "Arabic (Saudi Arabia)",
+            Locale::de_DE => "German",
+            Locale::en_US => "English (US)",
+            Locale::es_419 | Locale::es_LA => "Spanish (Latin America)",
+            Locale::es_ES => "Spanish (European)",
+            Locale::fr_FR => "French",
+            Locale::hi_IN => "Hindi",
+            Locale::it_IT => "Italian",
+            Locale::ja_JP => "Japanese",
+            Locale::pt_BR => "Portuguese (Brazil)",
+            Locale::pt_PT => "Portuguese (Europe)",
+            Locale::ru_RU => "Russian",
+            Locale::zh_CN => "Chinese (China)",
+            Locale::Custom(custom) => custom.as_str(),
+        }
+        .to_string()
     }
 }
 
