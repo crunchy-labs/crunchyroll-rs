@@ -52,6 +52,7 @@ pub(crate) struct OldEpisode {
 
     // usually the same as episode_number, just as string
     episode: String,
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     episode_number: u32,
     // usually also the same as episode_number, I don't know the purpose of this
     sequence_number: u32,
