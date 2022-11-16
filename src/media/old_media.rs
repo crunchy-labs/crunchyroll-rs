@@ -54,8 +54,9 @@ pub(crate) struct OldEpisode {
     episode: String,
     #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     episode_number: u32,
-    // usually also the same as episode_number, I don't know the purpose of this
-    sequence_number: u32,
+    // usually also the same as episode_number. if the episode number is null (which occurs for the
+    // first AOT episode, which is a preview, for example) this might be a floating number like 0.5
+    sequence_number: f32,
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[default(Duration::milliseconds(0))]
