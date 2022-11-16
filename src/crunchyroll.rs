@@ -9,6 +9,7 @@ enum_values! {
         ar_ME = "ar-ME"
         ar_SA = "ar-SA"
         de_DE = "de-DE"
+        en_IN = "en-IN"
         en_US = "en-US"
         es_419 = "es-419"
         es_ES = "es-ES"
@@ -30,6 +31,7 @@ impl Locale {
             Locale::ar_ME,
             Locale::ar_SA,
             Locale::de_DE,
+            Locale::en_IN,
             Locale::en_US,
             Locale::es_419,
             Locale::es_ES,
@@ -50,6 +52,7 @@ impl Locale {
             Locale::ar_ME => "Arabic",
             Locale::ar_SA => "Arabic (Saudi Arabia)",
             Locale::de_DE => "German",
+            Locale::en_IN => "English (India)",
             Locale::en_US => "English (US)",
             Locale::es_419 | Locale::es_LA => "Spanish (Latin America)",
             Locale::es_ES => "Spanish (European)",
