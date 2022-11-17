@@ -149,7 +149,7 @@ impl Crunchyroll {
 
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/{}/watchlist",
-            self.executor.details.account_id
+            self.executor.details.account_id.clone()?
         );
         Ok(self
             .executor
@@ -169,7 +169,7 @@ macro_rules! add_to_watchlist {
             impl $s {
                 #[doc = $add]
                 pub async fn add_to_watchlist(&self) -> Result<()> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/watchlist/{}", self.executor.details.account_id);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/watchlist/{}", self.executor.details.account_id.clone()?);
                     let _: EmptyJsonProxy = self.executor.post(endpoint)
                         .json(&json!({"content_id": &self.id}))
                         .query(&[("locale", &self.executor.details.locale)])
@@ -180,7 +180,7 @@ macro_rules! add_to_watchlist {
 
                 #[doc = $as]
                 pub async fn into_watchlist_entry(&self) -> Result<Option<SimpleWatchlistEntry>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/watchlist/{}/{}", self.executor.details.account_id, self.id);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/watchlist/{}/{}", self.executor.details.account_id.clone()?, self.id);
                     let builder = isahc::Request::get(endpoint).body(()).unwrap();
                     let result: serde_json::Value = self.executor.request(builder).await?;
                     let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
@@ -213,7 +213,8 @@ async fn mark_favorite_watchlist(
 ) -> Result<()> {
     let endpoint = format!(
         "https://www.crunchyroll.com/content/v1/watchlist/{}/{}",
-        executor.details.account_id, id
+        executor.details.account_id.clone()?,
+        id
     );
     executor
         .patch(endpoint)
@@ -226,7 +227,8 @@ async fn mark_favorite_watchlist(
 async fn remove_from_watchlist(executor: Arc<Executor>, id: String) -> Result<()> {
     let endpoint = format!(
         "https://www.crunchyroll.com/content/v1/watchlist/{}/{}",
-        executor.details.account_id, id
+        executor.details.account_id.clone()?,
+        id
     );
     executor
         .delete(endpoint)

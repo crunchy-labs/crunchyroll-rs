@@ -131,6 +131,7 @@ mod auth {
     pub enum SessionToken {
         RefreshToken(String),
         EtpRt(String),
+        Anonymous,
     }
 
     #[derive(Debug, Default, Deserialize)]
@@ -139,12 +140,14 @@ mod auth {
     #[allow(dead_code)]
     struct AuthResponse {
         access_token: String,
-        refresh_token: String,
+        /// Is [`None`] if generated via [`Executor::auth_anonymously`].
+        refresh_token: Option<String>,
         expires_in: i32,
         token_type: String,
         scope: String,
         country: String,
-        account_id: String,
+        /// Is [`None`] if generated via [`Executor::auth_anonymously`].
+        account_id: Option<String>,
     }
 
     #[derive(Clone, Debug)]
@@ -166,7 +169,7 @@ mod auth {
         pub(crate) signature: String,
         pub(crate) policy: String,
         pub(crate) key_pair_id: String,
-        pub(crate) account_id: String,
+        pub(crate) account_id: Result<String>,
     }
 
     /// Internal struct to execute all request with.
@@ -215,6 +218,9 @@ mod auth {
                     SessionToken::EtpRt(etp_rt) => {
                         Executor::auth_with_etp_rt(self.client.clone(), etp_rt).await?
                     }
+                    SessionToken::Anonymous => {
+                        Executor::auth_anonymously(self.client.clone()).await?
+                    }
                 };
 
                 let mut new_config = config.clone();
@@ -222,9 +228,12 @@ mod auth {
                 new_config.access_token = login_response.access_token;
                 new_config.session_token = match new_config.session_token {
                     SessionToken::RefreshToken(_) => {
-                        SessionToken::RefreshToken(login_response.refresh_token)
+                        SessionToken::RefreshToken(login_response.refresh_token.unwrap())
                     }
-                    SessionToken::EtpRt(_) => SessionToken::EtpRt(login_response.refresh_token),
+                    SessionToken::EtpRt(_) => {
+                        SessionToken::EtpRt(login_response.refresh_token.unwrap())
+                    }
+                    SessionToken::Anonymous => SessionToken::Anonymous,
                 };
                 new_config.session_expire =
                     Utc::now().add(Duration::seconds(login_response.expires_in as i64));
@@ -376,7 +385,7 @@ mod auth {
                 }),
                 details: ExecutorDetails {
                     locale: Default::default(),
-                    account_id: "".to_string(),
+                    account_id: Ok("".to_string()),
                     bucket: "".to_string(),
                     premium: false,
                     signature: "".to_string(),
@@ -506,7 +515,7 @@ mod auth {
 
         pub async fn login_anonymously(self) -> Result<Crunchyroll> {
             let login_response = Executor::auth_anonymously(self.client.clone()).await?;
-            let session_token = SessionToken::RefreshToken(login_response.refresh_token.clone());
+            let session_token = SessionToken::Anonymous;
 
             self.post_login(login_response, session_token).await
         }
@@ -524,7 +533,8 @@ mod auth {
                 password.as_ref().to_string(),
             )
             .await?;
-            let session_token = SessionToken::RefreshToken(login_response.refresh_token.clone());
+            let session_token =
+                SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
             self.post_login(login_response, session_token).await
         }
@@ -544,7 +554,8 @@ mod auth {
                 refresh_token.as_ref().to_string(),
             )
             .await?;
-            let session_token = SessionToken::RefreshToken(login_response.refresh_token.clone());
+            let session_token =
+                SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
             self.post_login(login_response, session_token).await
         }
@@ -559,7 +570,7 @@ mod auth {
             let login_response =
                 Executor::auth_with_etp_rt(self.client.clone(), etp_rt.as_ref().to_string())
                     .await?;
-            let session_token = SessionToken::EtpRt(login_response.refresh_token.clone());
+            let session_token = SessionToken::EtpRt(login_response.refresh_token.clone().unwrap());
 
             self.post_login(login_response, session_token).await
         }
@@ -665,7 +676,11 @@ mod auth {
                         signature: index.cms_web.signature,
                         policy: index.cms_web.policy,
                         key_pair_id: index.cms_web.key_pair_id,
-                        account_id: login_response.account_id,
+                        account_id: login_response.account_id.ok_or_else(|| {
+                            CrunchyrollError::Authentication(
+                                "Login with a user account to use this function".into(),
+                            )
+                        }),
                     },
                 }),
             };

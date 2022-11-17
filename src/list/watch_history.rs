@@ -47,7 +47,7 @@ impl Crunchyroll {
     ) -> Result<Vec<WatchHistoryEntry>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/watch-history/{}",
-            self.executor.details.account_id
+            self.executor.details.account_id.clone()?
         );
         Ok(self
             .executor
@@ -63,7 +63,7 @@ impl Crunchyroll {
     pub async fn clear_watch_history(&self) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/watch-history/{}",
-            self.executor.details.account_id
+            self.executor.details.account_id.clone()?
         );
         self.executor
             .delete(endpoint)

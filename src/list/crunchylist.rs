@@ -29,7 +29,9 @@ impl CrunchylistEntry {
     pub async fn delete(self, entry: &CrunchylistEntry) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}/{}",
-            self.executor.details.account_id, entry.list_id, self.id
+            self.executor.details.account_id.clone()?,
+            entry.list_id,
+            self.id
         );
         self.executor
             .delete(endpoint)
@@ -74,7 +76,7 @@ impl Crunchylists {
     pub async fn create<S: AsRef<str>>(&self, title: S) -> Result<CrunchylistPreview> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/custom-lists/{}",
-            self.executor.details.account_id
+            self.executor.details.account_id.clone()?
         );
         let create_result: CrunchylistCreate = self
             .executor
@@ -124,7 +126,8 @@ impl Crunchylist {
     pub async fn add(&self, media: MediaCollection) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
-            self.executor.details.account_id, self.id
+            self.executor.details.account_id.clone()?,
+            self.id
         );
         let id = match media {
             MediaCollection::Series(series) => series.id,
@@ -148,7 +151,8 @@ impl Crunchylist {
     pub async fn rename<S: AsRef<str>>(&self, name: S) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
-            self.executor.details.account_id, self.id
+            self.executor.details.account_id.clone()?,
+            self.id
         );
         self.executor
             .patch(endpoint)
@@ -163,7 +167,8 @@ impl Crunchylist {
     pub async fn delete(self) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
-            self.executor.details.account_id, self.id
+            self.executor.details.account_id.clone()?,
+            self.id
         );
         self.executor
             .delete(endpoint)
@@ -199,7 +204,8 @@ impl CrunchylistPreview {
     pub async fn crunchylist(&self) -> Result<Crunchylist> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
-            self.executor.details.account_id, self.list_id
+            self.executor.details.account_id.clone()?,
+            self.list_id
         );
         let mut crunchylist: Crunchylist = self
             .executor
@@ -217,7 +223,7 @@ impl Crunchyroll {
     pub async fn crunchylists(&self) -> Result<Crunchylists> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/custom-lists/{}",
-            self.executor.details.account_id
+            self.executor.details.account_id.clone()?
         );
         self.executor
             .get(endpoint)

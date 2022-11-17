@@ -33,6 +33,7 @@ pub async fn set_session(crunchy: Crunchyroll) -> anyhow::Result<()> {
         SessionToken::EtpRt(etp_rt) => {
             Ok(set_store("session".into(), format!("etp_rt:{}", etp_rt))?)
         }
+        SessionToken::Anonymous => Ok(()),
     }
 }
 

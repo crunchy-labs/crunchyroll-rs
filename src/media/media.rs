@@ -740,7 +740,7 @@ macro_rules! impl_media_video_collection {
             impl Media<$media_video> {
                 /// Similar series or movie listing to the current item.
                 pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<MediaCollection>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/{}/similar_to", self.executor.details.account_id);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/{}/similar_to", self.executor.details.account_id.clone()?);
                     self.executor.get(endpoint)
                         .query(&[("guid", &self.id)])
                         .query(&options.into_query())

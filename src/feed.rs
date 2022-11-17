@@ -288,7 +288,7 @@ impl Crunchyroll {
     pub async fn home_feed(&self, options: HomeFeedOptions) -> Result<Vec<HomeFeed>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/{}/home_feed",
-            self.executor.details.account_id
+            self.executor.details.account_id.clone()?
         );
         Ok(self
             .executor
@@ -318,7 +318,7 @@ impl Crunchyroll {
     ) -> Result<BulkResult<MediaCollection>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/{}/recommendations",
-            self.executor.details.account_id
+            self.executor.details.account_id.clone()?
         );
         self.executor
             .get(endpoint)
@@ -332,7 +332,7 @@ impl Crunchyroll {
     pub async fn up_next(&self, options: UpNextOptions) -> Result<BulkResult<UpNextEntry>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/{}/up_next_account",
-            self.executor.details.account_id
+            self.executor.details.account_id.clone()?
         );
         self.executor
             .get(endpoint)
