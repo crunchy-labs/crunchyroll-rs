@@ -248,6 +248,26 @@ mod auth {
             Ok(resp)
         }
 
+        async fn auth_anonymously(client: HttpClient) -> Result<AuthResponse> {
+            Executor::pre_auth(&client).await?;
+
+            let endpoint = "https://www.crunchyroll.com/auth/v1/token";
+            let req = isahc::Request::post(endpoint)
+                .header(header::AUTHORIZATION, "Basic Y3Jfd2ViOg==")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(
+                    serde_urlencoded::to_string([
+                        ("grant_type", "client_id"),
+                        ("scope", "offline_access"),
+                    ])
+                    .unwrap(),
+                )
+                .unwrap();
+            let resp = client.send_async(req).await?;
+
+            check_request(endpoint.to_string(), resp).await
+        }
+
         async fn auth_with_credentials(
             client: HttpClient,
             user: String,
@@ -482,6 +502,13 @@ mod auth {
         pub fn locale(&mut self, locale: Locale) -> &Self {
             self.locale = locale;
             self
+        }
+
+        pub async fn login_anonymously(self) -> Result<Crunchyroll> {
+            let login_response = Executor::auth_anonymously(self.client.clone()).await?;
+            let session_token = SessionToken::RefreshToken(login_response.refresh_token.clone());
+
+            self.post_login(login_response, session_token).await
         }
 
         /// Logs in with credentials (username or email and password) and returns a new `Crunchyroll`

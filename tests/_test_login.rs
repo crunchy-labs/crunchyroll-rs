@@ -63,3 +63,14 @@ async fn login_with_session_id() {
         utils::session::set_session(crunchy.unwrap()).await.unwrap()
     }
 }
+
+#[tokio::test]
+async fn login_anonymously() {
+    let crunchy = Crunchyroll::builder().login_anonymously().await;
+
+    assert_result!(crunchy);
+
+    if !utils::session::has_session() {
+        utils::session::set_session(crunchy.unwrap()).await.unwrap()
+    }
+}
