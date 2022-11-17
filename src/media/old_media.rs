@@ -231,6 +231,7 @@ pub(crate) struct OldSeason {
     is_subbed: bool,
     is_dubbed: bool,
     is_simulcast: bool,
+    audio_locale: Locale,
     audio_locales: Vec<Locale>,
     subtitle_locales: Vec<Locale>,
 
@@ -240,8 +241,6 @@ pub(crate) struct OldSeason {
 
     availability_notes: String,
 
-    #[cfg(feature = "__test_strict")]
-    audio_locale: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     // currently empty (on all of my tests) but its might be filled in the future
     images: crate::StrictValue,
@@ -259,7 +258,11 @@ pub(crate) struct OldSeason {
 
 #[allow(clippy::from_over_into)]
 impl Into<Media<Season>> for OldSeason {
-    fn into(self) -> Media<Season> {
+    fn into(mut self) -> Media<Season> {
+        // check if `audio_locale` field is not populated
+        if self.audio_locale != Locale::default() {
+            self.audio_locales.push(self.audio_locale)
+        }
         Media {
             executor: self.executor,
             id: self.id,
@@ -280,8 +283,6 @@ impl Into<Media<Season>> for OldSeason {
                 maturity_ratings: self.maturity_ratings,
                 is_mature: self.is_mature,
                 mature_blocked: self.mature_blocked,
-                #[cfg(feature = "__test_strict")]
-                audio_locale: self.audio_locale,
                 #[cfg(feature = "__test_strict")]
                 season_display_number: self.season_display_number,
                 #[cfg(feature = "__test_strict")]

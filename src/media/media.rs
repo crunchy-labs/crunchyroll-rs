@@ -60,9 +60,37 @@ pub struct Series {
 }
 impl Video for Series {}
 
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+struct SeasonProxy {
+    audio_locale: Locale,
+    audio_locales: Vec<Locale>,
+    subtitle_locales: Vec<Locale>,
+
+    #[serde(default)]
+    season_number: u32,
+
+    maturity_ratings: Vec<String>,
+    is_mature: bool,
+    mature_blocked: bool,
+
+    #[cfg(feature = "__test_strict")]
+    pub(crate) season_display_number: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    pub(crate) season_sequence_number: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    pub(crate) extended_maturity_rating: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    pub(crate) versions: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    pub(crate) identifier: crate::StrictValue,
+}
+
 /// Metadata for a [`Media`] season.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[serde(from = "SeasonProxy")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Season {
@@ -80,8 +108,6 @@ pub struct Season {
     pub mature_blocked: bool,
 
     #[cfg(feature = "__test_strict")]
-    pub(crate) audio_locale: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
     pub(crate) season_display_number: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     pub(crate) season_sequence_number: crate::StrictValue,
@@ -93,6 +119,32 @@ pub struct Season {
     pub(crate) identifier: crate::StrictValue,
 }
 impl Video for Season {}
+
+impl From<SeasonProxy> for Season {
+    fn from(mut season_proxy: SeasonProxy) -> Self {
+        if season_proxy.audio_locale != Locale::default() {
+            season_proxy.audio_locales.push(season_proxy.audio_locale)
+        }
+        Self {
+            audio_locales: season_proxy.audio_locales,
+            subtitle_locales: season_proxy.subtitle_locales,
+            season_number: season_proxy.season_number,
+            maturity_ratings: season_proxy.maturity_ratings,
+            is_mature: season_proxy.is_mature,
+            mature_blocked: season_proxy.mature_blocked,
+            #[cfg(feature = "__test_strict")]
+            season_display_number: season_proxy.season_display_number,
+            #[cfg(feature = "__test_strict")]
+            season_sequence_number: season_proxy.season_sequence_number,
+            #[cfg(feature = "__test_strict")]
+            extended_maturity_rating: season_proxy.extended_maturity_rating,
+            #[cfg(feature = "__test_strict")]
+            versions: season_proxy.versions,
+            #[cfg(feature = "__test_strict")]
+            identifier: season_proxy.identifier,
+        }
+    }
+}
 
 /// Metadata for a [`Media`] episode.
 #[allow(dead_code)]
