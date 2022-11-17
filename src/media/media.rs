@@ -88,14 +88,18 @@ struct SeasonProxy {
 }
 
 /// Metadata for a [`Media`] season.
+/// The deserializing requires a [`SeasonProxy`] because the season json response has two similar
+/// fields, `audio_locale` and `audio_locales`. Sometimes the first is populated, sometimes the
+/// second and sometimes both. They're representing the season audio but why it needs two fields
+/// for this, who knows. `audio_locale` is also a [`Vec`] of locales but, if populated, contains
+/// always only one locale.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[serde(from = "SeasonProxy")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Season {
-    /// Sometimes populated, sometimes not. idk why. Crunchyroll.
-    pub audio_locales: Vec<Locale>,
+    pub audio_locale: Locale,
     /// Sometimes populated, sometimes not. idk why. Crunchyroll.
     pub subtitle_locales: Vec<Locale>,
 
@@ -122,11 +126,12 @@ impl Video for Season {}
 
 impl From<SeasonProxy> for Season {
     fn from(mut season_proxy: SeasonProxy) -> Self {
-        if season_proxy.audio_locale != Locale::default() {
-            season_proxy.audio_locales.push(season_proxy.audio_locale)
+        if season_proxy.audio_locale == Locale::default() && !season_proxy.audio_locales.is_empty()
+        {
+            season_proxy.audio_locale = season_proxy.audio_locales[0].clone()
         }
         Self {
-            audio_locales: season_proxy.audio_locales,
+            audio_locale: season_proxy.audio_locale,
             subtitle_locales: season_proxy.subtitle_locales,
             season_number: season_proxy.season_number,
             maturity_ratings: season_proxy.maturity_ratings,

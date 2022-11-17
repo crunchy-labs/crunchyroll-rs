@@ -259,9 +259,8 @@ pub(crate) struct OldSeason {
 #[allow(clippy::from_over_into)]
 impl Into<Media<Season>> for OldSeason {
     fn into(mut self) -> Media<Season> {
-        // check if `audio_locale` field is not populated
-        if self.audio_locale != Locale::default() {
-            self.audio_locales.push(self.audio_locale)
+        if self.audio_locale == Locale::default() && !self.audio_locales.is_empty() {
+            self.audio_locale = self.audio_locales[0].clone()
         }
         Media {
             executor: self.executor,
@@ -277,7 +276,7 @@ impl Into<Media<Season>> for OldSeason {
             description: self.description.clone(),
             promo_description: self.description,
             metadata: Season {
-                audio_locales: self.audio_locales,
+                audio_locale: self.audio_locale,
                 subtitle_locales: self.subtitle_locales,
                 season_number: self.season_number,
                 maturity_ratings: self.maturity_ratings,
