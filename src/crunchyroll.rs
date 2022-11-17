@@ -86,11 +86,14 @@ pub struct Crunchyroll {
     pub(crate) executor: Arc<Executor>,
 }
 
-/// This impl is only for the native login methods. Compiling to with wasm fails if every function
-/// is in here because it don't know how to behave with `reqwest::Client`.
 impl Crunchyroll {
     pub fn builder() -> CrunchyrollBuilder {
         CrunchyrollBuilder::default()
+    }
+
+    /// Return the (cloned) [`isahc::HttpClient`] which is internally used to make requests.
+    pub fn client(&self) -> isahc::HttpClient {
+        self.executor.client.clone()
     }
 
     /// Check if the current used account has premium.
