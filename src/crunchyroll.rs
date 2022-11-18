@@ -169,6 +169,10 @@ mod auth {
         pub(crate) signature: String,
         pub(crate) policy: String,
         pub(crate) key_pair_id: String,
+        /// The account id is wrapped in a [`Result`] since [`Executor::auth_anonymously`] /
+        /// [`CrunchyrollBuilder::login_anonymously`] doesn't return an account id and to prevent
+        /// writing error messages multiple times in functions which require the account id to be
+        /// set they can just get the id or return the fix set error message.
         pub(crate) account_id: Result<String>,
     }
 
@@ -177,8 +181,8 @@ mod auth {
     pub struct Executor {
         pub(crate) client: HttpClient,
 
-        // this must be a mutex because `Executor` is always passed inside of `Arc` which does not allow
-        // direct changes to the struct
+        /// Must be a mutex because `Executor` is always passed inside of `Arc` which does not allow
+        /// direct changes to the struct.
         pub(crate) config: Mutex<ExecutorConfig>,
         pub(crate) details: ExecutorDetails,
     }
@@ -513,6 +517,8 @@ mod auth {
             self
         }
 
+        /// Login without an account. This is just like if you would visit crunchyroll.com without
+        /// an account. Some functions won't work if logged in with this method.
         pub async fn login_anonymously(self) -> Result<Crunchyroll> {
             let login_response = Executor::auth_anonymously(self.client.clone()).await?;
             let session_token = SessionToken::Anonymous;
