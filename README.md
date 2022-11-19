@@ -31,7 +31,7 @@
 > We are in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
 > The official Crunchyroll website can be found at https://crunchyroll.com/.
 
-**Please use this library via git in your Rust project. We're relying on a [development branch](https://github.com/sagebind/isahc/tree/tls-api-refactor) of [isahc](https://crates.io/crates/isahc) which is why it currently can't be published to crates.io.**
+**Please use this library via git in your Rust project. We're relying on a [development branch](https://github.com/sagebind/isahc/tree/tls-api-refactor) of [isahc](https://crates.io/crates/isahc) which is why it currently can't be published to [crates.io](https://crates.io/).**
 
 ## Documentation
 
@@ -42,7 +42,7 @@ The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).
 You need this crate and [tokio](https://github.com/tokio-rs/tokio) as dependency in your Cargo.toml in order to start working:
 ```toml
 [dependencies]
-crunchyroll-rs = "0.1"
+crunchyroll-rs = { git = "https://github.com/crunchy-labs/crunchyroll-rs" }
 tokio = { version = "1.21", features = ["full"] }
 ```
 
