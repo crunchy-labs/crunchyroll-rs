@@ -42,7 +42,9 @@ pub struct Series {
     pub is_subbed: bool,
     pub is_dubbed: bool,
     pub is_simulcast: bool,
+    /// Might be empty. Some series have this field populated with locales, others not.
     pub audio_locales: Vec<Locale>,
+    /// Might be empty. Some series have this field populated with locales, others not.
     pub subtitle_locales: Vec<Locale>,
 
     #[serde(default)]
