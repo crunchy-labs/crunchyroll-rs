@@ -35,7 +35,9 @@
 
 ## Documentation
 
-The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).
+~~The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).~~
+
+Documentation of the latest commit can be found [here](https://crunchy-labs.github.io/crunchyroll-rs/crunchyroll_rs/).
 
 ## Example
 
@@ -43,7 +45,7 @@ You need this crate and [tokio](https://github.com/tokio-rs/tokio) as dependency
 ```toml
 [dependencies]
 crunchyroll-rs = { git = "https://github.com/crunchy-labs/crunchyroll-rs" }
-tokio = { version = "1.21", features = ["full"] }
+tokio = { version = "1.22", features = ["full"] }
 ```
 
 The following code prints the data of the episode behind the given url:
