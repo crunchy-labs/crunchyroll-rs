@@ -1,12 +1,26 @@
-name: Documentation
+name: documentation
 
 on:
   push:
     branches:
       - master
 
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -17,8 +31,14 @@ jobs:
           cargo doc --no-deps --all-features
           echo '<meta http-equiv="refresh" content="0; url=crunchyroll_rs">' > ./target/doc/index.html
 
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/doc
+          path: ./target/doc
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v1
