@@ -124,7 +124,7 @@ pub struct Review {
 
 impl Review {
     /// Mark a review as helpful. A review can only be marked once as helpful (or not). If
-    /// [`Review::review::helpful`] is [`Some`], a review were already made.
+    /// [`Review::review.helpful`] is [`Some`], a review were already made.
     pub async fn mark_helpful(&mut self, helpful: bool) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content-reviews/v2/user/{}/rating/review/{}",

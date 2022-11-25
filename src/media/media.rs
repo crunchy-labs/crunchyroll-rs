@@ -16,13 +16,14 @@ pub trait Video: Default + DeserializeOwned + Request {}
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SearchMetadata {
-    /// `None` if queried by [`Crunchyroll::by_query`].
+    /// [`None`] if queried by [`crate::Crunchyroll::query`].
     pub last_public: Option<DateTime<Utc>>,
-    /// `None` if queried by [`Crunchyroll::by_query`].
+    /// [`None`] if queried by [`crate::Crunchyroll::query`].
     pub rank: Option<u32>,
 
     pub score: f64,
-    /// `None` if not queried by [`Series::similar`] or [`MovieListing::similar`].
+    /// [`None`] if not queried by [`crate::Media<Series>::similar`] or
+    /// [`crate::Media<MovieListing>::similar`].
     pub popularity_score: Option<f64>,
 }
 
@@ -90,7 +91,7 @@ struct SeasonProxy {
 }
 
 /// Metadata for a [`Media`] season.
-/// The deserializing requires a [`SeasonProxy`] because the season json response has two similar
+/// The deserializing requires a proxy struct because the season json response has two similar
 /// fields, `audio_locale` and `audio_locales`. Sometimes the first is populated, sometimes the
 /// second and sometimes both. They're representing the season audio but why it needs two fields
 /// for this, who knows. `audio_locale` is also a [`Vec`] of locales but, if populated, contains

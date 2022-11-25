@@ -23,8 +23,8 @@ macro_rules! impl_streaming {
                 /// further (e.g. write them to a file which than can be played).
                 /// The locale argument specifies which hardsub (subtitles which are "burned" into
                 /// the video) the returned data should have. You can get a list of supported locales
-                /// by calling [`VideoStream::streaming_hardsub_locale`] /
-                /// [`PlaybackStream::streaming_hardsub_locale`].
+                /// by calling [`VideoStream::streaming_hardsub_locales`] /
+                /// [`PlaybackStream::streaming_hardsub_locales`].
                 /// Note that this is only the implementation of this crate to stream data. You can
                 /// still manually use the variants in [`VideoStream::variants`] /
                 /// [`PlaybackStream::variants`] and implement the streaming on your own.

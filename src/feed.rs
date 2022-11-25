@@ -93,10 +93,10 @@ pub enum HomeFeedType {
     /// The feed at the top of the Crunchyroll website. Call [`CarouselFeed::collection_from_id`]
     /// with the value of this field to get a collection of usable [`CarouselFeed`] structs.
     CarouselFeed(String),
-    /// Represents a series. Call [`Series::from_id`] with the value of this field to get a usable
-    /// [`Series`] struct.
+    /// Represents a series. Call [`crate::Media<Series>::from_id`] with the value of this field to
+    /// get a usable [`crate::Media<Series>`] struct.
     Series(String),
-    /// Results similar to a series. Call [`Series::similar`] with the value of this field as first
+    /// Results similar to a series. Call [`crate::Media<Series>::similar`] with the value of this field as first
     /// argument to get similar series.
     SimilarTo(String),
     /// Represents a separate feed. Call [`CuratedFeed::from_id`] with the value of this field to
@@ -116,7 +116,7 @@ pub enum HomeFeedType {
     Browse(BrowseOptions),
     /// Banner with a link to a Crunchyroll series. Use the first value of this field to get the
     /// series link and the second to get image links. Note that no id is provided (for whatever
-    /// reason), so you cannot use [`Series::from_id`] to get the series as api element.
+    /// reason), so you cannot use [`crate::Media<Series>::from_id`] to get the series as api element.
     Banner(String, HomeFeedBannerImages),
 }
 
