@@ -75,7 +75,7 @@ impl From<std::io::Error> for CrunchyrollError {
 pub struct CrunchyrollErrorContext {
     pub message: String,
     pub url: Option<String>,
-    pub value: Option<Vec<u8>>,
+    pub value: Option<String>,
 }
 
 impl Display for CrunchyrollErrorContext {
@@ -83,16 +83,10 @@ impl Display for CrunchyrollErrorContext {
         let mut res = self.message.clone();
 
         if let Some(url) = &self.url {
-            res.push_str(format!(" ({})", url).as_str());
+            res.push_str(&format!(" ({})", url));
         }
         if let Some(value) = &self.value {
-            res.push_str(
-                format!(
-                    ": {}",
-                    std::str::from_utf8(value.as_slice()).unwrap_or("-- not displayable --")
-                )
-                .as_str(),
-            );
+            res.push_str(&format!(": {}", value));
         }
 
         write!(f, "{}", res)
@@ -127,7 +121,10 @@ impl CrunchyrollErrorContext {
     }
 
     pub(crate) fn with_value(mut self, value: &[u8]) -> Self {
-        self.value = Some(value.to_vec());
+        self.value = Some(format!(
+            ": {}",
+            std::str::from_utf8(value).unwrap_or("-- not displayable --")
+        ));
 
         self
     }
