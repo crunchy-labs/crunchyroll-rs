@@ -7,6 +7,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  ETP_RT: ${{ secrets.ETP_RT }}
 
 jobs:
   test-login-windows:
@@ -35,7 +36,7 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          target: x86_64-pc-windows-gnu
+          target: x86_64-pc-windows-msvc
           default: true
 
       - name: Test
