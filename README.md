@@ -33,6 +33,8 @@
 
 **Please use this library via git in your Rust project. We're relying on a [development branch](https://github.com/sagebind/isahc/tree/tls-api-refactor) of [isahc](https://crates.io/crates/isahc) which is why it currently can't be published to [crates.io](https://crates.io/).**
 
+**Windows has some problems with openssl (we're working on it) which may cause that this library does not work on windows based system. Works fine on Linux, if you want to test the lib, try via WSL 2 or another Linux host.**
+
 ## Documentation
 
 ~~The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).~~
