@@ -9,17 +9,73 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  ci:
+  test-login:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+            - os: ubuntu-latest
+              toolchain: x86_64-unknown-linux-musl
+            - os: windows-latest
+              toolchain: x86_64-pc-windows-gnu
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.toolchain }}
+          default: true
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: login_with_etp_rt --all-features
+
+  test-full:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Build
-        run: cargo build --verbose
+      - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run tests
-        env:
-          ETP_RT: ${{ secrets.ETP_RT }}
-        run: cargo test --verbose --tests --no-fail-fast --features __test_strict -- --test-threads=1 --skip login_with_credentials --skip login_with_access_token --skip login_with_refresh_token --skip login_with_session_id
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.toolchain }}
+          default: true
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_credentials --skip login_with_access_token --skip login_with_refresh_token --skip login_with_session_id
