@@ -500,7 +500,7 @@ mod auth {
             let client = HttpClientBuilder::new()
                 .default_header(header::USER_AGENT, USER_AGENT)
                 .default_header(header::ACCEPT, "*")
-                .proxy_tls_config(tls) // TODO: Change this to `tls_config` when https://github.com/sagebind/isahc/pull/388#discussion_r1014010929 is fixed
+                .tls_config(tls)
                 .cookie_jar(isahc::cookies::CookieJar::new())
                 .build()
                 .unwrap();
