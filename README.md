@@ -98,6 +98,7 @@ This installs openssl via [vcpkg](https://vcpkg.io) and makes it available for R
 $ git clone https://github.com/Microsoft/vcpkg.git
 $ cd vcpkg
 $ .\bootstrap-vcpkg.bat
+$ .\vcpkg.exe integrate install
 $ .\vcpkg.exe install openssl:x64-windows-static-md
 $ $env:CFLAGS="-I$pwd\packages\openssl_x64-windows-static-md\include"
 ```
