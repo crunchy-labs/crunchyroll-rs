@@ -22,7 +22,7 @@ jobs:
 
       - name: Set env variables
         shell: bash
-        run: echo "CFLAGS=-I$(echo $VCPKG_INSTALLATION_ROOT)/vcpkg/packages/openssl_x64-windows-static-md/include" >> $GITHUB_ENV
+        run: echo "CFLAGS=-I$(echo $VCPKG_INSTALLATION_ROOT)\packages\openssl_x64-windows-static-md\include" >> $GITHUB_ENV
 
       - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
         uses: actions/cache@v3
