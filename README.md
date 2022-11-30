@@ -107,6 +107,9 @@ This is only temporary for your shell session, it is recommended to set this env
 
 The same steps _must_ also be done if you try to use this library in a project and want to export it for Windows.
 
+> If you want to use the internally used http library ([isahc](https://github.com/sagebind/isahc/tree/tls-api-refactor)) and create a new instance of it, you _must_ set the tls certificates manually.
+> The `rustls-native-certs` crate is recommended since crunchyroll-rs uses it too (in [src/crunchyroll.rs](src/crunchyroll.rs)).
+
 #### Linux
 You need the openssl development package to compile this crate successfully.
 They will probably be distributed with your distros package manager.
