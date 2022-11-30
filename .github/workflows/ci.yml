@@ -47,7 +47,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: login_with_etp_rt --all-features
+          args: login_anonymously --all-features
 
   test-full:
     runs-on: ubuntu-latest
