@@ -482,9 +482,21 @@ mod auth {
 
     impl Default for CrunchyrollBuilder {
         fn default() -> Self {
+            #[cfg(not(all(windows, target_env = "msvc")))]
             let tls = TlsConfigBuilder::default()
                 .min_version(ProtocolVersion::Tlsv13)
                 .build();
+            #[cfg(all(windows, target_env = "msvc"))]
+            let tls = TlsConfigBuilder::default()
+                .min_version(ProtocolVersion::Tlsv13)
+                .root_cert_store(isahc::tls::RootCertStore::custom(
+                    rustls_native_certs::load_native_certs()
+                        .unwrap()
+                        .into_iter()
+                        .map(|l| isahc::tls::Certificate::from_der(l.0)),
+                ))
+                .build();
+
             let client = HttpClientBuilder::new()
                 .default_header(header::USER_AGENT, USER_AGENT)
                 .default_header(header::ACCEPT, "*")

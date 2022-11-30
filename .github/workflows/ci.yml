@@ -20,6 +20,10 @@ jobs:
       - run: vcpkg integrate install
       - run: vcpkg install openssl:x64-windows-static-md
 
+      - name: Set env variables
+        shell: bash
+        run: export CFLAGS="-I $(echo $VCPKG_INSTALLATION_ROOT)/vcpkg/packages/openssl_x64-windows-static-md/include"
+
       - name: Cargo cache # https://github.com/actions/cache/blob/main/examples.md#rust---cargo
         uses: actions/cache@v3
         with:
