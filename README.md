@@ -33,8 +33,6 @@
 
 **Please use this library via git in your Rust project. We're relying on a [development branch](https://github.com/sagebind/isahc/tree/tls-api-refactor) of [isahc](https://crates.io/crates/isahc) which is why it currently can't be published to [crates.io](https://crates.io/).**
 
-**Windows has some problems with openssl (we're working on it) which may cause that this library does not work on windows based system. Works fine on Linux, if you want to test the lib, try via WSL 2 or another Linux host.**
-
 ## Documentation
 
 ~~The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).~~
@@ -87,8 +85,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 _More examples can be found in the [examples/](examples) directory._
 
-## Api Coverage
+## Development
 
+#### Windows
+To get this library working on Windows a manual build of [OpenSSL](https://www.openssl.org/) is required which involves some extra steps.
+In order to work this library _must_ use TLSv1.3 (to bypass the Crunchyroll Bot Check) but cannot the default Windows SSL/TLS library does not support TLSv1.3.
+[rustls](https://github.com/rustls/rustls) was also considered as a replacement for OpenSSL but unfortunately the Bot Check cannot be bypassed even though TLSv1.3 is supported by it.
+See crunchy-labs/crunchy-cli#74 for more information about the initial OpenSSL issue.
+
+This installs openssl via [vcpkg](https://vcpkg.io) and makes it available for Rust (in Powershell):
+```shell 
+$ git clone https://github.com/Microsoft/vcpkg.git
+$ cd vcpkg
+$ .\bootstrap-vcpkg.bat
+$ .\vcpkg.exe install openssl:x64-windows-static-md
+$ $env:CFLAGS="-I$pwd\packages\openssl_x64-windows-static-md\include"
+```
+The last line sets the path to the openssl headers.
+This is only temporary for your shell session, it is recommended to set this environment variable in your code editor or somewhere where it can be globally accessed.
+
+The same steps _must_ also be done if you try to use this library in a project and want to export it for Windows.
+
+#### Linux
+You need the openssl development package to compile this crate successfully.
+They will probably be distributed with your distros package manager.
+
+Arch
+```shell
+$ pacman -S openssl
+```
+
+Debian
+```shell
+$ apt install libssl-dev
+```
+
+Fedora
+```shell
+$ dnf install openssl-devel
+```
+
+Alpine
+```shell
+$ apk add openssl-dev
+```
+
+#### Api Coverage
 Crunchyroll regularly updates their api but does not provide any documentation for it.
 Because we do not monitor the api constantly, so we cannot immediately say when a new endpoint is added or something has changed on already existing and implemented endpoints (which is semi-covered by the `__test-strict` feature, at least).
 If you find an endpoint which is not implemented or has changes feel free to open a new [issue](https://github.com/crunchy-labs/crunchyroll-rs/issues) and tell us, or fork the library and implement it yourself.
