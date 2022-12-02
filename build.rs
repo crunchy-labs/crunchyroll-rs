@@ -7,8 +7,10 @@ fn main() -> std::io::Result<()> {
             .unwrap()
             .bytes()?;
         std::fs::write(
-            std::path::Path::new(&std::env::var("OUT_DIR").map_err(|_| std::io::ErrorKind::NotFound)?)
-                .join("cacert.pem"),
+            std::path::Path::new(
+                &std::env::var("OUT_DIR").map_err(|_| std::io::ErrorKind::NotFound)?,
+            )
+            .join("cacert.pem"),
             cacert,
         )?
     }

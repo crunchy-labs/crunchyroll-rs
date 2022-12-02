@@ -490,7 +490,10 @@ mod auth {
             let tls = TlsConfigBuilder::default()
                 .min_version(ProtocolVersion::Tlsv13)
                 .root_cert_store(isahc::tls::RootCertStore::from(
-                    isahc::tls::Certificate::from_pem(include_bytes!(concat!(env!("OUT_DIR"), "/cacert.pem"))),
+                    isahc::tls::Certificate::from_pem(include_bytes!(concat!(
+                        env!("OUT_DIR"),
+                        "/cacert.pem"
+                    ))),
                 ))
                 .build();
 
