@@ -1,5 +1,3 @@
-use std::io::Read;
-
 fn main() -> std::io::Result<()> {
     #[cfg(any(all(windows, target_env = "msvc"), feature = "static-certs"))]
     {
