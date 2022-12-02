@@ -169,9 +169,7 @@ impl VariantData {
     /// its configuration is not compatible with the segment download servers.
     pub fn download_client(&self) -> isahc::HttpClient {
         #[cfg(not(any(all(windows, target_env = "msvc"), feature = "static-certs")))]
-        let tls = TlsConfigBuilder::default()
-            .min_version(ProtocolVersion::Tlsv13)
-            .build();
+        let tls = TlsConfigBuilder::default().build();
         #[cfg(any(all(windows, target_env = "msvc"), feature = "static-certs"))]
         let tls = TlsConfigBuilder::default()
             .root_cert_store(isahc::tls::RootCertStore::from(
