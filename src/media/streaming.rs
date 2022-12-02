@@ -203,11 +203,7 @@ impl VariantData {
         for segment in media_playlist.segments {
             if let Some(k) = segment.key {
                 if let Some(url) = k.uri {
-                    let req = isahc::Request::get(url)
-                        .header(header::USER_AGENT, USER_AGENT)
-                        .body(())
-                        .unwrap();
-                    let mut resp = isahc::send_async(req).await?;
+                    let mut resp = download_client.clone().get_async(url).await?;
                     let raw_key = resp.bytes().await?;
 
                     let temp_iv = k.iv.unwrap_or_default();
@@ -268,11 +264,7 @@ impl VariantSegment {
 
     /// Write this segment to a writer.
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        let req = isahc::Request::get(self.url)
-            .header(header::USER_AGENT, USER_AGENT)
-            .body(())
-            .unwrap();
-        let mut resp = self.download_client.send_async(req).await?;
+        let mut resp = self.download_client.get_async(self.url).await?;
         let segment = resp.bytes().await?;
 
         w.write(VariantSegment::decrypt(
