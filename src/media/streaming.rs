@@ -6,7 +6,9 @@ use crate::media::{PlaybackStream, VideoStream};
 use crate::{Executor, Locale, Request, Result};
 use aes::cipher::{BlockDecryptMut, KeyIvInit};
 use http::header;
-use isahc::AsyncReadResponseExt;
+use isahc::config::Configurable;
+use isahc::tls::TlsConfigBuilder;
+use isahc::{AsyncReadResponseExt, HttpClient, HttpClientBuilder};
 use std::borrow::BorrowMut;
 use std::fmt::Formatter;
 use std::io::Write;
@@ -162,8 +164,33 @@ impl VariantData {
         Ok(stream_data)
     }
 
+    /// Return a [`isahc::HttpClient`] which can be used to download segments (via
+    /// [`VariantData::segments`]). The normal [`crate::Crunchyroll::client`] cannot be used because
+    /// its configuration is not compatible with the segment download servers.
+    pub fn download_client(&self) -> isahc::HttpClient {
+        #[cfg(not(any(all(windows, target_env = "msvc"), feature = "static-certs")))]
+        let tls = TlsConfigBuilder::default()
+            .min_version(ProtocolVersion::Tlsv13)
+            .build();
+        #[cfg(any(all(windows, target_env = "msvc"), feature = "static-certs"))]
+        let tls = TlsConfigBuilder::default()
+            .root_cert_store(isahc::tls::RootCertStore::from(
+                isahc::tls::Certificate::from_pem(include_bytes!(concat!(
+                    env!("OUT_DIR"),
+                    "/cacert.pem"
+                ))),
+            ))
+            .build();
+
+        HttpClientBuilder::new()
+            .default_header(header::USER_AGENT, USER_AGENT)
+            .default_header(header::ACCEPT, "*")
+            .tls_config(tls)
+            .build()
+            .unwrap()
+    }
+
     /// Return all segments in order the variant stream is made of.
-    #[allow(dead_code)]
     pub async fn segments(&self) -> Result<Vec<VariantSegment>> {
         let mut resp = self.executor.client.get_async(self.url.clone()).await?;
         let raw_media_playlist = resp.bytes().await?;
@@ -172,6 +199,8 @@ impl VariantData {
 
         let mut segments: Vec<VariantSegment> = vec![];
         let mut key: Option<Aes128CbcDec> = None;
+
+        let download_client = Arc::new(self.download_client());
 
         for segment in media_playlist.segments {
             if let Some(k) = segment.key {
@@ -195,7 +224,7 @@ impl VariantData {
             }
 
             segments.push(VariantSegment {
-                executor: self.executor.clone(),
+                download_client: download_client.clone(),
                 key: key.clone(),
                 url: segment.uri,
                 length: Duration::from_secs_f32(segment.duration),
@@ -214,7 +243,7 @@ impl VariantData {
 #[allow(dead_code)]
 #[derive(Clone, Debug, Request)]
 pub struct VariantSegment {
-    executor: Arc<Executor>,
+    download_client: Arc<HttpClient>,
 
     /// Decryption key to decrypt the segment data (if encrypted).
     pub key: Option<Aes128CbcDec>,
@@ -241,14 +270,11 @@ impl VariantSegment {
 
     /// Write this segment to a writer.
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        // The default isahc client the crate uses cannot be used here because it's configured to
-        // only accept TLSv1.3 connections (to bypass the cloudflare bot check) but the servers where
-        // the stream segments are stored only accept TLS up to v1.2 (but have no cloudflare bot check)
         let req = isahc::Request::get(self.url)
             .header(header::USER_AGENT, USER_AGENT)
             .body(())
             .unwrap();
-        let mut resp = isahc::send_async(req).await?;
+        let mut resp = self.download_client.send_async(req).await?;
         let segment = resp.bytes().await?;
 
         w.write(VariantSegment::decrypt(
