@@ -181,8 +181,7 @@ macro_rules! add_to_watchlist {
                 #[doc = $as]
                 pub async fn into_watchlist_entry(&self) -> Result<Option<SimpleWatchlistEntry>> {
                     let endpoint = format!("https://www.crunchyroll.com/content/v1/watchlist/{}/{}", self.executor.details.account_id.clone()?, self.id);
-                    let builder = isahc::Request::get(endpoint).body(()).unwrap();
-                    let result: serde_json::Value = self.executor.request(builder).await?;
+                    let result: serde_json::Value = self.executor.get(endpoint).request().await?;
                     let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
                     if as_map.is_empty() {
                         Ok(None)
