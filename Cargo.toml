@@ -21,6 +21,9 @@ parse = ["regex"]
 
 # Embed curl statically into the library instead of using a system provided shared library.
 static-curl = ["isahc/static-curl"]
+# Embed the system tls library statically into the crate instead of using a system provided shared library.
+# Has no effect on Windows, the tls library is always statically there.
+static-ssl = ["isahc/native-tls-static"]
 # Embed static tls certificates which get grabbed from https://curl.se/docs/caextract.html.
 # Has no effect on Windows (msvc), always activated.
 static-certs = []
