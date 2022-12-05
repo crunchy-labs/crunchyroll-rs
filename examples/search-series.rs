@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
             s.title, s.metadata.season_count
         );
         let seasons = s.seasons().await?;
-        for season in seasons.items {
+        for season in seasons {
             println!(
                 "Found season {} with audio locale(s) {}",
                 season.metadata.season_number,
