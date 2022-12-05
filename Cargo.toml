@@ -11,11 +11,12 @@ keywords = ["crunchyroll", "anime", "downloader"]
 categories = ["api-bindings"]
 
 [features]
-default = ["stream", "parse", "static-curl"]
+default = ["hls-stream", "parse", "static-curl"]
 
 # Add functionality to stream episodes / movies so you can process the unencrypted streaming data further, e.g. write it
 # to a file and then play it.
-stream = ["aes", "cbc", "m3u8-rs"]
+hls-stream = ["aes", "cbc", "m3u8-rs"]
+dash-stream = ["dash-mpd"]
 # Add functionality to parse Crunchyroll urls.
 parse = ["regex"]
 
@@ -46,6 +47,7 @@ crunchyroll-rs-internal = { version = "0.1", path = "internal" }
 # Optional / required from features
 aes = { version = "0.8", optional = true }
 cbc = { version = "0.1", optional = true }
+dash-mpd = { version = "0.6", default-features = false, optional = true }
 m3u8-rs = { version = "5.0", optional = true }
 regex = { version = "1.7", default-features = false, features = ["std"], optional = true }
 

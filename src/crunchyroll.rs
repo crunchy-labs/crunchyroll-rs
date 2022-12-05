@@ -474,9 +474,15 @@ mod auth {
 
         pub(crate) async fn request_raw(self) -> Result<Vec<u8>> {
             let mut result = if let Some(body) = self.body {
-                self.executor.client.send_async(self.builder.body(body).unwrap()).await?
+                self.executor
+                    .client
+                    .send_async(self.builder.body(body).unwrap())
+                    .await?
             } else {
-                self.executor.client.send_async(self.builder.body(()).unwrap()).await?
+                self.executor
+                    .client
+                    .send_async(self.builder.body(()).unwrap())
+                    .await?
             };
             Ok(result.bytes().await?)
         }

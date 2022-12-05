@@ -6,7 +6,7 @@ mod streaming;
 
 pub use media::*;
 pub use stream::*;
-#[cfg(feature = "stream")]
+#[cfg(any(feature = "hls-stream", feature = "dash-stream"))]
 pub use streaming::*;
 
 use crate::enum_values;
