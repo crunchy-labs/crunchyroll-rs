@@ -814,13 +814,14 @@ macro_rules! impl_media_video {
                         "https://static.crunchyroll.com/datalab-intro-v2/{}.json",
                         self.id
                     );
-                    let result: serde_json::Value = self.executor.get(endpoint)
-                        .request()
+                    let raw_result = self.executor.get(endpoint)
+                        .request_raw()
                         .await?;
-                    if result.to_string().contains("</Error>") {
+                    let result = String::from_utf8_lossy(raw_result.as_slice());
+                    if result.contains("</Error>") {
                         Ok(None)
                     } else {
-                        let video_intro_result: VideoIntroResult = serde_json::from_value(result)?;
+                        let video_intro_result: VideoIntroResult = serde_json::from_str(&result)?;
                         Ok(Some((video_intro_result.start_time, video_intro_result.end_time)))
                     }
                 }
