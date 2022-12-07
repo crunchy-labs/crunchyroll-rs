@@ -296,8 +296,9 @@ impl VariantData {
                         .clone(),
                     init: segment_template
                         .initialization
+                        .clone()
                         .expect("dash initialization url"),
-                    fragments: segment_template.media.expect("dash media url"),
+                    fragments: segment_template.media.clone().expect("dash media url"),
                     start: segment_template.startNumber.expect("dash start number") as u32,
                     count: segment_count,
                 },

@@ -141,4 +141,3 @@ pub use parse::{parse_url, UrlType};
 
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;
-use crate::media::{PlaybackStream, VideoStream};
