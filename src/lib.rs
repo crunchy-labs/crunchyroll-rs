@@ -75,11 +75,17 @@
 //! Crunchyroll uses the [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) and
 //! [MPEG-DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP) video streaming
 //! formats to distribute their streams. The logic to work with this formats is already implemented
-//! into this crate (it uses the _HLS_ stream backend).
+//! into this crate.
+//!
+//! The feature `hls-stream` and / or `dash-stream` must be activated to get streams. `hls-stream`
+//! is activated by default and should be used if you want to get the video + audio combined
+//! ([`VideoStream::hls_streaming_data`] / [`PlaybackStream::hls_streaming_data`]). `dash-stream`
+//! should be used if you want to get the audio and video streams separately
+//! ([`VideoStream::dash_streaming_data`] / [`PlaybackStream::dash_streaming_data`]).
 //!
 //! ```
 //! let streaming_data = streams
-//!     .streaming_data(None)
+//!     .hls_streaming_data(None)
 //!     .await?;
 //!
 //! // sort the streams to get the stream with the best resolution at first
@@ -97,8 +103,6 @@
 //!     segment.write_to(sink).await?;
 //! }
 //! ```
-//!
-//! **Note:** The `stream` feature must be enable to process / write streams (enabled by default).
 //!
 //! # Implementation
 //! To ensure at least all existing parts of the library are working as expected, a special feature
@@ -137,3 +141,4 @@ pub use parse::{parse_url, UrlType};
 
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;
+use crate::media::{PlaybackStream, VideoStream};
