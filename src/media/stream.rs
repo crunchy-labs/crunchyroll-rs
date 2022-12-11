@@ -58,6 +58,7 @@ pub struct VideoStream {
     pub audio_locale: Locale,
     /// All subtitles.
     pub subtitles: HashMap<Locale, StreamSubtitle>,
+    pub closed_captions: HashMap<Locale, StreamSubtitle>,
 
     /// All stream variants.
     /// One stream has multiple variants how it can be delivered. At the time of writing,
@@ -74,8 +75,6 @@ pub struct VideoStream {
 
     #[cfg(feature = "__test_strict")]
     captions: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    closed_captions: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     bifs: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
