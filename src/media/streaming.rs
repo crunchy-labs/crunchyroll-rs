@@ -199,7 +199,7 @@ pub struct VariantData {
 }
 
 impl VariantData {
-    pub(crate) async fn get_url() -> Result<VariantDataUrl>{
+    pub(crate) async fn get_url(&self) -> Result<VariantDataUrl>{
     Ok(self.url)
     }
     
