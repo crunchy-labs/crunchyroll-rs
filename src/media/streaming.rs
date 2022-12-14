@@ -199,9 +199,6 @@ pub struct VariantData {
 }
 
 impl VariantData {
-    pub fn get_url(&self) -> VariantDataUrl{
-        self.url
-    }
     
     #[cfg(feature = "hls-stream")]
     pub(crate) async fn from_hls_master(
@@ -464,6 +461,11 @@ impl VariantData {
 
         Ok(segments)
     }
+    
+    pub fn get_url(&self) -> VariantDataUrl {
+        self.url
+    }
+
 }
 
 /// A single segment, representing a part of a video stream.
