@@ -199,7 +199,6 @@ pub struct VariantData {
 }
 
 impl VariantData {
-    
     #[cfg(feature = "hls-stream")]
     pub(crate) async fn from_hls_master(
         executor: Arc<Executor>,
@@ -461,7 +460,7 @@ impl VariantData {
 
         Ok(segments)
     }
-    
+
     pub fn get_url(&self) -> VariantDataUrl {
         self.url
     }
