@@ -464,7 +464,6 @@ impl VariantData {
     pub fn get_url(&self) -> VariantDataUrl {
         self.url
     }
-
 }
 
 /// A single segment, representing a part of a video stream.
