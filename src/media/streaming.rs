@@ -419,6 +419,17 @@ impl VariantData {
         Ok(segments)
     }
 
+    // Get the m3u8 url if you want to use ffmpeg to handle all the download process
+    // It can be faster to download yourself segment by segment
+    #[cfg(feature = "hls-stream")]
+    pub fn hls_get_master_url(&self) -> Result<String> {
+        #[allow(irrefutable_let_patterns)]
+        let VariantDataUrl::Hls { url } = &self.url else {
+            return Err(CrunchyrollError::Internal("variant url should be hls".into()))
+        };
+        Ok(url.to_string())
+    }
+
     #[cfg(feature = "dash-stream")]
     async fn dash_segments(&self) -> Result<Vec<VariantSegment>> {
         #[allow(irrefutable_let_patterns)]
