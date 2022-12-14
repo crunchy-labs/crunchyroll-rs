@@ -462,7 +462,7 @@ impl VariantData {
     }
 
     pub fn get_url(&self) -> VariantDataUrl {
-        self.url
+        self.url.clone()
     }
 }
 
