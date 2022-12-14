@@ -199,8 +199,8 @@ pub struct VariantData {
 }
 
 impl VariantData {
-    pub(crate) async fn get_url(&self) -> Result<VariantDataUrl>{
-    Ok(self.url)
+    pub fn get_url(&self) -> VariantDataUrl{
+        self.url
     }
     
     #[cfg(feature = "hls-stream")]
