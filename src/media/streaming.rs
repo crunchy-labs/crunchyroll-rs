@@ -195,10 +195,14 @@ pub struct VariantData {
     pub fps: f64,
     pub codecs: String,
 
-    pub url: VariantDataUrl,
+    url: VariantDataUrl,
 }
 
 impl VariantData {
+    pub(crate) async fn get_url() -> Result<VariantDataUrl>{
+    Ok(self.url)
+    }
+    
     #[cfg(feature = "hls-stream")]
     pub(crate) async fn from_hls_master(
         executor: Arc<Executor>,
