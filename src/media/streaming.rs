@@ -460,10 +460,6 @@ impl VariantData {
 
         Ok(segments)
     }
-
-    pub fn get_url(&self) -> VariantDataUrl {
-        self.url.clone()
-    }
 }
 
 /// A single segment, representing a part of a video stream.
