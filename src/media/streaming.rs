@@ -195,7 +195,7 @@ pub struct VariantData {
     pub fps: f64,
     pub codecs: String,
 
-    url: VariantDataUrl,
+    pub url: VariantDataUrl,
 }
 
 impl VariantData {
