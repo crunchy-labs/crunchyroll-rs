@@ -9,6 +9,9 @@ on:
       dry_run:
         type: boolean
         default: false
+      skip_exists_check:
+        type: boolean
+        default: false
 
 jobs:
   publish:
@@ -25,6 +28,7 @@ jobs:
           args: cargo-show
 
       - name: Check if version exists
+        if: !${{ github.event.inputs.skip_exists_check }}
         run: if cargo show crunchyroll-rs --json | grep -q -E "\"num\":\w*\"$(git describe --tags --abbrev=0 --match 'v*' 2> /dev/null | cut -c 2-)"; then echo "Version already exists" && exit 1; fi
 
       - name: Publish
