@@ -21,14 +21,14 @@ jobs:
       # I had a check here if the versions are already existing but magically with gh actions it returned a false
       # positive.
 
-      - name: Publish main
-        run: |
-          DRY_RUN=${{ github.event.inputs.dry_run }}
-          DRY_RUN=${DRY_RUN:-"false"}
-          cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
-
       - name: Publish internal
         run: |
           DRY_RUN=${{ github.event.inputs.dry_run }}
           DRY_RUN=${DRY_RUN:-"false"}
           cd internal && cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
+
+      - name: Publish main
+        run: |
+          DRY_RUN=${{ github.event.inputs.dry_run }}
+          DRY_RUN=${DRY_RUN:-"false"}
+          cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
