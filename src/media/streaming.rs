@@ -395,6 +395,7 @@ impl VariantData {
     pub fn hls_master_url(&self) -> Option<String> {
         match &self.url {
             VariantDataUrl::Hls { url } => Some(url.clone()),
+            #[cfg(feature = "dash-stream")]
             _ => None,
         }
     }
