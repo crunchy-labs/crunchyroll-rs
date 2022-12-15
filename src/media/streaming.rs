@@ -395,7 +395,7 @@ impl VariantData {
     pub fn hls_master_url(&self) -> Option<String> {
         match &self.url {
             VariantDataUrl::Hls { url } => Some(url.clone()),
-            _ => None
+            _ => None,
         }
     }
 
