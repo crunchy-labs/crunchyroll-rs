@@ -1,4 +1,5 @@
 use crate::enum_values;
+use reqwest::Client;
 use std::sync::Arc;
 
 enum_values! {
@@ -77,9 +78,6 @@ enum_values! {
     }
 }
 
-pub(crate) const USER_AGENT: &str =
-    "Mozilla/5.0 (X11; Linux x86_64; rv:106.0) Gecko/20100101 Firefox/106.0";
-
 /// Starting point of this whole library.
 #[derive(Clone, Debug)]
 pub struct Crunchyroll {
@@ -91,8 +89,8 @@ impl Crunchyroll {
         CrunchyrollBuilder::default()
     }
 
-    /// Return the (cloned) [`isahc::HttpClient`] which is internally used to make requests.
-    pub fn client(&self) -> isahc::HttpClient {
+    /// Return the (cloned) [`Client`] which is internally used to make requests.
+    pub fn client(&self) -> Client {
         self.executor.client.clone()
     }
 
@@ -109,18 +107,14 @@ impl Crunchyroll {
 }
 
 mod auth {
-    use crate::crunchyroll::USER_AGENT;
     use crate::error::{check_request, CrunchyrollError, CrunchyrollErrorContext};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
     use http::header;
-    use isahc::config::Configurable;
-    use isahc::tls::{ProtocolVersion, TlsConfigBuilder};
-    use isahc::{AsyncReadResponseExt, HttpClient, HttpClientBuilder, ResponseExt};
+    use reqwest::{Client, IntoUrl, RequestBuilder};
     use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
     use std::ops::Add;
-    use std::str::FromStr;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -179,7 +173,7 @@ mod auth {
     /// Internal struct to execute all request with.
     #[derive(Debug)]
     pub struct Executor {
-        pub(crate) client: HttpClient,
+        pub(crate) client: Client,
 
         /// Must be a mutex because `Executor` is always passed inside of `Arc` which does not allow
         /// direct changes to the struct.
@@ -188,29 +182,29 @@ mod auth {
     }
 
     impl Executor {
-        pub(crate) fn get<S: AsRef<str>>(self: &Arc<Self>, url: S) -> ExecutorRequestBuilder {
-            ExecutorRequestBuilder::new(self.clone(), isahc::Request::get(url.as_ref()))
+        pub(crate) fn get<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.get(url))
         }
 
-        pub(crate) fn post<S: AsRef<str>>(self: &Arc<Self>, url: S) -> ExecutorRequestBuilder {
-            ExecutorRequestBuilder::new(self.clone(), isahc::Request::post(url.as_ref()))
+        pub(crate) fn post<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.post(url))
         }
 
-        pub(crate) fn put<S: AsRef<str>>(self: &Arc<Self>, url: S) -> ExecutorRequestBuilder {
-            ExecutorRequestBuilder::new(self.clone(), isahc::Request::put(url.as_ref()))
+        pub(crate) fn put<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.put(url))
         }
 
-        pub(crate) fn patch<S: AsRef<str>>(self: &Arc<Self>, url: S) -> ExecutorRequestBuilder {
-            ExecutorRequestBuilder::new(self.clone(), isahc::Request::patch(url.as_ref()))
+        pub(crate) fn patch<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.patch(url))
         }
 
-        pub(crate) fn delete<S: AsRef<str>>(self: &Arc<Self>, url: S) -> ExecutorRequestBuilder {
-            ExecutorRequestBuilder::new(self.clone(), isahc::Request::delete(url.as_ref()))
+        pub(crate) fn delete<U: IntoUrl>(self: &Arc<Self>, url: U) -> ExecutorRequestBuilder {
+            ExecutorRequestBuilder::new(self.clone(), self.client.delete(url))
         }
 
-        pub(crate) async fn request<T: Request + DeserializeOwned, B: Into<isahc::AsyncBody>>(
+        pub(crate) async fn request<T: Request + DeserializeOwned>(
             self: &Arc<Self>,
-            mut req: isahc::Request<B>,
+            mut req: RequestBuilder,
         ) -> Result<T> {
             let mut config = self.config.lock().await;
             if config.session_expire <= Utc::now() {
@@ -245,14 +239,11 @@ mod auth {
                 *config = new_config;
             }
 
-            req.headers_mut().append(
+            req = req.header(
                 header::AUTHORIZATION,
-                header::HeaderValue::from_str(&format!("Bearer {}", config.access_token)).unwrap(),
+                format!("Bearer {}", config.access_token),
             );
-            req.headers_mut().append(
-                header::CONTENT_TYPE,
-                header::HeaderValue::from_str("application/json").unwrap(),
-            );
+            req = req.header(header::CONTENT_TYPE, "application/json");
 
             let mut resp: T = request(self.client.clone(), req).await?;
 
@@ -261,11 +252,10 @@ mod auth {
             Ok(resp)
         }
 
-        async fn auth_anonymously(client: HttpClient) -> Result<AuthResponse> {
-            Executor::pre_auth(&client).await?;
-
+        async fn auth_anonymously(client: Client) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let req = isahc::Request::post(endpoint)
+            let resp = client
+                .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic Y3Jfd2ViOg==")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(
@@ -275,21 +265,19 @@ mod auth {
                     ])
                     .unwrap(),
                 )
-                .unwrap();
-            let resp = client.send_async(req).await?;
+                .send()
+                .await?;
 
             check_request(endpoint.to_string(), resp).await
         }
 
         async fn auth_with_credentials(
-            client: HttpClient,
+            client: Client,
             user: String,
             password: String,
         ) -> Result<AuthResponse> {
-            Executor::pre_auth(&client).await?;
-
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let req = isahc::Request::post(endpoint)
+            let resp = client.post(endpoint)
                 .header(header::AUTHORIZATION, "Basic aHJobzlxM2F3dnNrMjJ1LXRzNWE6cHROOURteXRBU2Z6QjZvbXVsSzh6cUxzYTczVE1TY1k=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(
@@ -301,20 +289,18 @@ mod auth {
                     ])
                     .unwrap(),
                 )
-                .unwrap();
-            let resp = client.send_async(req).await?;
+                .send()
+                .await?;
 
             check_request(endpoint.to_string(), resp).await
         }
 
         async fn auth_with_refresh_token(
-            client: HttpClient,
+            client: Client,
             refresh_token: String,
         ) -> Result<AuthResponse> {
-            Executor::pre_auth(&client).await?;
-
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let req = isahc::Request::post(endpoint)
+            let resp = client.post(endpoint)
                 .header(header::AUTHORIZATION, "Basic aHJobzlxM2F3dnNrMjJ1LXRzNWE6cHROOURteXRBU2Z6QjZvbXVsSzh6cUxzYTczVE1TY1k=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(
@@ -325,30 +311,19 @@ mod auth {
                     ])
                     .unwrap(),
                 )
-                .unwrap();
-            let resp = client.send_async(req).await?;
+                .send()
+                .await?;
 
             check_request(endpoint.to_string(), resp).await
         }
 
-        async fn auth_with_etp_rt(client: HttpClient, etp_rt: String) -> Result<AuthResponse> {
-            Executor::pre_auth(&client).await?;
-
+        async fn auth_with_etp_rt(client: Client, etp_rt: String) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-
-            let jar = client.cookie_jar().unwrap();
-            jar.set(
-                isahc::cookies::CookieBuilder::new("etp_rt", etp_rt)
-                    .build()
-                    .unwrap(),
-                &http::Uri::from_str("https://www.crunchyroll.com/").unwrap(),
-            )
-            .unwrap();
-
-            let req = isahc::Request::post(endpoint)
+            let resp = client
+                .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-                .cookie_jar(jar.clone())
+                .header(header::COOKIE, format!("etp_rt={}", etp_rt))
                 .body(
                     serde_urlencoded::to_string([
                         ("grant_type", "etp_rt_cookie"),
@@ -356,31 +331,17 @@ mod auth {
                     ])
                     .unwrap(),
                 )
-                .unwrap();
-            let resp = client.send_async(req).await?;
+                .send()
+                .await?;
 
             check_request(endpoint.to_string(), resp).await
-        }
-
-        async fn pre_auth(client: &HttpClient) -> Result<()> {
-            let mut resp = client.get_async("https://www.crunchyroll.com/").await?;
-
-            if resp.status().as_u16() >= 400 {
-                Err(CrunchyrollError::Internal(
-                    CrunchyrollErrorContext::new("Failed to get index cookies")
-                        .with_url("https://www.crunchyroll.com/")
-                        .with_value(resp.bytes().await.unwrap().as_slice()),
-                ))
-            } else {
-                Ok(())
-            }
         }
     }
 
     impl Default for Executor {
         fn default() -> Self {
             Self {
-                client: HttpClient::new().unwrap(),
+                client: Client::new(),
                 config: Mutex::new(ExecutorConfig {
                     token_type: "".to_string(),
                     access_token: "".to_string(),
@@ -402,41 +363,16 @@ mod auth {
 
     pub(crate) struct ExecutorRequestBuilder {
         executor: Arc<Executor>,
-        builder: http::request::Builder,
-        body: Option<Vec<u8>>,
+        builder: RequestBuilder,
     }
 
     impl ExecutorRequestBuilder {
-        pub(crate) fn new(executor: Arc<Executor>, builder: http::request::Builder) -> Self {
-            Self {
-                executor,
-                builder,
-                body: None,
-            }
+        pub(crate) fn new(executor: Arc<Executor>, builder: RequestBuilder) -> Self {
+            Self { executor, builder }
         }
 
-        pub(crate) fn query<K: Serialize + Sized, V: Serialize + Sized>(
-            mut self,
-            query: &[(K, V)],
-        ) -> ExecutorRequestBuilder {
-            let uri = self.builder.uri_ref().unwrap().clone();
-            let path_and_query = uri.path_and_query().unwrap();
-            let path = path_and_query.path();
-            let query = if let Some(q) = path_and_query.query() {
-                format!("{}&{}", q, serde_urlencoded::to_string(query).unwrap())
-            } else {
-                serde_urlencoded::to_string(query).unwrap()
-            };
-            self.builder = self.builder.uri(
-                http::Uri::from_str(&format!(
-                    "{}://{}{}?{}",
-                    uri.scheme_str().unwrap(),
-                    uri.host().unwrap(),
-                    path,
-                    query
-                ))
-                .unwrap(),
-            );
+        pub(crate) fn query<T: Serialize + ?Sized>(mut self, query: &T) -> ExecutorRequestBuilder {
+            self.builder = self.builder.query(query);
 
             self
         }
@@ -457,66 +393,54 @@ mod auth {
         }
 
         pub(crate) fn json<T: Serialize + ?Sized>(mut self, json: &T) -> ExecutorRequestBuilder {
-            self.body = Some(serde_json::to_vec(json).unwrap());
+            self.builder = self.builder.json(json);
 
             self
         }
 
         pub(crate) async fn request<T: Request + DeserializeOwned>(self) -> Result<T> {
-            if let Some(body) = self.body {
-                self.executor
-                    .request(self.builder.body(body).unwrap())
-                    .await
-            } else {
-                self.executor.request(self.builder.body(()).unwrap()).await
-            }
+            self.executor.request(self.builder).await
         }
 
         pub(crate) async fn request_raw(self) -> Result<Vec<u8>> {
-            let mut result = if let Some(body) = self.body {
-                self.executor
-                    .client
-                    .send_async(self.builder.body(body).unwrap())
-                    .await?
-            } else {
-                self.executor
-                    .client
-                    .send_async(self.builder.body(()).unwrap())
-                    .await?
-            };
-            Ok(result.bytes().await?)
+            Ok(self.builder.send().await?.bytes().await?.to_vec())
         }
     }
 
     /// A builder to construct a new [`Crunchyroll`] instance. To create it, call
     /// [`Crunchyroll::builder`].
     pub struct CrunchyrollBuilder {
-        pub(crate) client: HttpClient,
+        pub(crate) client: Client,
         pub(crate) locale: Locale,
     }
 
     impl Default for CrunchyrollBuilder {
         fn default() -> Self {
-            #[cfg(not(any(all(windows, target_env = "msvc"), feature = "static-certs")))]
-            let tls = TlsConfigBuilder::default()
-                .min_version(ProtocolVersion::Tlsv13)
-                .build();
-            #[cfg(any(all(windows, target_env = "msvc"), feature = "static-certs"))]
-            let tls = TlsConfigBuilder::default()
-                .min_version(ProtocolVersion::Tlsv13)
-                .root_cert_store(isahc::tls::RootCertStore::from(
-                    isahc::tls::Certificate::from_pem(include_bytes!(concat!(
-                        env!("OUT_DIR"),
-                        "/cacert.pem"
-                    ))),
-                ))
-                .build();
+            let mut root_store = rustls::RootCertStore::empty();
+            root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
+                |ta| {
+                    rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+                        ta.subject,
+                        ta.spki,
+                        ta.name_constraints,
+                    )
+                },
+            ));
+            let config = rustls::ClientConfig::builder()
+                .with_cipher_suites(&[rustls::cipher_suite::TLS13_CHACHA20_POLY1305_SHA256])
+                .with_kx_groups(&[&rustls::kx_group::X25519])
+                .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
+                .unwrap()
+                .with_root_certificates(root_store)
+                .with_no_client_auth();
 
-            let client = HttpClientBuilder::new()
-                .default_header(header::USER_AGENT, USER_AGENT)
-                .default_header(header::ACCEPT, "*")
-                .tls_config(tls)
-                .cookie_jar(isahc::cookies::CookieJar::new())
+            // the client needs some extra work to be created. the tls must be custom build in order
+            // to bypass the cloudflare bot check crunchyroll has applied to the website
+            let client = Client::builder()
+                .https_only(true)
+                .cookie_store(true)
+                .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46a")
+                .use_preconfigured_tls(config)
                 .build()
                 .unwrap();
 
@@ -529,10 +453,11 @@ mod auth {
 
     impl CrunchyrollBuilder {
         /// Set a custom client over which all request to the api are made.
-        /// Is it not recommended to overwrite the default client since its need a browser valid
-        /// useragent and special ssl / tls config to bypass the Cloudflare Bot-Check used by
-        /// Crunchyroll.
-        pub fn client(&mut self, client: HttpClient) -> &Self {
+        /// Is it not recommended to overwrite the default client since its need some special
+        /// configurations to bypass cloudflare.
+        /// See [`CrunchyrollBuilder::default`] which minimal changes must be done to create a
+        /// working custom client.
+        pub fn client(&mut self, client: Client) -> &Self {
             self.client = client;
             self
         }
@@ -621,13 +546,9 @@ mod auth {
                 "https://api.crunchyroll.com/start_session.0.json?session_id={}",
                 session_id.as_ref()
             );
-            let resp = self.client.get_async(&endpoint).await?;
+            let resp = self.client.get(&endpoint).send().await?;
 
-            let jar = resp.cookie_jar().unwrap();
-            let etp_rt = jar.get_by_name(
-                &http::Uri::from_str("https://www.crunchyroll.com/").unwrap(),
-                "etp_rt",
-            );
+            let etp_rt = resp.cookies().find(|c| c.name() == "etp_rt");
 
             if let Some(cookie) = etp_rt {
                 self.login_with_etp_rt(cookie.value()).await
@@ -670,16 +591,14 @@ mod auth {
                 #[cfg(feature = "__test_strict")]
                 cms_beta: crate::StrictValue,
             }
-            let index_req = isahc::Request::get(index_endpoint)
-                .header(
-                    header::AUTHORIZATION,
-                    format!(
-                        "{} {}",
-                        login_response.token_type, login_response.access_token
-                    ),
-                )
-                .body(())
-                .unwrap();
+
+            let index_req = self.client.get(index_endpoint).header(
+                header::AUTHORIZATION,
+                format!(
+                    "{} {}",
+                    login_response.token_type, login_response.access_token
+                ),
+            );
             let index: IndexResp = request(self.client.clone(), index_req).await?;
 
             let crunchy = Crunchyroll {
@@ -723,12 +642,13 @@ mod auth {
     }
 
     /// Make a request from the provided builder.
-    async fn request<T: Request + DeserializeOwned, B: Into<isahc::AsyncBody>>(
-        client: HttpClient,
-        req: http::request::Request<B>,
+    async fn request<T: Request + DeserializeOwned>(
+        client: Client,
+        req: RequestBuilder,
     ) -> Result<T> {
-        let url = req.uri().to_string();
-        let resp = client.send_async(req).await?;
+        let built_req = req.build()?;
+        let url = built_req.url().to_string();
+        let resp = client.execute(built_req).await?;
 
         #[cfg(not(feature = "__test_strict"))]
         {

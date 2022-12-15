@@ -1,6 +1,5 @@
 use crate::error::CrunchyrollError;
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
-use isahc::AsyncReadResponseExt;
 use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -134,9 +133,8 @@ pub struct StreamSubtitle {
 
 impl StreamSubtitle {
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        let mut resp = self.executor.client.get_async(self.url).await?;
-        let body = resp.bytes().await?;
-        w.write_all(body.as_ref())
+        let resp = self.executor.get(self.url).request_raw().await?;
+        w.write_all(resp.as_ref())
             .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
         Ok(())
     }

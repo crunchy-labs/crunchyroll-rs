@@ -11,7 +11,7 @@ keywords = ["crunchyroll", "anime", "downloader"]
 categories = ["api-bindings"]
 
 [features]
-default = ["hls-stream", "parse", "static-curl"]
+default = ["hls-stream", "parse"]
 
 # Add functionality to stream episodes / movies so you can process the unencrypted streaming data further, e.g. write it
 # to a file and then play it.
@@ -20,27 +20,20 @@ dash-stream = ["dash-mpd"]
 # Add functionality to parse Crunchyroll urls.
 parse = ["regex"]
 
-# Embed curl statically into the library instead of using a system provided shared library.
-static-curl = ["isahc/static-curl"]
-# Embed the system tls library statically into the crate instead of using a system provided shared library.
-# Has no effect on Windows, the tls library is always statically there.
-static-ssl = ["isahc/native-tls-static"]
-# Embed static tls certificates which get grabbed from https://curl.se/docs/caextract.html.
-# Has no effect on Windows (msvc), always activated.
-static-certs = []
-
 # Internal! Do not use it outside of testing
 __test_strict = []
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 http = "0.2"
-isahc = { git = "https://github.com/sagebind/isahc", rev = "c39f6f8", features = ["cookies"] }
+reqwest = { version = "0.11", features = ["cookies", "json", "rustls-tls"], default-features = false }
+rustls = { version = "0.20", features = ["dangerous_configuration"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 smart-default = "0.6"
 tokio = { version = "1.22", features = ["sync"] }
+webpki-roots = "0.22"
 
 crunchyroll-rs-internal = { version = "0.1", path = "internal" }
 
@@ -51,9 +44,6 @@ dash-mpd = { version = "0.6", default-features = false, optional = true }
 m3u8-rs = { version = "5.0", optional = true }
 regex = { version = "1.7", default-features = false, features = ["std"], optional = true }
 
-[target.'cfg(all(windows, target_env = "msvc"))'.dependencies]
-curl-sys = { version = "0.4.59", features = ["windows-static-ssl"], default-features = false }
-
 [dev-dependencies]
 anyhow = "1.0"
 once_cell = "1.16"
@@ -61,8 +51,6 @@ rand = "0.8"
 tokio = { version = "1.22", features = ["macros", "rt", "rt-multi-thread"] }
 
 [build-dependencies]
-# reqwest is used here instead of isahc because some windows clients cannot connect to the curl server where the ca certs
-# are stored
 reqwest = { version = "0.11", features = ["blocking"] }
 
 [workspace]

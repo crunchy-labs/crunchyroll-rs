@@ -1,13 +1,8 @@
 #![cfg(any(feature = "hls-stream", feature = "dash-stream"))]
 
-use crate::crunchyroll::USER_AGENT;
 use crate::error::CrunchyrollError;
 use crate::media::{PlaybackStream, VideoStream};
 use crate::{Executor, Locale, Request, Result};
-use http::header;
-use isahc::config::Configurable;
-use isahc::tls::TlsConfigBuilder;
-use isahc::{AsyncReadResponseExt, HttpClient, HttpClientBuilder};
 use std::borrow::BorrowMut;
 use std::fmt::Formatter;
 use std::io::Write;
@@ -204,8 +199,7 @@ impl VariantData {
         executor: Arc<Executor>,
         url: String,
     ) -> Result<Vec<VariantData>> {
-        let mut resp = executor.client.get_async(url).await?;
-        let raw_master_playlist = resp.bytes().await?;
+        let raw_master_playlist = executor.get(url).request_raw().await?;
 
         let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_slice())
             .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
@@ -338,30 +332,6 @@ impl VariantData {
         Ok(stream_data)
     }
 
-    /// Return a [`isahc::HttpClient`] which can be used to download segments (via
-    /// [`VariantData::segments`]). The normal [`crate::Crunchyroll::client`] cannot be used because
-    /// its configuration is not compatible with the segment download servers.
-    pub fn download_client(&self) -> HttpClient {
-        #[cfg(not(any(all(windows, target_env = "msvc"), feature = "static-certs")))]
-        let tls = TlsConfigBuilder::default().build();
-        #[cfg(any(all(windows, target_env = "msvc"), feature = "static-certs"))]
-        let tls = TlsConfigBuilder::default()
-            .root_cert_store(isahc::tls::RootCertStore::from(
-                isahc::tls::Certificate::from_pem(include_bytes!(concat!(
-                    env!("OUT_DIR"),
-                    "/cacert.pem"
-                ))),
-            ))
-            .build();
-
-        HttpClientBuilder::new()
-            .default_header(header::USER_AGENT, USER_AGENT)
-            .default_header(header::ACCEPT, "*")
-            .tls_config(tls)
-            .build()
-            .unwrap()
-    }
-
     /// Return all segments in order the variant stream is made of.
     pub async fn segments(&self) -> Result<Vec<VariantSegment>> {
         match &self.url {
@@ -381,21 +351,17 @@ impl VariantData {
             return Err(CrunchyrollError::Internal("variant url should be hls".into()))
         };
 
-        let mut resp = self.executor.client.get_async(url).await?;
-        let raw_media_playlist = resp.bytes().await?;
+        let raw_media_playlist = self.executor.get(url).request_raw().await?;
         let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_slice())
             .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
 
         let mut segments: Vec<VariantSegment> = vec![];
         let mut key: Option<Aes128CbcDec> = None;
 
-        let download_client = Arc::new(self.download_client());
-
         for segment in media_playlist.segments {
             if let Some(k) = segment.key {
                 if let Some(url) = k.uri {
-                    let mut resp = download_client.clone().get_async(url).await?;
-                    let raw_key = resp.bytes().await?;
+                    let raw_key = self.executor.get(url).request_raw().await?;
 
                     let temp_iv = k.iv.unwrap_or_default();
                     let iv = if !temp_iv.is_empty() {
@@ -409,7 +375,7 @@ impl VariantData {
             }
 
             segments.push(VariantSegment {
-                download_client: download_client.clone(),
+                executor: self.executor.clone(),
                 key: key.clone(),
                 url: segment.uri,
                 length: Some(Duration::from_secs_f32(segment.duration)),
@@ -437,10 +403,8 @@ impl VariantData {
             return Err(CrunchyrollError::Internal("variant url should be dash".into()))
         };
 
-        let download_client = Arc::new(self.download_client());
-
         let mut segments = vec![VariantSegment {
-            download_client: download_client.clone(),
+            executor: self.executor.clone(),
             key: None,
             url: base.clone() + &init.replace("$RepresentationID$", &id),
             length: None,
@@ -448,7 +412,7 @@ impl VariantData {
 
         for i in start..count + start + 1 {
             segments.push(VariantSegment {
-                download_client: download_client.clone(),
+                executor: self.executor.clone(),
                 key: None,
                 url: base.clone()
                     + &fragments
@@ -470,7 +434,7 @@ impl VariantData {
 #[allow(dead_code)]
 #[derive(Clone, Debug, Request)]
 pub struct VariantSegment {
-    download_client: Arc<HttpClient>,
+    executor: Arc<Executor>,
 
     /// Decryption key to decrypt the segment data (if encrypted).
     pub key: Option<Aes128CbcDec>,
@@ -499,11 +463,10 @@ impl VariantSegment {
 
     /// Write this segment to a writer.
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        let mut resp = self.download_client.get_async(self.url).await?;
-        let segment = resp.bytes().await?;
+        let mut segment = self.executor.get(self.url).request_raw().await?;
 
         w.write(VariantSegment::decrypt(
-            segment.to_vec().borrow_mut(),
+            segment.borrow_mut(),
             self.key.clone(),
         )?)
         .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
