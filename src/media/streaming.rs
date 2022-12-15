@@ -1,9 +1,9 @@
 #![cfg(any(feature = "hls-stream", feature = "dash-stream"))]
 
-use std::borrow::BorrowMut;
 use crate::error::CrunchyrollError;
 use crate::media::{PlaybackStream, VideoStream};
 use crate::{Executor, Locale, Request, Result};
+use std::borrow::BorrowMut;
 use std::fmt::Formatter;
 use std::io::Write;
 use std::sync::Arc;

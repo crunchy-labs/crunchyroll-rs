@@ -1,9 +1,9 @@
+use reqwest::Response;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
-use reqwest::Response;
 
 pub(crate) type Result<T, E = CrunchyrollError> = core::result::Result<T, E>;
 

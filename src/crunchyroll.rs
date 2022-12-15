@@ -1,6 +1,6 @@
 use crate::enum_values;
-use std::sync::Arc;
 use reqwest::Client;
+use std::sync::Arc;
 
 enum_values! {
     /// Enum of supported languages by Crunchyroll.
@@ -111,11 +111,11 @@ mod auth {
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
     use http::header;
+    use reqwest::{Client, IntoUrl, RequestBuilder};
     use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
     use std::ops::Add;
     use std::sync::Arc;
-    use reqwest::{Client, IntoUrl, RequestBuilder};
     use tokio::sync::Mutex;
 
     /// Stores if the refresh token or etp-rt cookie was used for login. Extract the token and use
@@ -239,7 +239,10 @@ mod auth {
                 *config = new_config;
             }
 
-            req = req.header(header::AUTHORIZATION, format!("Bearer {}", config.access_token));
+            req = req.header(
+                header::AUTHORIZATION,
+                format!("Bearer {}", config.access_token),
+            );
             req = req.header(header::CONTENT_TYPE, "application/json");
 
             let mut resp: T = request(self.client.clone(), req).await?;
@@ -251,7 +254,8 @@ mod auth {
 
         async fn auth_anonymously(client: Client) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let resp = client.post(endpoint)
+            let resp = client
+                .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic Y3Jfd2ViOg==")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(
@@ -315,7 +319,8 @@ mod auth {
 
         async fn auth_with_etp_rt(client: Client, etp_rt: String) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let resp = client.post(endpoint)
+            let resp = client
+                .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .header(header::COOKIE, format!("etp_rt={}", etp_rt))
@@ -363,10 +368,7 @@ mod auth {
 
     impl ExecutorRequestBuilder {
         pub(crate) fn new(executor: Arc<Executor>, builder: RequestBuilder) -> Self {
-            Self {
-                executor,
-                builder,
-            }
+            Self { executor, builder }
         }
 
         pub(crate) fn query<T: Serialize + ?Sized>(mut self, query: &T) -> ExecutorRequestBuilder {
@@ -415,13 +417,15 @@ mod auth {
     impl Default for CrunchyrollBuilder {
         fn default() -> Self {
             let mut root_store = rustls::RootCertStore::empty();
-            root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
-                rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
-                    ta.subject,
-                    ta.spki,
-                    ta.name_constraints,
-                )
-            }));
+            root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
+                |ta| {
+                    rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+                        ta.subject,
+                        ta.spki,
+                        ta.name_constraints,
+                    )
+                },
+            ));
             let config = rustls::ClientConfig::builder()
                 .with_cipher_suites(&[rustls::cipher_suite::TLS13_CHACHA20_POLY1305_SHA256])
                 .with_kx_groups(&[&rustls::kx_group::X25519])
@@ -588,14 +592,13 @@ mod auth {
                 cms_beta: crate::StrictValue,
             }
 
-            let index_req = self.client.get(index_endpoint)
-                .header(
-                    header::AUTHORIZATION,
-                    format!(
-                        "{} {}",
-                        login_response.token_type, login_response.access_token
-                    ),
-                );
+            let index_req = self.client.get(index_endpoint).header(
+                header::AUTHORIZATION,
+                format!(
+                    "{} {}",
+                    login_response.token_type, login_response.access_token
+                ),
+            );
             let index: IndexResp = request(self.client.clone(), index_req).await?;
 
             let crunchy = Crunchyroll {
