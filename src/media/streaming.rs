@@ -385,15 +385,18 @@ impl VariantData {
         Ok(segments)
     }
 
-    // Get the m3u8 url if you want to use ffmpeg to handle all the download process
-    // It can be faster to download yourself segment by segment
+    /// Get the m3u8 master url if you want to use it in an external download service (like ffmpeg)
+    /// to handle the download process. Only works if this [`VariantData`] was returned by
+    /// [`VideoStream::hls_streaming_data`] or [`PlaybackStream::hls_streaming_data`].
+    /// Implementing the download in native Rust has generally no
+    /// drawbacks (if done with multithreading) and even can be faster than 3rd party tools (like
+    /// ffmpeg; multithreaded native Rust is ~30 secs faster).
     #[cfg(feature = "hls-stream")]
-    pub fn hls_master_url(&self) -> Result<String> {
-        #[allow(irrefutable_let_patterns)]
-        let VariantDataUrl::Hls { url } = &self.url else {
-            return Err(CrunchyrollError::Internal("variant url should be hls".into()))
-        };
-        Ok(url.to_string())
+    pub fn hls_master_url(&self) -> Option<String> {
+        match &self.url {
+            VariantDataUrl::Hls { url } => Some(url.clone()),
+            _ => None
+        }
     }
 
     #[cfg(feature = "dash-stream")]
