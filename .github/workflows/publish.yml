@@ -33,7 +33,13 @@ jobs:
         run: if cargo show crunchyroll-rs-internal --json | grep -q -E "\"num\":\w*\"$(git describe --tags --abbrev=0 --match 'v*' 2> /dev/null | cut -c 2-)"; then echo "Internal version already exists" && exit 1; fi
 
       - name: Publish main
-        run: cargo publish $(if ${{ github.event.inputs.dry_run }}; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
+        run: |
+          DRY_RUN=${{ github.event.inputs.dry_run }}
+          DRY_RUN=${DRY_RUN:-"false"}
+          cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
 
       - name: Publish internal
-        run: cd internal && cargo publish $(if ${{ github.event.inputs.dry_run }}; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
+        run: |
+          DRY_RUN=${{ github.event.inputs.dry_run }}
+          DRY_RUN=${DRY_RUN:-"false"}
+          cd internal && cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
