@@ -59,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .login_with_credentials("<username>", "<password>")
         .await?;
 
-    let url = Crunchyroll::parse_url("https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome")?;
+    let url = crunchyroll_rs::parse_url("https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome")?;
     if let UrlType::EpisodeOrMovie(media_id) = url {
         match crunchyroll.media_collection_from_id(media_id).await? {
             MediaCollection::Episode(episode) => {

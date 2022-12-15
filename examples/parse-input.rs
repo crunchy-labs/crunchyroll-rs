@@ -11,7 +11,7 @@ async fn main() -> Result<()> {
         "please set the 'URL' environment variable to any crunchyroll url which points to a media",
     );
 
-    let parsed = Crunchyroll::parse_url(url)?;
+    let parsed = crunchyroll_rs::parse_url(url)?;
     match parsed {
         UrlType::Series(_) => println!("url points to a crunchyroll series"),
         UrlType::MovieListing(_) => println!("url points to a crunchyroll movie listing"),
