@@ -33,16 +33,14 @@
 
 ## Documentation
 
-~~The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).~~
-
-Documentation of the latest commit can be found [here](https://crunchy-labs.github.io/crunchyroll-rs/crunchyroll_rs/).
+The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).
 
 ## Example
 
 You need this crate and [tokio](https://github.com/tokio-rs/tokio) as dependency in your Cargo.toml in order to start working:
 ```toml
 [dependencies]
-crunchyroll-rs = { git = "https://github.com/crunchy-labs/crunchyroll-rs" }
+crunchyroll-rs = "0.2"
 tokio = { version = "1.22", features = ["full"] }
 ```
 
