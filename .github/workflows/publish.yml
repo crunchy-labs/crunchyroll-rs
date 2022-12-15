@@ -18,19 +18,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install cargo show
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cargo-show
-
-      - name: Check if main version exists
-        if: ${{ github.event.inputs.dry_run == 'false' }}
-        run: if cargo show crunchyroll-rs --json | grep -q -E "\"num\":\w*\"$(git describe --tags --abbrev=0 --match 'v*' 2> /dev/null | cut -c 2-)"; then echo "Main version already exists" && exit 1; fi
-
-      - name: Check main if internal version exists
-        if: ${{ github.event.inputs.dry_run == 'false' }}
-        run: if cargo show crunchyroll-rs-internal --json | grep -q -E "\"num\":\w*\"$(git describe --tags --abbrev=0 --match 'v*' 2> /dev/null | cut -c 2-)"; then echo "Internal version already exists" && exit 1; fi
+      # I had a check here if the versions are already existing but magically with gh actions it returned a false
+      # positive.
 
       - name: Publish main
         run: |
