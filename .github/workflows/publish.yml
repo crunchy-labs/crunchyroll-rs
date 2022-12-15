@@ -1,0 +1,31 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
+        default: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install cargo show
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-show
+
+      - name: Check if version exists
+        run: if cargo show crunchyroll-rs --json | grep -q -E "\"num\":\w*\"$(git describe --tags --abbrev=0 --match 'v*' 2> /dev/null | cut -c 2-)"; then echo "Version already exists" && exit 1; fi
+
+      - name: Publish
+        run: cargo publish $(if ${{ github.event.inputs.dry_run }}; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
