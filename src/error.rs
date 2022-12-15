@@ -1,9 +1,9 @@
-use isahc::{AsyncBody, AsyncReadResponseExt};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
+use reqwest::Response;
 
 pub(crate) type Result<T, E = CrunchyrollError> = core::result::Result<T, E>;
 
@@ -47,13 +47,24 @@ impl From<serde_json::Error> for CrunchyrollError {
     }
 }
 
-impl From<isahc::Error> for CrunchyrollError {
-    fn from(err: isahc::Error) -> Self {
-        let context = CrunchyrollErrorContext::new(err.to_string());
+impl From<reqwest::Error> for CrunchyrollError {
+    fn from(err: reqwest::Error) -> Self {
+        let mut context = CrunchyrollErrorContext::new(err.to_string());
+        if let Some(url) = err.url() {
+            context = context.with_url(url.clone());
+        }
 
-        if err.is_timeout() || err.is_server() || err.is_network() {
+        if err.is_request()
+            || err.is_redirect()
+            || err.is_timeout()
+            || err.is_connect()
+            || err.is_body()
+            || err.is_status()
+        {
             CrunchyrollError::Request(context)
-        } else if err.is_client() || err.is_tls() {
+        } else if err.is_decode() {
+            CrunchyrollError::Decode(context)
+        } else if err.is_builder() {
             CrunchyrollError::Internal(context)
         } else {
             CrunchyrollError::Internal(CrunchyrollErrorContext::new(format!(
@@ -205,16 +216,13 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
     Ok(())
 }
 
-pub(crate) async fn check_request<T: DeserializeOwned>(
-    url: String,
-    mut resp: isahc::Response<AsyncBody>,
-) -> Result<T> {
+pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Response) -> Result<T> {
+    let content_length = resp.content_length().unwrap_or(0);
     let _raw = resp.bytes().await.unwrap();
     let mut raw: &[u8] = _raw.as_ref();
-    let content_length = resp.headers().get(http::header::CONTENT_LENGTH);
 
     // to ensure compatibility with `T`, convert a empty response to {}
-    if raw.is_empty() && (content_length.is_none() || content_length.unwrap() == "0") {
+    if raw.is_empty() && (content_length == 0) {
         raw = "{}".as_bytes();
     }
 
