@@ -24,9 +24,16 @@ jobs:
           command: install
           args: cargo-show
 
-      - name: Check if version exists
+      - name: Check if main version exists
         if: ${{ github.event.inputs.dry_run == 'false' }}
-        run: if cargo show crunchyroll-rs --json | grep -q -E "\"num\":\w*\"$(git describe --tags --abbrev=0 --match 'v*' 2> /dev/null | cut -c 2-)"; then echo "Version already exists" && exit 1; fi
+        run: if cargo show crunchyroll-rs --json | grep -q -E "\"num\":\w*\"$(git describe --tags --abbrev=0 --match 'v*' 2> /dev/null | cut -c 2-)"; then echo "Main version already exists" && exit 1; fi
 
-      - name: Publish
+      - name: Check main if internal version exists
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        run: if cargo show crunchyroll-rs-internal --json | grep -q -E "\"num\":\w*\"$(git describe --tags --abbrev=0 --match 'v*' 2> /dev/null | cut -c 2-)"; then echo "Internal version already exists" && exit 1; fi
+
+      - name: Publish main
         run: cargo publish $(if ${{ github.event.inputs.dry_run }}; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
+
+      - name: Publish internal
+        run: cd internal && cargo publish $(if ${{ github.event.inputs.dry_run }}; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
