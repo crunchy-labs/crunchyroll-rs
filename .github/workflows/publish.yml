@@ -27,6 +27,13 @@ jobs:
           DRY_RUN=${DRY_RUN:-"false"}
           cd internal && cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
 
+      # Sleep 10 seconds if publishing. Without this the "Publish main" step fails as it can't find the correct
+      # crunchyroll-rs-internal version, since the step is faster than crates.io can process the new  crunchyroll-rs-internal
+      # version
+      - name: Sleep in non dry run
+        if: github.event.inputs.dry_run == 'false'
+        run: sleep 10
+
       - name: Publish main
         run: |
           DRY_RUN=${{ github.event.inputs.dry_run }}
