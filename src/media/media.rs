@@ -102,7 +102,11 @@ struct SeasonProxy {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Season {
-    pub audio_locale: Locale,
+    /// Most of the time, like 99%, this contains only one locale. But sometimes Crunchyroll does
+    /// weird stuff and marks a season which clearly has only one locale with two locales. See
+    /// [this](https://github.com/crunchy-labs/crunchy-cli/issues/81#issuecomment-1351813787) issue
+    /// comment for an example.
+    pub audio_locales: Vec<Locale>,
     /// Sometimes populated, sometimes not. idk why. Crunchyroll.
     pub subtitle_locales: Vec<Locale>,
 
@@ -129,12 +133,12 @@ impl Video for Season {}
 
 impl From<SeasonProxy> for Season {
     fn from(mut season_proxy: SeasonProxy) -> Self {
-        if season_proxy.audio_locale == Locale::default() && !season_proxy.audio_locales.is_empty()
-        {
-            season_proxy.audio_locale = season_proxy.audio_locales[0].clone()
+        if season_proxy.audio_locale != Locale::default() {
+            season_proxy.audio_locales.push(season_proxy.audio_locale);
+            season_proxy.audio_locales.dedup()
         }
         Self {
-            audio_locale: season_proxy.audio_locale,
+            audio_locales: season_proxy.audio_locales,
             subtitle_locales: season_proxy.subtitle_locales,
             season_number: season_proxy.season_number,
             maturity_ratings: season_proxy.maturity_ratings,
@@ -403,7 +407,7 @@ impl MediaCollection {
             ))
         } else if result.items.len() >= 2 {
             // if this ever gets fired, crunchyroll hopefully unified episode and movie on the api
-            // level (this functions was only implemented so `Crunchyroll::parse_url` can work
+            // level (this functions was only implemented so `crunchyroll_rs::parse_url` can work
             // easily)
             Err(CrunchyrollError::Internal(format!("multiple media were found for id '{}'. this shouldn't happen, please report it immediately!", id).into()))
         } else {
@@ -550,7 +554,7 @@ impl<M: Video> Media<M> {
             ))
         } else if result.items.len() >= 2 {
             // if this ever gets fired, crunchyroll hopefully unified episode and movie on the api
-            // level (this functions was only implemented so `Crunchyroll::parse_url` can work
+            // level (this functions was only implemented so `crunchyroll_rs::parse_url` can work
             // easily)
             Err(CrunchyrollError::Internal(format!("multiple media were found for id '{}'. this shouldn't happen, please report it immediately!", id).into()))
         } else {
