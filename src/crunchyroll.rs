@@ -457,14 +457,14 @@ mod auth {
         /// configurations to bypass cloudflare.
         /// See [`CrunchyrollBuilder::default`] which minimal changes must be done to create a
         /// working custom client.
-        pub fn client(&mut self, client: Client) -> &Self {
+        pub fn client(mut self, client: Client) -> CrunchyrollBuilder {
             self.client = client;
             self
         }
 
         /// Set in which languages all results which have human readable text in it should be
         /// returned.
-        pub fn locale(&mut self, locale: Locale) -> &Self {
+        pub fn locale(mut self, locale: Locale) -> CrunchyrollBuilder {
             self.locale = locale;
             self
         }
