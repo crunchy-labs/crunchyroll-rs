@@ -17,7 +17,7 @@ pub trait Video: Default + DeserializeOwned + Request {
 }
 
 #[cfg(feature = "experimental-stabilizations")]
-fn parse_locale_from_series_title<S: AsRef<str>>(title: S) -> Locale {
+pub(crate) fn parse_locale_from_series_title<S: AsRef<str>>(title: S) -> Locale {
     lazy_static::lazy_static! {
         static ref SERIES_LOCALE_REGEX: regex::Regex = regex::Regex::new(r".*\((?P<locale>\S+)(\sDub)?\)$").unwrap();
     }
@@ -413,7 +413,9 @@ impl Request for MediaCollection {
             MediaCollection::Series(series) => series.__set_executor(executor).await,
             MediaCollection::Season(season) => season.__set_executor(executor).await,
             MediaCollection::Episode(episode) => episode.__set_executor(executor).await,
-            MediaCollection::MovieListing(movie_listing) => movie_listing.__set_executor(executor).await,
+            MediaCollection::MovieListing(movie_listing) => {
+                movie_listing.__set_executor(executor).await
+            }
             MediaCollection::Movie(movie) => movie.__set_executor(executor).await,
         }
     }

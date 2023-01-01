@@ -15,7 +15,7 @@ pub(crate) struct OldMediaImages {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Debug, Deserialize, smart_default::SmartDefault)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub(crate) struct OldEpisode {
@@ -123,6 +123,16 @@ pub(crate) struct OldEpisode {
     media_type: crate::StrictValue,
 }
 
+#[async_trait::async_trait(?Send)]
+impl Request for OldEpisode {
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        if executor.fixes.locale_name_parsing {
+            self.audio_locale = crate::media::parse_locale_from_series_title(&self.season_title)
+        }
+        self.executor = executor
+    }
+}
+
 #[allow(clippy::from_over_into)]
 impl Into<Media<Episode>> for OldEpisode {
     fn into(self) -> Media<Episode> {
@@ -204,7 +214,7 @@ impl Into<Media<Episode>> for OldEpisode {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Default, Deserialize, Request)]
+#[derive(Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub(crate) struct OldSeason {
@@ -254,6 +264,18 @@ pub(crate) struct OldSeason {
     versions: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     identifier: crate::StrictValue,
+}
+
+#[async_trait::async_trait(?Send)]
+impl Request for OldSeason {
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        if executor.fixes.locale_name_parsing {
+            let locale = crate::media::parse_locale_from_series_title(&self.title);
+            self.audio_locale = locale.clone();
+            self.audio_locales = vec![locale];
+        }
+        self.executor = executor
+    }
 }
 
 #[allow(clippy::from_over_into)]
