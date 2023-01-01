@@ -104,6 +104,11 @@
 //! }
 //! ```
 //!
+//! # Bugs
+//! Crunchyroll is awful in keep their api clean. Thus, some things are broken, will break for no
+//! reason or aren't well implemented (if at all). The methods added with the
+//! `experimental-stabilizations` feature (`CrunchyrollBuilder::stabilization_*`)
+//!
 //! # Implementation
 //! To ensure at least all existing parts of the library are working as expected, a special feature
 //! only for testing is implemented. When running tests with the `__test_strict` feature, it ensures

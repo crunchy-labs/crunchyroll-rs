@@ -10,7 +10,36 @@ use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::sync::Arc;
 
-pub trait Video: Default + DeserializeOwned + Request {}
+#[async_trait::async_trait(?Send)]
+pub trait Video: Default + DeserializeOwned + Request {
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_fixes(_: Arc<Executor>, _: &mut Media<Self>) {}
+}
+
+#[cfg(feature = "experimental-stabilizations")]
+fn parse_locale_from_series_title<S: AsRef<str>>(title: S) -> Locale {
+    lazy_static::lazy_static! {
+        static ref SERIES_LOCALE_REGEX: regex::Regex = regex::Regex::new(r".*\((?P<locale>\S+)(\sDub)?\)$").unwrap();
+    }
+
+    if let Some(capture) = SERIES_LOCALE_REGEX.captures(title.as_ref()) {
+        match capture.name("locale").unwrap().as_str() {
+            "Castilian" => Locale::es_ES,
+            "English" => Locale::en_US,
+            "English-IN" => Locale::en_IN,
+            "French" => Locale::fr_FR,
+            "German" => Locale::de_DE,
+            "Hindi" => Locale::hi_IN,
+            "Italian" => Locale::it_IT,
+            "Portuguese" => Locale::pt_BR,
+            "Russian" => Locale::ru_RU,
+            "Spanish" => Locale::es_419,
+            _ => Locale::ja_JP,
+        }
+    } else {
+        Locale::ja_JP
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -61,7 +90,24 @@ pub struct Series {
     #[cfg(feature = "__test_strict")]
     pub(crate) extended_maturity_rating: crate::StrictValue,
 }
-impl Video for Series {}
+
+#[async_trait::async_trait(?Send)]
+impl Video for Series {
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
+        if executor.fixes.locale_name_parsing {
+            if let Ok(seasons) = media.seasons().await {
+                let mut locales = seasons
+                    .into_iter()
+                    .flat_map(|s| s.metadata.audio_locales)
+                    .collect::<Vec<Locale>>();
+                locales.dedup();
+
+                media.metadata.audio_locales = locales
+            }
+        }
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -129,7 +175,16 @@ pub struct Season {
     #[cfg(feature = "__test_strict")]
     pub(crate) identifier: crate::StrictValue,
 }
-impl Video for Season {}
+
+#[async_trait::async_trait(?Send)]
+impl Video for Season {
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
+        if executor.fixes.locale_name_parsing {
+            media.metadata.audio_locales = vec![parse_locale_from_series_title(&media.title)];
+        }
+    }
+}
 
 impl From<SeasonProxy> for Season {
     fn from(mut season_proxy: SeasonProxy) -> Self {
@@ -234,7 +289,17 @@ pub struct Episode {
     #[cfg(feature = "__test_strict")]
     pub(crate) identifier: crate::StrictValue,
 }
-impl Video for Episode {}
+
+#[async_trait::async_trait(?Send)]
+impl Video for Episode {
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
+        if executor.fixes.locale_name_parsing {
+            media.metadata.audio_locale =
+                parse_locale_from_series_title(&media.metadata.series_title)
+        }
+    }
+}
 
 /// Metadata for a [`Media`] movie listing.
 #[allow(dead_code)]
@@ -284,6 +349,7 @@ pub struct MovieListing {
     pub(crate) premium_date: crate::StrictValue,
 }
 
+#[async_trait::async_trait(?Send)]
 impl Video for MovieListing {}
 
 /// Metadata for a [`Media`] movie.
@@ -318,6 +384,8 @@ pub struct Movie {
     #[cfg(feature = "__test_strict")]
     pub(crate) extended_maturity_rating: crate::StrictValue,
 }
+
+#[async_trait::async_trait(?Send)]
 impl Video for Movie {}
 
 /// Collection of all media types. Useful in situations where [`Media`] can contain more than one
@@ -338,8 +406,9 @@ impl Default for MediaCollection {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl Request for MediaCollection {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
         match self {
             MediaCollection::Series(series) => series.executor = executor,
             MediaCollection::Season(season) => season.executor = executor,
@@ -475,8 +544,7 @@ pub struct MediaImages {
 /// Base struct which stores all information about series, seasons, episodes, movie listings and
 /// movies. The generic this struct takes specifies which media type it actually contains.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[request(executor(metadata))]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(bound = "M: Video")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -524,6 +592,16 @@ pub struct Media<M: Video> {
     pub(crate) last_public: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     pub(crate) linked_resource_key: crate::StrictValue,
+}
+
+#[async_trait::async_trait(?Send)]
+impl<M: Video> Request for Media<M> {
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        #[cfg(feature = "experimental-stabilizations")]
+        M::__apply_fixes(executor.clone(), self).await;
+
+        self.executor = executor;
+    }
 }
 
 impl<M: Video> PartialEq for Media<M> {
