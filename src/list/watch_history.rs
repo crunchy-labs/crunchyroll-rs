@@ -1,4 +1,8 @@
-use crate::{options, Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Result};
+use std::sync::Arc;
+
+use crate::{
+    crunchyroll::Executor, options, Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Result,
+};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -13,14 +17,14 @@ pub struct WatchHistoryEntry {
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub date_played: DateTime<Utc>,
     pub playhead: u32,
-    pub fullywatched: bool,
+    pub fully_watched: bool,
 
     /// Should always be [`MediaCollection::Episode`] or [`MediaCollection::Movie`].
     pub panel: MediaCollection,
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 struct BulkWatchHistoryResult {
@@ -31,6 +35,21 @@ struct BulkWatchHistoryResult {
     #[default(crate::StrictValue::default())]
     // field does not appear when `items` is `[]` (empty)
     next_page: crate::StrictValue,
+}
+impl Request for BulkWatchHistoryResult {
+    fn __set_executor(&mut self, executor: Arc<Executor>) {
+        for item in self.items.iter_mut() {
+            let executor = executor.clone();
+            let panel = &mut item.panel;
+            match panel {
+                MediaCollection::Series(series) => series.executor = executor,
+                MediaCollection::Season(season) => season.executor = executor,
+                MediaCollection::Episode(episode) => episode.executor = executor,
+                MediaCollection::MovieListing(movie_listing) => movie_listing.executor = executor,
+                MediaCollection::Movie(movie) => movie.executor = executor,
+            }
+        }
+    }
 }
 
 options! {
