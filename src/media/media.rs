@@ -410,11 +410,11 @@ impl Default for MediaCollection {
 impl Request for MediaCollection {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         match self {
-            MediaCollection::Series(series) => series.executor = executor,
-            MediaCollection::Season(season) => season.executor = executor,
-            MediaCollection::Episode(episode) => episode.executor = executor,
-            MediaCollection::MovieListing(movie_listing) => movie_listing.executor = executor,
-            MediaCollection::Movie(movie) => movie.executor = executor,
+            MediaCollection::Series(series) => series.__set_executor(executor).await,
+            MediaCollection::Season(season) => season.__set_executor(executor).await,
+            MediaCollection::Episode(episode) => episode.__set_executor(executor).await,
+            MediaCollection::MovieListing(movie_listing) => movie_listing.__set_executor(executor).await,
+            MediaCollection::Movie(movie) => movie.__set_executor(executor).await,
         }
     }
 }
