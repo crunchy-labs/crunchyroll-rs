@@ -24,27 +24,23 @@ pub enum UrlType {
 /// Extract information out of Crunchyroll urls which are pointing to episodes / movies /
 /// series.
 pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
-    // the regex calls are pretty ugly but for performance reasons it's the best to define them
-    // only if needed. once the std lazy api is stabilized they can be moved to the root of this
-    // file to make it look cleaner. an external crate to call the regexes lazy would also be an
-    // option but it would a little overload if it's only used here
+    lazy_static::lazy_static! {
+        static ref SERIES_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<type>series|movie_listing)/(?P<id>.+)/.*$").unwrap();
+        static ref EPISODE_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}/)?watch/(?P<id>.+)/.*$").unwrap();
+    }
 
     #[allow(clippy::manual_map)]
-    if let Some(capture) = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<type>series|movie_listing)/(?P<id>.+)/.*$")
-        .unwrap()
-        .captures(url.as_ref())
-    {
+    if let Some(capture) = SERIES_REGEX.captures(url.as_ref()) {
         let id = capture.name("id").unwrap().as_str().to_string();
         match capture.name("type").unwrap().as_str() {
             "series" => Some(UrlType::Series(id)),
             "movie_listing" => Some(UrlType::MovieListing(id)),
-            _ => None // should never happen
+            _ => None, // should never happen
         }
-    } else if let Some(capture) = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}/)?watch/(?P<id>.+)/.*$")
-        .unwrap()
-        .captures(url.as_ref())
-    {
-        Some(UrlType::EpisodeOrMovie(capture.name("id").unwrap().as_str().to_string()))
+    } else if let Some(capture) = EPISODE_REGEX.captures(url.as_ref()) {
+        Some(UrlType::EpisodeOrMovie(
+            capture.name("id").unwrap().as_str().to_string(),
+        ))
     } else {
         None
     }
