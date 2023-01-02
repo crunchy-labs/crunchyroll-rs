@@ -31,7 +31,7 @@ jobs:
       # crunchyroll-rs-internal version, since the step is faster than crates.io can process the new  crunchyroll-rs-internal
       # version
       - name: Sleep in non dry run
-        if: github.event.inputs.dry_run == 'false'
+        if: github.event.inputs.dry_run != 'true'
         run: sleep 10
 
       - name: Publish main
