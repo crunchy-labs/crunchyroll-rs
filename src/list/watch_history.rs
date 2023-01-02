@@ -6,6 +6,7 @@ use serde::Deserialize;
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
+#[request(executor(panel))]
 pub struct WatchHistoryEntry {
     pub id: String,
     pub parent_id: String,
@@ -13,7 +14,7 @@ pub struct WatchHistoryEntry {
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub date_played: DateTime<Utc>,
     pub playhead: u32,
-    pub fullywatched: bool,
+    pub fully_watched: bool,
 
     /// Should always be [`MediaCollection::Episode`] or [`MediaCollection::Movie`].
     pub panel: MediaCollection,
@@ -21,6 +22,7 @@ pub struct WatchHistoryEntry {
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(items))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 struct BulkWatchHistoryResult {
