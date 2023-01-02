@@ -17,10 +17,11 @@ pub struct BulkResult<T: Default + DeserializeOwned + Request> {
     pub total: u32,
 }
 
+#[async_trait::async_trait(?Send)]
 impl<T: Default + DeserializeOwned + Request> Request for BulkResult<T> {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
         for item in self.items.iter_mut() {
-            item.__set_executor(executor.clone())
+            item.__set_executor(executor.clone()).await;
         }
     }
 }
@@ -35,10 +36,11 @@ pub struct CrappyBulkResult<T: Default + DeserializeOwned + Request> {
     pub items: Vec<T>,
 }
 
+#[async_trait::async_trait(?Send)]
 impl<T: Default + DeserializeOwned + Request> Request for CrappyBulkResult<T> {
-    fn __set_executor(&mut self, executor: Arc<Executor>) {
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
         for item in self.items.iter_mut() {
-            item.__set_executor(executor.clone())
+            item.__set_executor(executor.clone()).await;
         }
     }
 }
@@ -58,9 +60,10 @@ pub struct Image {
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
 #[doc(hidden)]
+#[async_trait::async_trait(?Send)]
 pub trait Request {
     /// Set a usable [`Executor`] instance to the struct if required
-    fn __set_executor(&mut self, _: Arc<Executor>) {}
+    async fn __set_executor(&mut self, _: Arc<Executor>) {}
 }
 
 /// Implement [`Request`] for cases where only the request must be done without needing an
