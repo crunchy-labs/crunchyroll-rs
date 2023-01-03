@@ -17,7 +17,7 @@ pub struct BulkResult<T: Default + DeserializeOwned + Request> {
     pub total: u32,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl<T: Default + DeserializeOwned + Request> Request for BulkResult<T> {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         for item in self.items.iter_mut() {
@@ -36,7 +36,7 @@ pub struct CrappyBulkResult<T: Default + DeserializeOwned + Request> {
     pub items: Vec<T>,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl<T: Default + DeserializeOwned + Request> Request for CrappyBulkResult<T> {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         for item in self.items.iter_mut() {
@@ -60,8 +60,8 @@ pub struct Image {
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
 #[doc(hidden)]
-#[async_trait::async_trait(?Send)]
-pub trait Request {
+#[async_trait::async_trait]
+pub trait Request: Send {
     /// Set a usable [`Executor`] instance to the struct if required
     async fn __set_executor(&mut self, _: Arc<Executor>) {}
 }
@@ -70,6 +70,6 @@ pub trait Request {
 /// explicit result.
 impl Request for () {}
 
-impl<K, V> Request for HashMap<K, V> {}
+impl<K: Send, V: Send> Request for HashMap<K, V> {}
 
 impl Request for serde_json::Value {}

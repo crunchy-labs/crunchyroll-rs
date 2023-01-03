@@ -10,7 +10,7 @@ use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::sync::Arc;
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 pub trait Video: Default + DeserializeOwned + Request {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(_: Arc<Executor>, _: &mut Media<Self>) {}
@@ -91,7 +91,7 @@ pub struct Series {
     pub(crate) extended_maturity_rating: crate::StrictValue,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Video for Series {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
@@ -176,7 +176,7 @@ pub struct Season {
     pub(crate) identifier: crate::StrictValue,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Video for Season {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
@@ -290,7 +290,7 @@ pub struct Episode {
     pub(crate) identifier: crate::StrictValue,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Video for Episode {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
@@ -349,7 +349,7 @@ pub struct MovieListing {
     pub(crate) premium_date: crate::StrictValue,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Video for MovieListing {}
 
 /// Metadata for a [`Media`] movie.
@@ -385,7 +385,7 @@ pub struct Movie {
     pub(crate) extended_maturity_rating: crate::StrictValue,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Video for Movie {}
 
 /// Collection of all media types. Useful in situations where [`Media`] can contain more than one
@@ -406,7 +406,7 @@ impl Default for MediaCollection {
     }
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Request for MediaCollection {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         match self {
@@ -596,7 +596,7 @@ pub struct Media<M: Video> {
     pub(crate) linked_resource_key: crate::StrictValue,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl<M: Video> Request for Media<M> {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         self.executor = executor.clone();

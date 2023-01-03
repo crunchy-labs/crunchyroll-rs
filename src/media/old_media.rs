@@ -123,7 +123,7 @@ pub(crate) struct OldEpisode {
     media_type: crate::StrictValue,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Request for OldEpisode {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         if executor.fixes.locale_name_parsing {
@@ -266,7 +266,7 @@ pub(crate) struct OldSeason {
     identifier: crate::StrictValue,
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Request for OldSeason {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         if executor.fixes.locale_name_parsing {
