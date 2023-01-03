@@ -68,3 +68,10 @@ async fn by_query() {
         "'episode' is not None"
     );
 }
+
+#[tokio::test]
+async fn simulcast_seasons() {
+    let crunchy = SESSION.get().await.unwrap();
+
+    assert_result!(crunchy.simulcast_seasons().await)
+}

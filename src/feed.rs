@@ -89,6 +89,7 @@ impl CarouselFeed {
 }
 
 /// Contains all feeds which can be obtained via [`HomeFeed`].
+#[derive(Clone, Debug)]
 pub enum HomeFeedType {
     /// The feed at the top of the Crunchyroll website. Call [`CarouselFeed::collection_from_id`]
     /// with the value of this field to get a collection of usable [`CarouselFeed`] structs.

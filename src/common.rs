@@ -8,7 +8,8 @@ pub(crate) use crunchyroll_rs_internal::Request;
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(items))]
 #[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -17,32 +18,15 @@ pub struct BulkResult<T: Default + DeserializeOwned + Request> {
     pub total: u32,
 }
 
-#[async_trait::async_trait]
-impl<T: Default + DeserializeOwned + Request> Request for BulkResult<T> {
-    async fn __set_executor(&mut self, executor: Arc<Executor>) {
-        for item in self.items.iter_mut() {
-            item.__set_executor(executor.clone()).await;
-        }
-    }
-}
-
 /// Just like [`BulkResult`] but without [`BulkResult::total`] because some request does not have
 /// this field (but should?!).
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(items))]
 #[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CrappyBulkResult<T: Default + DeserializeOwned + Request> {
     pub items: Vec<T>,
-}
-
-#[async_trait::async_trait]
-impl<T: Default + DeserializeOwned + Request> Request for CrappyBulkResult<T> {
-    async fn __set_executor(&mut self, executor: Arc<Executor>) {
-        for item in self.items.iter_mut() {
-            item.__set_executor(executor.clone()).await;
-        }
-    }
 }
 
 /// The standard representation of images how the api returns them.

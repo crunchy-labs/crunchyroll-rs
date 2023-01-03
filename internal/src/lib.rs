@@ -38,7 +38,7 @@ pub fn derive_request(input: TokenStream) -> TokenStream {
                         let ty = if let Type::Path(ty) = field.clone().ty {
                             ty
                         } else {
-                            panic!("shouldn't happen")
+                            unreachable!()
                         };
                         impl_executor.push(derive_request_check(quote! { self.#ident }, &ty.path));
                         continue;
@@ -121,21 +121,21 @@ fn segment_types(segment: &PathSegment) -> Vec<Path> {
     let args = if let PathArguments::AngleBracketed(args) = &segment.arguments {
         &args.args
     } else {
-        panic!("shouldn't happen")
+        unreachable!()
     };
     args.iter()
         .map(|a| {
             if let GenericArgument::Type(t) = a {
                 t
             } else {
-                panic!("shouldn't happen")
+                unreachable!()
             }
         })
         .map(|t| {
             if let Type::Path(ty) = t {
                 ty.path.clone()
             } else {
-                panic!("shouldn't happen")
+                unreachable!()
             }
         })
         .collect()
