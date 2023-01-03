@@ -128,11 +128,8 @@ impl Request for OldEpisode {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         #[cfg(feature = "experimental-stabilizations")]
         if executor.fixes.locale_name_parsing {
-            if let Ok(episode) =
-                crate::media::re_request_english::<Episode>(executor.clone(), &self.id).await
-            {
-                self.audio_locale =
-                    crate::media::parse_locale_from_season_title(episode.metadata.season_title)
+            if !self.is_dubbed {
+                self.audio_locale = Locale::ja_JP
             }
         }
         self.executor = executor
@@ -277,12 +274,9 @@ impl Request for OldSeason {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         #[cfg(feature = "experimental-stabilizations")]
         if executor.fixes.locale_name_parsing {
-            if let Ok(season) =
-                crate::media::re_request_english::<Season>(executor.clone(), &self.id).await
-            {
-                let locale = crate::media::parse_locale_from_season_title(season.title);
-                self.audio_locale = locale.clone();
-                self.audio_locales = vec![locale];
+            if !self.is_dubbed {
+                self.audio_locale = Locale::ja_JP;
+                self.audio_locales = vec![Locale::ja_JP]
             }
         }
         self.executor = executor

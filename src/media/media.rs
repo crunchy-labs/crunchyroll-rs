@@ -112,16 +112,8 @@ impl Video for Series {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
         if executor.fixes.locale_name_parsing {
-            if let Ok(series) = re_request_english::<Series>(executor, &media.id).await {
-                if let Ok(seasons) = series.seasons().await {
-                    let mut locales = seasons
-                        .into_iter()
-                        .flat_map(|s| s.metadata.audio_locales)
-                        .collect::<Vec<Locale>>();
-                    locales.dedup();
-
-                    media.metadata.audio_locales = locales
-                }
+            if !media.metadata.is_dubbed && !media.metadata.audio_locales.contains(&Locale::ja_JP) {
+                media.metadata.audio_locales.insert(0, Locale::ja_JP)
             }
         }
     }
@@ -315,9 +307,8 @@ impl Video for Episode {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
         if executor.fixes.locale_name_parsing {
-            if let Ok(episode) = re_request_english::<Episode>(executor, &media.id).await {
-                media.metadata.audio_locale =
-                    parse_locale_from_season_title(episode.metadata.season_title)
+            if !media.metadata.is_dubbed {
+                media.metadata.audio_locale = Locale::ja_JP
             }
         }
     }
