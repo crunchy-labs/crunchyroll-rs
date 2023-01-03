@@ -599,10 +599,10 @@ pub struct Media<M: Video> {
 #[async_trait::async_trait(?Send)]
 impl<M: Video> Request for Media<M> {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
-        #[cfg(feature = "experimental-stabilizations")]
-        M::__apply_fixes(executor.clone(), self).await;
+        self.executor = executor.clone();
 
-        self.executor = executor;
+        #[cfg(feature = "experimental-stabilizations")]
+        M::__apply_fixes(executor, self).await;
     }
 }
 
