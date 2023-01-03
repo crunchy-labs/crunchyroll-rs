@@ -258,6 +258,10 @@ mod auth {
 
             let mut resp: T = request(self.client.clone(), req).await?;
 
+            // drop config here explicitly as `__set_executor` can call this function recursively
+            // which would lead to a deadlock
+            drop(config);
+
             resp.__set_executor(self.clone()).await;
 
             Ok(resp)
