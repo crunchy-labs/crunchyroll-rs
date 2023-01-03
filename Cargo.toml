@@ -20,7 +20,7 @@ dash-stream = ["dash-mpd"]
 # Add functionality to parse Crunchyroll urls.
 parse = ["lazy_static", "regex"]
 # Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
-experimental-stabilizations = ["lazy_static", "regex"]
+experimental-stabilizations = []
 
 # Internal! Do not use it outside of testing
 __test_strict = []

@@ -17,41 +17,29 @@ pub trait Video: Default + DeserializeOwned + Request {
 }
 
 #[cfg(feature = "experimental-stabilizations")]
-pub(crate) async fn re_request_english<M: Video>(
-    executor: Arc<Executor>,
-    id: impl AsRef<str>,
-) -> Result<Media<M>> {
-    let mut modified_executor = Executor {
-        client: executor.client.clone(),
-        config: tokio::sync::Mutex::new((*executor.config.lock().await).clone()),
-        details: executor.details.clone(),
-        fixes: executor.fixes.clone(),
-    };
-    modified_executor.details.locale = Locale::en_US;
+pub(crate) fn parse_locale_from_slug_title(mut title: String) -> Locale {
+    title = title.trim_end_matches("-dub").to_string();
 
-    Crunchyroll { executor }.media_from_id(id).await
-}
-
-#[cfg(feature = "experimental-stabilizations")]
-pub(crate) fn parse_locale_from_season_title<S: AsRef<str>>(title: S) -> Locale {
-    lazy_static::lazy_static! {
-        static ref SERIES_LOCALE_REGEX: regex::Regex = regex::Regex::new(r".*\((?P<locale>\S+)(\sDub)?\)$").unwrap();
-    }
-
-    if let Some(capture) = SERIES_LOCALE_REGEX.captures(title.as_ref()) {
-        match capture.name("locale").unwrap().as_str() {
-            "Castilian" => Locale::es_ES,
-            "English" => Locale::en_US,
-            "English-IN" => Locale::en_IN,
-            "French" => Locale::fr_FR,
-            "German" => Locale::de_DE,
-            "Hindi" => Locale::hi_IN,
-            "Italian" => Locale::it_IT,
-            "Portuguese" => Locale::pt_BR,
-            "Russian" => Locale::ru_RU,
-            "Spanish" => Locale::es_419,
-            _ => Locale::ja_JP,
-        }
+    if title.ends_with("-castilian") {
+        Locale::es_ES
+    } else if title.ends_with("-english") {
+        Locale::en_US
+    } else if title.ends_with("-english-in") {
+        Locale::en_IN
+    } else if title.ends_with("-french") {
+        Locale::fr_FR
+    } else if title.ends_with("-german") {
+        Locale::de_DE
+    } else if title.ends_with("-hindi") {
+        Locale::en_IN
+    } else if title.ends_with("-italian") {
+        Locale::it_IT
+    } else if title.ends_with("-portuguese") {
+        Locale::pt_BR
+    } else if title.ends_with("-russian") {
+        Locale::ru_RU
+    } else if title.ends_with("-spanish") {
+        Locale::es_419
     } else {
         Locale::ja_JP
     }
@@ -192,9 +180,8 @@ impl Video for Season {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
         if executor.fixes.locale_name_parsing {
-            if let Ok(season) = re_request_english::<Season>(executor, &media.id).await {
-                media.metadata.audio_locales = vec![parse_locale_from_season_title(season.title)]
-            }
+            media.metadata.audio_locales =
+                vec![parse_locale_from_slug_title(media.slug_title.clone())]
         }
     }
 }
