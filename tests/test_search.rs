@@ -1,5 +1,6 @@
 use crate::utils::SESSION;
 use crunchyroll_rs::search::{BrowseOptions, QueryOptions, QueryType};
+use crunchyroll_rs::Locale;
 
 mod utils;
 
@@ -73,5 +74,5 @@ async fn by_query() {
 async fn simulcast_seasons() {
     let crunchy = SESSION.get().await.unwrap();
 
-    assert_result!(crunchy.simulcast_seasons().await)
+    assert_result!(crunchy.simulcast_seasons(Locale::en_US).await)
 }

@@ -2,7 +2,7 @@ mod browse {
     use crate::categories::Category;
     use crate::common::BulkResult;
     use crate::media::MediaType;
-    use crate::{enum_values, options, Crunchyroll, MediaCollection, Request, Result};
+    use crate::{enum_values, options, Crunchyroll, Locale, MediaCollection, Request, Result};
     use serde::Deserialize;
 
     /// Human readable implementation of [`SimulcastSeason`].
@@ -21,6 +21,19 @@ mod browse {
     pub struct SimulcastSeason {
         pub id: String,
         pub localization: SimulcastSeasonLocalization,
+    }
+
+    #[allow(dead_code)]
+    #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+    #[request(executor(items))]
+    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
+    struct BulkSimulcastSeasonResult {
+        items: Vec<SimulcastSeason>,
+        total: u32,
+
+        #[cfg(feature = "__test_strict")]
+        locale: crate::StrictValue,
     }
 
     enum_values! {
@@ -66,14 +79,15 @@ mod browse {
                 .await
         }
 
-        /// Returns all simulcast seasons.
-        pub async fn simulcast_seasons(&self) -> Result<Vec<SimulcastSeason>> {
+        /// Returns all simulcast seasons. The locale specified which language the localization /
+        /// human readable name ([`SimulcastSeasonLocalization::title`]) has.
+        pub async fn simulcast_seasons(&self, locale: Locale) -> Result<Vec<SimulcastSeason>> {
             let endpoint = "https://www.crunchyroll.com/content/v1/season_list";
             Ok(self
                 .executor
                 .get(endpoint)
-                .apply_locale_query()
-                .request::<BulkResult<SimulcastSeason>>()
+                .query(&[("locale", locale)])
+                .request::<BulkSimulcastSeasonResult>()
                 .await?
                 .items)
         }
