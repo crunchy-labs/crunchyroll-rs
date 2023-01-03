@@ -126,8 +126,14 @@ pub(crate) struct OldEpisode {
 #[async_trait::async_trait]
 impl Request for OldEpisode {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        #[cfg(feature = "experimental-stabilizations")]
         if executor.fixes.locale_name_parsing {
-            self.audio_locale = crate::media::parse_locale_from_series_title(&self.season_title)
+            if let Ok(episode) =
+                crate::media::re_request_english::<Episode>(executor.clone(), &self.id).await
+            {
+                self.audio_locale =
+                    crate::media::parse_locale_from_season_title(episode.metadata.season_title)
+            }
         }
         self.executor = executor
     }
@@ -269,10 +275,15 @@ pub(crate) struct OldSeason {
 #[async_trait::async_trait]
 impl Request for OldSeason {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        #[cfg(feature = "experimental-stabilizations")]
         if executor.fixes.locale_name_parsing {
-            let locale = crate::media::parse_locale_from_series_title(&self.title);
-            self.audio_locale = locale.clone();
-            self.audio_locales = vec![locale];
+            if let Ok(season) =
+                crate::media::re_request_english::<Season>(executor.clone(), &self.id).await
+            {
+                let locale = crate::media::parse_locale_from_season_title(season.title);
+                self.audio_locale = locale.clone();
+                self.audio_locales = vec![locale];
+            }
         }
         self.executor = executor
     }

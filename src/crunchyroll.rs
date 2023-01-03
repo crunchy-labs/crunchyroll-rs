@@ -172,7 +172,7 @@ mod auth {
 
     /// Contains which fixes should be used to make the api more reliable as Crunchyroll does weird
     /// stuff / delivers incorrect results.
-    #[derive(Debug)]
+    #[derive(Clone, Debug)]
     #[cfg(feature = "experimental-stabilizations")]
     pub(crate) struct ExecutorFixes {
         pub(crate) locale_name_parsing: bool,

@@ -17,7 +17,23 @@ pub trait Video: Default + DeserializeOwned + Request {
 }
 
 #[cfg(feature = "experimental-stabilizations")]
-pub(crate) fn parse_locale_from_series_title<S: AsRef<str>>(title: S) -> Locale {
+pub(crate) async fn re_request_english<M: Video>(
+    executor: Arc<Executor>,
+    id: impl AsRef<str>,
+) -> Result<Media<M>> {
+    let mut modified_executor = Executor {
+        client: executor.client.clone(),
+        config: tokio::sync::Mutex::new((*executor.config.lock().await).clone()),
+        details: executor.details.clone(),
+        fixes: executor.fixes.clone(),
+    };
+    modified_executor.details.locale = Locale::en_US;
+
+    Crunchyroll { executor }.media_from_id(id).await
+}
+
+#[cfg(feature = "experimental-stabilizations")]
+pub(crate) fn parse_locale_from_season_title<S: AsRef<str>>(title: S) -> Locale {
     lazy_static::lazy_static! {
         static ref SERIES_LOCALE_REGEX: regex::Regex = regex::Regex::new(r".*\((?P<locale>\S+)(\sDub)?\)$").unwrap();
     }
@@ -96,14 +112,16 @@ impl Video for Series {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
         if executor.fixes.locale_name_parsing {
-            if let Ok(seasons) = media.seasons().await {
-                let mut locales = seasons
-                    .into_iter()
-                    .flat_map(|s| s.metadata.audio_locales)
-                    .collect::<Vec<Locale>>();
-                locales.dedup();
+            if let Ok(series) = re_request_english::<Series>(executor, &media.id).await {
+                if let Ok(seasons) = series.seasons().await {
+                    let mut locales = seasons
+                        .into_iter()
+                        .flat_map(|s| s.metadata.audio_locales)
+                        .collect::<Vec<Locale>>();
+                    locales.dedup();
 
-                media.metadata.audio_locales = locales
+                    media.metadata.audio_locales = locales
+                }
             }
         }
     }
@@ -181,7 +199,9 @@ impl Video for Season {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
         if executor.fixes.locale_name_parsing {
-            media.metadata.audio_locales = vec![parse_locale_from_series_title(&media.title)];
+            if let Ok(season) = re_request_english::<Season>(executor, &media.id).await {
+                media.metadata.audio_locales = vec![parse_locale_from_season_title(season.title)]
+            }
         }
     }
 }
@@ -295,8 +315,10 @@ impl Video for Episode {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
         if executor.fixes.locale_name_parsing {
-            media.metadata.audio_locale =
-                parse_locale_from_series_title(&media.metadata.series_title)
+            if let Ok(episode) = re_request_english::<Episode>(executor, &media.id).await {
+                media.metadata.audio_locale =
+                    parse_locale_from_season_title(episode.metadata.season_title)
+            }
         }
     }
 }
