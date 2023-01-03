@@ -99,11 +99,16 @@ pub struct Series {
 impl Video for Series {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
-        if executor.fixes.locale_name_parsing
-            && !media.metadata.is_dubbed
-            && !media.metadata.audio_locales.contains(&Locale::ja_JP)
-        {
-            media.metadata.audio_locales.insert(0, Locale::ja_JP)
+        if executor.fixes.locale_name_parsing {
+            if let Ok(seasons) = media.seasons().await {
+                let mut locales = seasons
+                    .into_iter()
+                    .flat_map(|s| s.metadata.audio_locales)
+                    .collect::<Vec<Locale>>();
+                locales.dedup();
+
+                media.metadata.audio_locales = locales
+            }
         }
     }
 }
