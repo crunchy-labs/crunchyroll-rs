@@ -1,6 +1,6 @@
 [package]
 name = "crunchyroll-rs"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2021"
 description = "Pure Rust implementation of the crunchyroll api."
