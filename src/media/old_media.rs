@@ -127,8 +127,9 @@ pub(crate) struct OldEpisode {
 impl Request for OldEpisode {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         #[cfg(feature = "experimental-stabilizations")]
-        if executor.fixes.locale_name_parsing && !self.is_dubbed {
-            self.audio_locale = Locale::ja_JP
+        if executor.fixes.locale_name_parsing {
+            self.audio_locale =
+                crate::media::parse_locale_from_slug_title(self.season_slug_title.clone())
         }
         self.executor = executor
     }
@@ -271,9 +272,9 @@ pub(crate) struct OldSeason {
 impl Request for OldSeason {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         #[cfg(feature = "experimental-stabilizations")]
-        if executor.fixes.locale_name_parsing && !self.is_dubbed {
-            self.audio_locale = Locale::ja_JP;
-            self.audio_locales = vec![Locale::ja_JP]
+        if executor.fixes.locale_name_parsing {
+            self.audio_locale = crate::media::parse_locale_from_slug_title(self.slug_title.clone());
+            self.audio_locales = vec![self.audio_locale.clone()]
         }
         self.executor = executor
     }

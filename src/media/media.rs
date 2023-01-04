@@ -31,7 +31,7 @@ pub(crate) fn parse_locale_from_slug_title(mut title: String) -> Locale {
     } else if title.ends_with("-german") {
         Locale::de_DE
     } else if title.ends_with("-hindi") {
-        Locale::en_IN
+        Locale::hi_IN
     } else if title.ends_with("-italian") {
         Locale::it_IT
     } else if title.ends_with("-portuguese") {
@@ -299,8 +299,9 @@ pub struct Episode {
 impl Video for Episode {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
-        if executor.fixes.locale_name_parsing && !media.metadata.is_dubbed {
-            media.metadata.audio_locale = Locale::ja_JP
+        if executor.fixes.locale_name_parsing {
+            media.metadata.audio_locale =
+                parse_locale_from_slug_title(media.metadata.season_slug_title.clone())
         }
     }
 }
