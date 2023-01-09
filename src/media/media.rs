@@ -20,7 +20,9 @@ pub trait Video: Default + DeserializeOwned + Request {
 pub(crate) fn parse_locale_from_slug_title(mut title: String) -> Locale {
     title = title.trim_end_matches("-dub").to_string();
 
-    if title.ends_with("-castilian") {
+    if title.ends_with("-arabic") {
+        Locale::ar_SA
+    } else if title.ends_with("-castilian") {
         Locale::es_ES
     } else if title.ends_with("-english") {
         Locale::en_US
