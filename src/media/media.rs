@@ -877,6 +877,21 @@ struct VideoIntroResult {
     last_updated: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[serde(bound = "M: Video")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct RelatedMedia<M: Video> {
+    pub fully_watched: bool,
+    pub never_watched: bool,
+
+    pub playhead: u32,
+
+    #[serde(alias = "episode_metadata")]
+    #[serde(alias = "movie_metadata")]
+    pub panel: Media<M>,
+}
+
 macro_rules! impl_media_video {
     ($($media_video:ident)*) => {
         $(
@@ -914,6 +929,39 @@ macro_rules! impl_media_video {
                     } else {
                         let video_intro_result: VideoIntroResult = serde_json::from_str(&result)?;
                         Ok(Some((video_intro_result.start_time, video_intro_result.end_time)))
+                    }
+                }
+
+                /// Return the previous episode / movie. Is [`None`] if the current media is the
+                /// first in its season / has no previous media.
+                pub async fn previous(&self) -> Result<Option<RelatedMedia<$media_video>>> {
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/previous_episode/{}", &self.id);
+                    let result: serde_json::Value = self.executor.get(endpoint)
+                        .apply_locale_query()
+                        .request()
+                        .await?;
+                    let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
+                    if as_map.is_empty() {
+                        Ok(None)
+                    } else {
+                        Ok(Some(serde_json::from_value(result)?))
+                    }
+                }
+
+                /// Return the next episode / movie. Is [`None`] if the current media is the last in
+                /// its season / has no further media afterwards.
+                pub async fn next(&self) -> Result<Option<RelatedMedia<$media_video>>> {
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/up_next_episode");
+                    let result: serde_json::Value = self.executor.get(endpoint)
+                        .query(&[("episode_id", &self.id)])
+                        .apply_locale_query()
+                        .request()
+                        .await?;
+                    let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
+                    if as_map.is_empty() {
+                        Ok(None)
+                    } else {
+                        Ok(Some(serde_json::from_value(result)?))
                     }
                 }
 
