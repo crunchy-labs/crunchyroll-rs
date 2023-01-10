@@ -916,6 +916,20 @@ macro_rules! impl_media_video {
                         Ok(Some((video_intro_result.start_time, video_intro_result.end_time)))
                     }
                 }
+
+                /// Set the playhead (current playback position) for this episode / movie. Used unit
+                /// is seconds. Setting the playhead also triggers the Crunchyroll Discord
+                /// integration so if you update the playhead and have Crunchyroll connected to
+                /// Discord, this episode / movie will be shown as your Discord status.
+                pub async fn set_playhead(&self, position: u32) -> Result<()> {
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/playheads/{}", self.executor.details.account_id.clone()?);
+                    self.executor.post(endpoint)
+                        .apply_locale_query()
+                        .json(&serde_json::json!({"content_id": &self.id, "playhead": position}))
+                        .request::<crate::EmptyJsonProxy>()
+                        .await?;
+                    Ok(())
+                }
             }
         )*
     }

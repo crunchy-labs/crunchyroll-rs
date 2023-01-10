@@ -30,3 +30,10 @@ async fn episode_streams() {
 
     assert_result!(episode.streams().await)
 }
+
+#[tokio::test]
+async fn episode_playhead() {
+    let episode = EPISODE.get().await.unwrap();
+
+    assert_result!(episode.set_playhead(69).await)
+}
