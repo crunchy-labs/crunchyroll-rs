@@ -892,6 +892,22 @@ pub struct RelatedMedia<M: Video> {
     pub panel: Media<M>,
 }
 
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct PlayheadInformation {
+    playhead: u32,
+
+    content_id: String,
+
+    fully_watched: bool,
+
+    /// Date when the last playhead update was
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    last_modified: DateTime<Utc>,
+}
+
 macro_rules! impl_media_video {
     ($($media_video:ident)*) => {
         $(
@@ -962,6 +978,21 @@ macro_rules! impl_media_video {
                         Ok(None)
                     } else {
                         Ok(Some(serde_json::from_value(result)?))
+                    }
+                }
+
+                /// Get playhead information.
+                pub async fn playhead(&self) -> Result<Option<PlayheadInformation>> {
+                    let endpoint = format!("https://www.crunchyroll.com/content/v1/playheads/{}/{}", self.executor.details.account_id.clone()?, &self.id);
+                    let result: serde_json::Value = self.executor.get(endpoint)
+                        .apply_locale_query()
+                        .request()
+                        .await?;
+                    let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
+                    if as_map.is_empty() {
+                        Ok(None)
+                    } else {
+                        Ok(Some(serde_json::from_value(as_map.get(&self.id).unwrap().clone())?))
                     }
                 }
 
