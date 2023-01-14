@@ -217,6 +217,22 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
 }
 
 pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Response) -> Result<T> {
+    if resp.status().as_u16() == 429 {
+        return Err(CrunchyrollError::Request(
+            CrunchyrollErrorContext::new("Rate limit detected. Try again later")
+                .with_url(resp.url()),
+        ));
+    } else if resp.status().is_client_error() {
+        return Err(CrunchyrollError::Request(
+            CrunchyrollErrorContext::new("Unexpected client error").with_url(resp.url()),
+        ));
+    } else if resp.status().is_server_error() {
+        return Err(CrunchyrollError::Request(
+            CrunchyrollErrorContext::new("Server error detected. Try again later")
+                .with_url(resp.url()),
+        ));
+    }
+
     let content_length = resp.content_length().unwrap_or(0);
     let _raw = resp.bytes().await.unwrap();
     let mut raw: &[u8] = _raw.as_ref();
