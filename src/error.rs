@@ -218,9 +218,23 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
 
 pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Response) -> Result<T> {
     if resp.status().as_u16() == 429 {
+        let retry_secs = if let Some(retry_after) = resp.headers().get(http::header::RETRY_AFTER) {
+            retry_after.to_str().map_or(None, |retry_after_secs| {
+                retry_after_secs.parse::<u32>().ok()
+            })
+        } else {
+            None
+        };
+
         return Err(CrunchyrollError::Request(
-            CrunchyrollErrorContext::new("Rate limit detected. Try again later")
-                .with_url(resp.url()),
+            CrunchyrollErrorContext::new(format!(
+                "Rate limit detected. {}",
+                retry_secs.map_or("Try again later".to_string(), |secs| format!(
+                    "Try again in {} seconds",
+                    secs
+                ))
+            ))
+            .with_url(resp.url()),
         ));
     } else if resp.status().is_client_error() {
         return Err(CrunchyrollError::Request(
