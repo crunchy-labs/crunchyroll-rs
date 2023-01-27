@@ -236,15 +236,6 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
             ))
             .with_url(resp.url()),
         ));
-    } else if resp.status().is_client_error() {
-        return Err(CrunchyrollError::Request(
-            CrunchyrollErrorContext::new("Unexpected client error").with_url(resp.url()),
-        ));
-    } else if resp.status().is_server_error() {
-        return Err(CrunchyrollError::Request(
-            CrunchyrollErrorContext::new("Server error detected. Try again later")
-                .with_url(resp.url()),
-        ));
     }
 
     let content_length = resp.content_length().unwrap_or(0);
