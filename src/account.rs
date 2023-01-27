@@ -34,6 +34,8 @@ pub struct Account {
 
     #[serde(rename = "preferred_communication_language")]
     pub email_language: Locale,
+    #[serde(rename = "preferred_content_audio_language")]
+    pub preferred_audio_language: Locale,
     #[serde(rename = "preferred_content_subtitle_language")]
     pub preferred_subtitle_language: Locale,
 
@@ -67,6 +69,8 @@ options! {
     email_newsletter(bool, "opt_out_newsletters") = None,
     /// Updates if promotions for products and offers should be sent to your email.
     email_promotion_details(bool, "opt_out_promotional_updates") = None,
+    /// Updates the language in which audio should be played.
+    audio_language(Locale, "preferred_content_audio_language") = None,
     /// Updates the language in which subtitles should be shown if available.
     subtitle_language(Locale, "preferred_content_subtitle_language") = None,
     /// Updates if / how mature video content should be shown / be available. I do not know the use

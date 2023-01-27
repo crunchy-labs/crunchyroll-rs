@@ -27,6 +27,7 @@ async fn account_update_preferences() {
         .email_store_details(account.email_store_details)
         .email_newsletter(account.email_newsletter)
         .email_promotion_details(account.email_promotion_details)
+        .audio_language(account.preferred_audio_language.clone())
         .subtitle_language(account.preferred_subtitle_language.clone())
         .mature_video_content(account.video_maturity_rating.clone())
         .mature_manga_content(account.manga_maturity_rating.clone());
@@ -35,6 +36,7 @@ async fn account_update_preferences() {
         .email_store_details(!account.email_store_details)
         .email_newsletter(!account.email_newsletter)
         .email_promotion_details(!account.email_promotion_details)
+        .audio_language(Locale::en_US)
         .subtitle_language(Locale::en_US)
         .mature_video_content(MaturityRating::Mature)
         .mature_manga_content(MaturityRating::Mature);
