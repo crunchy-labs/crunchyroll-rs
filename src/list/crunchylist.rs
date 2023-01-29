@@ -134,9 +134,9 @@ impl Crunchylist {
             MediaCollection::Season(_) => {
                 return Err(CrunchyrollError::Input("seasons are not supported".into()))
             }
-            MediaCollection::Episode(episode) => episode.metadata.series_id,
+            MediaCollection::Episode(episode) => episode.series_id,
             MediaCollection::MovieListing(movie_listing) => movie_listing.id,
-            MediaCollection::Movie(movie) => movie.metadata.movie_listing_id,
+            MediaCollection::Movie(movie) => movie.movie_listing_id,
         };
         self.executor
             .post(endpoint)

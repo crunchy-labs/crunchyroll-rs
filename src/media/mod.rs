@@ -1,6 +1,5 @@
 #[allow(clippy::module_inception)] // naming is difficult
 mod media;
-mod old_media;
 mod stream;
 mod streaming;
 

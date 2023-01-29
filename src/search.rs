@@ -95,10 +95,10 @@ mod browse {
 }
 
 mod query {
-    use crate::common::{BulkResult, Request};
+    use crate::common::{BulkResult, Request, V2BulkResult};
     use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
     use crate::media::{Episode, MovieListing, Series};
-    use crate::{enum_values, options, Crunchyroll, Executor, Media, MediaCollection};
+    use crate::{enum_values, options, Crunchyroll, Executor, Locale, MediaCollection};
     use serde::Deserialize;
     use std::sync::Arc;
 
@@ -108,33 +108,35 @@ mod query {
     /// be populated.
     #[derive(Clone, Debug, Default, Deserialize, Request)]
     #[request(executor(top_results, series, movie_listing, episode))]
-    #[serde(try_from = "BulkResult<QueryBulkResult>")]
+    #[serde(try_from = "V2BulkResult<QueryBulkResult>")]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     pub struct QueryResults {
         #[serde(skip)]
         executor: Arc<Executor>,
 
         pub top_results: Option<BulkResult<MediaCollection>>,
-        pub series: Option<BulkResult<Media<Series>>>,
-        pub movie_listing: Option<BulkResult<Media<MovieListing>>>,
-        pub episode: Option<BulkResult<Media<Episode>>>,
+        pub series: Option<BulkResult<Series>>,
+        pub movie_listing: Option<BulkResult<MovieListing>>,
+        pub episode: Option<BulkResult<Episode>>,
     }
 
-    impl TryFrom<BulkResult<QueryBulkResult>> for QueryResults {
+    impl TryFrom<V2BulkResult<QueryBulkResult>> for QueryResults {
         type Error = CrunchyrollError;
 
-        fn try_from(value: BulkResult<QueryBulkResult>) -> std::result::Result<Self, Self::Error> {
+        fn try_from(
+            value: V2BulkResult<QueryBulkResult>,
+        ) -> std::result::Result<Self, Self::Error> {
             let mut top_results: Option<BulkResult<MediaCollection>> = None;
-            let mut series: Option<BulkResult<Media<Series>>> = None;
-            let mut movie_listing: Option<BulkResult<Media<MovieListing>>> = None;
-            let mut episode: Option<BulkResult<Media<Episode>>> = None;
+            let mut series: Option<BulkResult<Series>> = None;
+            let mut movie_listing: Option<BulkResult<MovieListing>> = None;
+            let mut episode: Option<BulkResult<Episode>> = None;
 
-            for item in value.items.clone() {
+            for item in value.data.clone() {
                 match item.result_type.as_str() {
                     "top_results" => {
                         top_results = Some(BulkResult {
                             items: item.items,
-                            total: item.total,
+                            total: item.count,
                         })
                     }
                     "series" => {
@@ -142,9 +144,15 @@ mod query {
                             items: item
                                 .items
                                 .into_iter()
-                                .map(|i| i.try_into())
-                                .collect::<Result<Vec<Media<Series>>>>()?,
-                            total: item.total,
+                                .filter_map(|i| {
+                                    if let MediaCollection::Series(s) = i {
+                                        Some(s)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<Series>>(),
+                            total: item.count,
                         })
                     }
                     "movie_listing" => {
@@ -152,9 +160,15 @@ mod query {
                             items: item
                                 .items
                                 .into_iter()
-                                .map(|i| i.try_into())
-                                .collect::<Result<Vec<Media<MovieListing>>>>()?,
-                            total: item.total,
+                                .filter_map(|i| {
+                                    if let MediaCollection::MovieListing(ml) = i {
+                                        Some(ml)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<MovieListing>>(),
+                            total: item.count,
                         })
                     }
                     "episode" => {
@@ -162,9 +176,15 @@ mod query {
                             items: item
                                 .items
                                 .into_iter()
-                                .map(|i| i.try_into())
-                                .collect::<Result<Vec<Media<Episode>>>>()?,
-                            total: item.total,
+                                .filter_map(|i| {
+                                    if let MediaCollection::Episode(e) = i {
+                                        Some(e)
+                                    } else {
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<Episode>>(),
+                            total: item.count,
                         })
                     }
                     _ => {
@@ -196,7 +216,7 @@ mod query {
         #[serde(rename = "type")]
         result_type: String,
         items: Vec<MediaCollection>,
-        total: u32,
+        count: u32,
     }
 
     enum_values! {
@@ -212,7 +232,9 @@ mod query {
         /// Limit of results to return.
         limit(u32, "n") = Some(20),
         /// "Type of result to return.
-        result_type(QueryType, "type") = None
+        result_type(QueryType, "type") = None,
+        /// Preferred audio language
+        preferred_audio_language(Locale, "preferred_audio_language") = None
     }
 
     impl Crunchyroll {
@@ -222,7 +244,7 @@ mod query {
             query: S,
             options: QueryOptions,
         ) -> Result<QueryResults> {
-            let endpoint = "https://www.crunchyroll.com/content/v1/search";
+            let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
             self.executor
                 .get(endpoint)
                 .query(&options.into_query())

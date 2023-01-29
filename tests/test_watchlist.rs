@@ -1,13 +1,13 @@
 use crate::utils::{Store, SESSION};
 use crunchyroll_rs::list::WatchlistOptions;
-use crunchyroll_rs::{Media, Series};
+use crunchyroll_rs::Series;
 
 mod utils;
 
-static SERIES: Store<Media<Series>> = Store::new(|| {
+static SERIES: Store<Series> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let series = crunchy.media_from_id("GY8VEQ95Y").await?;
+        let series = Series::from_id(crunchy, "GY8VEQ95Y", None).await?;
         Ok(series)
     })
 });

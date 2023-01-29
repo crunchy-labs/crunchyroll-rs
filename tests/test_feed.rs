@@ -1,7 +1,5 @@
 use crate::utils::{Store, SESSION};
-use crunchyroll_rs::feed::{
-    HomeFeed, HomeFeedOptions, NewsFeedOptions, RecommendationOptions, UpNextOptions,
-};
+use crunchyroll_rs::feed::{HomeFeed, HomeFeedOptions, NewsFeedOptions, RecommendationOptions};
 
 mod utils;
 
@@ -46,18 +44,6 @@ async fn recommendations() {
             .await
             .unwrap()
             .recommendations(RecommendationOptions::default())
-            .await
-    )
-}
-
-#[tokio::test]
-async fn up_next() {
-    assert_result!(
-        SESSION
-            .get()
-            .await
-            .unwrap()
-            .up_next(UpNextOptions::default())
             .await
     )
 }

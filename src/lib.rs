@@ -140,7 +140,7 @@ pub(crate) use internal::serde::EmptyJsonProxy;
 pub(crate) use macros::{enum_values, options};
 
 pub use crunchyroll::{Crunchyroll, Locale};
-pub use media::{Episode, Media, MediaCollection, Movie, MovieListing, Season, Series};
+pub use media::{Episode, MediaCollection, Movie, MovieListing, Season, Series};
 #[cfg(feature = "parse")]
 pub use parse::{parse_url, UrlType};
 

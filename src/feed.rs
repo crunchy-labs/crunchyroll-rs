@@ -276,14 +276,6 @@ options! {
     start(u32, "start") = None
 }
 
-options! {
-    UpNextOptions;
-    /// Limit of results to return.
-    limit(u32, "n") = Some(20),
-    /// Specifies the index from which the entries should be returned.
-    start(u32, "start") = None
-}
-
 impl Crunchyroll {
     /// Returns the home feed (shown when visiting the Crunchyroll index page).
     pub async fn home_feed(&self, options: HomeFeedOptions) -> Result<Vec<HomeFeed>> {
@@ -319,20 +311,6 @@ impl Crunchyroll {
     ) -> Result<BulkResult<MediaCollection>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v1/{}/recommendations",
-            self.executor.details.account_id.clone()?
-        );
-        self.executor
-            .get(endpoint)
-            .query(&options.into_query())
-            .apply_locale_query()
-            .request()
-            .await
-    }
-
-    /// Suggests next episode or movie to watch.
-    pub async fn up_next(&self, options: UpNextOptions) -> Result<BulkResult<UpNextEntry>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/{}/up_next_account",
             self.executor.details.account_id.clone()?
         );
         self.executor

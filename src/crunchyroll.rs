@@ -170,14 +170,6 @@ mod auth {
         pub(crate) account_id: Result<String>,
     }
 
-    /// Contains which fixes should be used to make the api more reliable as Crunchyroll does weird
-    /// stuff / delivers incorrect results.
-    #[derive(Clone, Debug)]
-    #[cfg(feature = "experimental-stabilizations")]
-    pub(crate) struct ExecutorFixes {
-        pub(crate) locale_name_parsing: bool,
-    }
-
     /// Internal struct to execute all request with.
     #[derive(Debug)]
     pub struct Executor {
@@ -187,9 +179,6 @@ mod auth {
         /// direct changes to the struct.
         pub(crate) config: Mutex<ExecutorConfig>,
         pub(crate) details: ExecutorDetails,
-
-        #[cfg(feature = "experimental-stabilizations")]
-        pub(crate) fixes: ExecutorFixes,
     }
 
     impl Executor {
@@ -372,10 +361,6 @@ mod auth {
                     policy: "".to_string(),
                     key_pair_id: "".to_string(),
                 },
-                #[cfg(feature = "experimental-stabilizations")]
-                fixes: ExecutorFixes {
-                    locale_name_parsing: false,
-                },
             }
         }
     }
@@ -431,9 +416,6 @@ mod auth {
     pub struct CrunchyrollBuilder {
         pub(crate) client: Client,
         pub(crate) locale: Locale,
-
-        #[cfg(feature = "experimental-stabilizations")]
-        pub(crate) fixes: ExecutorFixes,
     }
 
     impl Default for CrunchyrollBuilder {
@@ -469,10 +451,6 @@ mod auth {
             Self {
                 client,
                 locale: Locale::en_US,
-                #[cfg(feature = "experimental-stabilizations")]
-                fixes: ExecutorFixes {
-                    locale_name_parsing: false,
-                },
             }
         }
     }
@@ -492,19 +470,6 @@ mod auth {
         /// returned.
         pub fn locale(mut self, locale: Locale) -> CrunchyrollBuilder {
             self.locale = locale;
-            self
-        }
-
-        /// Set season and episode locales by parsing the season name and check if it contains
-        /// any language name.
-        /// Under special circumstances, this can slow down some methods as additional request must
-        /// be made. Currently, this applies to [`crate::Media<crate::Series>`]. Whenever a request
-        /// is made which returns [`crate::Media<crate::Series>`], internally
-        /// [`crate::Media<crate::Series>::seasons`] is called for every series.
-        /// See https://github.com/crunchy-labs/crunchyroll-rs/issues/3 for more information.
-        #[cfg(feature = "experimental-stabilizations")]
-        pub fn stabilization_locales(mut self, enable: bool) -> CrunchyrollBuilder {
-            self.fixes.locale_name_parsing = enable;
             self
         }
 
@@ -673,8 +638,6 @@ mod auth {
                             )
                         }),
                     },
-                    #[cfg(feature = "experimental-stabilizations")]
-                    fixes: self.fixes,
                 }),
             };
 
@@ -722,26 +685,16 @@ mod auth {
     ) -> serde_json::Map<String, serde_json::Value> {
         for (key, value) in map.clone() {
             if key.starts_with("__") && key.ends_with("__") {
-                if key == "__links__" {
-                    let classic_crunchyroll_exception: serde_json::Map<String, serde_json::Value> =
-                        serde_json::from_value(value).unwrap();
-                    #[allow(clippy::if_same_then_else)]
-                    if classic_crunchyroll_exception.contains_key("episode/series")
-                        && classic_crunchyroll_exception.contains_key("streams")
-                    {
-                        // `Episode` requires the __links__ field because crunchyroll does not provide another
-                        // way to obtain a stream id
-                        continue;
-                    } else if map
+                if key == "__links__"
+                    && map
                         .get("id")
                         .unwrap_or(&serde_json::Value::default())
                         .as_str()
                         .unwrap_or("")
                         .starts_with("dynamic_collection-")
-                    {
-                        // `HomeFeed` has some implementations which require __links__ to be accessible
-                        continue;
-                    }
+                {
+                    // `HomeFeed` has some implementations which require __links__ to be accessible
+                    continue;
                 }
                 map.remove(key.as_str());
             } else if let Some(object) = value.as_object() {

@@ -257,7 +257,7 @@ macro_rules! impl_comment {
 }
 
 impl_comment! {
-    crate::Media<crate::media::Episode> crate::Media<crate::media::Movie>
+    crate::media::Episode crate::media::Movie
 }
 
 async fn create_comment<S: AsRef<str>>(

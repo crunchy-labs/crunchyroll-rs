@@ -199,10 +199,10 @@ macro_rules! add_to_watchlist {
 add_to_watchlist! {
     #[doc = "Add this series to your watchlist."]
     #[doc = "Check and convert this series to a watchlist entry (to check if this series was watched before)."]
-    crate::Media<crate::media::Series>;
+    crate::media::Series;
     #[doc = "Add this movie to your watchlist."]
     #[doc = "Check and convert this movie to a watchlist entry (to check if this movie was watched before)."]
-    crate::Media<crate::media::MovieListing>
+    crate::media::MovieListing
 }
 
 async fn mark_favorite_watchlist(

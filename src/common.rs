@@ -8,6 +8,22 @@ pub(crate) use crunchyroll_rs_internal::Request;
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(data))]
+#[serde(bound = "T: Request + DeserializeOwned")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct V2BulkResult<T: Default + DeserializeOwned + Request> {
+    pub data: Vec<T>,
+    pub total: u32,
+
+    #[cfg(feature = "__test_strict")]
+    meta: crate::StrictValue,
+}
+
+/// Contains a variable amount of items and the maximum / total of item which are available.
+/// Mostly used when fetching pagination results.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(items))]
 #[serde(bound = "T: Request + DeserializeOwned")]
