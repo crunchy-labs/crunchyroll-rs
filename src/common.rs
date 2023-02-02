@@ -14,12 +14,17 @@ pub(crate) use crunchyroll_rs_internal::Request;
 #[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct V2BulkResult<T: Default + DeserializeOwned + Request> {
+pub struct V2BulkResult<T, M = crate::StrictValue>
+where
+    T: Default + DeserializeOwned + Request,
+    M: Default + DeserializeOwned + Send,
+{
     pub data: Vec<T>,
+    #[serde(default)]
     pub total: u32,
 
-    #[cfg(feature = "__test_strict")]
-    meta: crate::StrictValue,
+    #[serde(default)]
+    pub(crate) meta: M,
 }
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
