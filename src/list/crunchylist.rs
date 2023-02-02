@@ -26,11 +26,11 @@ pub struct CrunchylistEntry {
 
 impl CrunchylistEntry {
     /// Delete this entry from the parent crunchylist.
-    pub async fn delete(self, entry: &CrunchylistEntry) -> Result<()> {
+    pub async fn delete(self) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}/{}",
             self.executor.details.account_id.clone()?,
-            entry.list_id,
+            self.list_id,
             self.id
         );
         self.executor
