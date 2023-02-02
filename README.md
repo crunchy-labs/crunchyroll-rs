@@ -59,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let url = crunchyroll_rs::parse_url("https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome").expect("url is not valid");
     if let UrlType::EpisodeOrMovie(media_id) = url {
-        match crunchyroll.media_collection_from_id(media_id).await? {
+        match crunchyroll.media_collection_from_id(media_id, None).await? {
             MediaCollection::Episode(episode) => {
                 println!(
                     "Url is episode {} ({}) of season {} from {}",

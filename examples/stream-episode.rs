@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
         .login_with_credentials(user, password)
         .await?;
 
-    let episode: Episode = Episode::from_id(&crunchyroll, "GRDKJZ81Y", None).await?;
+    let episode: Episode = crunchyroll.media_from_id("GRDKJZ81Y", None).await?;
     let streams = episode.streams().await?;
     let mut default_streams = streams.hls_streaming_data(None).await?;
     // sort after resolutions; best to worst

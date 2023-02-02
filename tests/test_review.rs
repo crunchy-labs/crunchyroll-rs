@@ -8,7 +8,7 @@ mod utils;
 static SERIES: Store<Series> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let series = Series::from_id(crunchy, "GY8VEQ95Y", None).await?;
+        let series = crunchy.media_from_id("GY8VEQ95Y", None).await?;
         Ok(series)
     })
 });

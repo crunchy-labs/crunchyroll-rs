@@ -38,12 +38,12 @@
 //! of the media. [`Media<Season>`] would represent a season for example.
 //!
 //! ```
-//! let series: Media<Series> = crunchy
+//! let series: Series = crunchy
 //!     // get the series with the id 'GY8VEQ95Y'
 //!     .media_from_id("GY8VEQ95Y")
 //!     .await?;
 //!
-//! let episode: Media<Episode> = crunchy
+//! let episode: Episode = crunchy
 //!     // get the episode with the id 'GRDKJZ81Y'
 //!     .media_from_id("GRDKJZ81Y")
 //!     .await?;

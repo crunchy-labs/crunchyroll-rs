@@ -5,19 +5,19 @@ use regex::Regex;
 /// Types of Crunchyroll urls, pointing to series, episodes or movies.
 #[derive(Clone, Debug)]
 pub enum UrlType {
-    /// The parsed url points to a series. Use [`crate::Media<Series>::from_id`] with the value
-    /// of this field to get a usable struct out of it.
+    /// The parsed url points to a series. Use [`crate::Series::from_id`] with the value of this
+    /// field to get a usable struct out of it.
     Series(String),
-    /// The parsed url points to a movie listing. Use [`crate::Media<MovieListing>::from_id`]
-    /// with the value of this field to get a usable struct out of it. This kind of url might not
-    /// exist in Crunchyroll at all but to be api compatible it's included anyway.
+    /// The parsed url points to a movie listing. Use [`crate::MovieListing::from_id`] with the
+    /// value of this field to get a usable struct out of it. This kind of url might not exist in
+    /// Crunchyroll at all but to be api compatible it's included anyway.
     MovieListing(String),
     /// The parsed url points to a episode or movie. You can either try
-    /// [`crate::Media<Episode>::from_id`] and [`crate::Media<Movie>::from_id`] to guess if it's a
-    /// episode or movie (in 99.9% of the time it will be a episode, because (at the time of writing)
+    /// [`crate::Episode::from_id`] and [`crate::Movie::from_id`] to guess if it's a episode or
+    /// movie (in 99.9% of the time it will be a episode, because (at the time of writing)
     /// Crunchyroll has only 3 movies which are listed as movies. All other movies are listed as
-    /// episodes. Makes sense I know) or use [`crate::Media::from_id`]. The value of this field is
-    /// the id you have to use in all shown methods.
+    /// episodes. Makes sense I know) or use [`crate::MediaCollection::from_id`]. The value of this
+    /// field is the id you have to use in all shown methods.
     EpisodeOrMovie(String),
 }
 

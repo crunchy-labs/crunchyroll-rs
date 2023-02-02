@@ -1,5 +1,6 @@
 use crate::categories::Category;
 use crate::common::{Image, V2BulkResult};
+use crate::error::CrunchyrollError;
 use crate::media::{PlaybackStream, VideoStream};
 use crate::{options, Crunchyroll, Executor, Locale, Request, Result};
 use chrono::{DateTime, Duration, Utc};
@@ -7,6 +8,17 @@ use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value};
 use std::sync::Arc;
+
+#[async_trait::async_trait(?Send)]
+pub trait Media {
+    async fn from_id<S: AsRef<str>>(
+        crunchyroll: &Crunchyroll,
+        id: S,
+        preferred_audio: Option<Locale>,
+    ) -> Result<Self>
+    where
+        Self: Sized;
+}
 
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(try_from = "Map<String, Value>")]
@@ -571,11 +583,6 @@ macro_rules! impl_manual_media_deserialize {
                         }
                     }
 
-                    #[cfg(feature = "__test_strict")]
-                    {
-
-                    }
-
                     $media::deserialize(
                         serde_json::to_value(as_map)
                             .map_err(|e| Error::custom(e.to_string()))?
@@ -734,11 +741,12 @@ async fn request_media<T: Default + DeserializeOwned + Request>(
     Ok(result.data)
 }
 
-macro_rules! impl_from_id {
+macro_rules! impl_media {
     ($($media:ident = $endpoint:literal),*) => {
         $(
-            impl $media {
-                pub async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S, preferred_audio: Option<Locale>) -> Result<$media> {
+            #[async_trait::async_trait(?Send)]
+            impl Media for $media {
+                async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S, preferred_audio: Option<Locale>) -> Result<$media> {
                     let endpoint = format!($endpoint, id.as_ref());
                     Ok(request_media(crunchyroll.executor.clone(), endpoint, preferred_audio).await?.remove(0))
                 }
@@ -747,7 +755,7 @@ macro_rules! impl_from_id {
     }
 }
 
-impl_from_id! {
+impl_media! {
     Series = "https://www.crunchyroll.com/content/v2/cms/series/{}",
     Season = "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
     Episode = "https://www.crunchyroll.com/content/v2/cms/episodes/{}",
@@ -828,6 +836,40 @@ impl Request for MediaCollection {
                 movie_listing.__set_executor(executor).await
             }
             MediaCollection::Movie(movie) => movie.__set_executor(executor).await,
+        }
+    }
+}
+
+impl MediaCollection {
+    pub async fn from_id<S: AsRef<str>>(
+        crunchyroll: &Crunchyroll,
+        id: S,
+        preferred_audio: Option<Locale>,
+    ) -> Result<MediaCollection> {
+        if let Ok(episode) =
+            Episode::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
+        {
+            Ok(MediaCollection::Episode(episode))
+        } else if let Ok(movie) =
+            Movie::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
+        {
+            Ok(MediaCollection::Movie(movie))
+        } else if let Ok(series) =
+            Series::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
+        {
+            Ok(MediaCollection::Series(series))
+        } else if let Ok(season) =
+            Season::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
+        {
+            Ok(MediaCollection::Season(season))
+        } else if let Ok(movie_listing) =
+            MovieListing::from_id(crunchyroll, id.as_ref(), preferred_audio).await
+        {
+            Ok(MediaCollection::MovieListing(movie_listing))
+        } else {
+            Err(CrunchyrollError::Input(
+                format!("failed to find valid media with id '{}'", id.as_ref()).into(),
+            ))
         }
     }
 }
@@ -1067,4 +1109,22 @@ macro_rules! impl_media_video {
 
 impl_media_video! {
     Episode Movie
+}
+
+impl Crunchyroll {
+    pub async fn media_from_id<M: Media, S: AsRef<str>>(
+        &self,
+        id: S,
+        preferred_audio: Option<Locale>,
+    ) -> Result<M> {
+        M::from_id(self, id, preferred_audio).await
+    }
+
+    pub async fn media_collection_from_id<S: AsRef<str>>(
+        &self,
+        id: S,
+        preferred_audio: Option<Locale>,
+    ) -> Result<MediaCollection> {
+        MediaCollection::from_id(self, id, preferred_audio).await
+    }
 }

@@ -8,7 +8,7 @@ mod utils;
 static COMMENTS: Store<BulkResult<Comment>> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let episode = Episode::from_id(crunchy, "GRDKJZ81Y", None).await.unwrap();
+        let episode: Episode = crunchy.media_from_id("GRDKJZ81Y", None).await.unwrap();
         Ok(episode.comments(CommentsOptions::default()).await?)
     })
 });

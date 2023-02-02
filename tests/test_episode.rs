@@ -7,14 +7,14 @@ mod utils;
 static START_EPISODE: Store<Episode> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let episode = Episode::from_id(crunchy, "GRDKJZ81Y", None).await?;
+        let episode = crunchy.media_from_id("GRDKJZ81Y", None).await?;
         Ok(episode)
     })
 });
 static END_EPISODE: Store<Episode> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let episode = Episode::from_id(crunchy, "G6QW40DE6", None).await?;
+        let episode = crunchy.media_from_id("G6QW40DE6", None).await?;
         Ok(episode)
     })
 });
