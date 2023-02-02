@@ -1,7 +1,7 @@
 #![cfg(feature = "hls-stream")]
 
 use anyhow::Result;
-use crunchyroll_rs::{Crunchyroll, Episode, Media};
+use crunchyroll_rs::{Crunchyroll, Episode};
 use std::env;
 
 #[tokio::main]
@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
         .login_with_credentials(user, password)
         .await?;
 
-    let episode: Media<Episode> = crunchyroll.media_from_id("GRDKJZ81Y").await?;
+    let episode: Episode = Episode::from_id(&crunchyroll, "GRDKJZ81Y", None).await?;
     let streams = episode.streams().await?;
     let mut default_streams = streams.hls_streaming_data(None).await?;
     // sort after resolutions; best to worst

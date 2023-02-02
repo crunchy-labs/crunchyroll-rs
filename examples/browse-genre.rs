@@ -20,7 +20,7 @@ async fn main() -> Result<()> {
         .categories(vec![Category::Action]);
     let result = crunchyroll.browse(options).await?;
 
-    for item in result.items {
+    for item in result.data {
         match item {
             MediaCollection::Series(series) => println!("Browse returned series {}", series.title),
             // is never season

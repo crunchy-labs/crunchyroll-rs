@@ -21,15 +21,14 @@ async fn main() -> Result<()> {
     for s in series.items {
         println!(
             "Queried series {} which has {} seasons",
-            s.title, s.metadata.season_count
+            s.title, s.season_count
         );
-        let seasons = s.seasons().await?;
+        let seasons = s.seasons(None).await?;
         for season in seasons {
             println!(
                 "Found season {} with audio locale(s) {}",
-                season.metadata.season_number,
+                season.season_number,
                 season
-                    .metadata
                     .audio_locales
                     .iter()
                     .map(|l| l.to_string())
