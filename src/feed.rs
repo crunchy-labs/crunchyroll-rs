@@ -160,7 +160,7 @@ impl<'de> Deserialize<'de> for HomeFeed {
                             .ok_or_else(|| type_error("link", "string"))?
                             .to_string();
                         let query: Vec<(String, String)> =
-                            serde_urlencoded::from_str(link.split("?").last().unwrap())
+                            serde_urlencoded::from_str(link.split('?').last().unwrap())
                                 .map_err(|e| Error::custom(e.to_string()))?;
 
                         let mut browse_options = BrowseOptions::default();
@@ -198,7 +198,7 @@ impl<'de> Deserialize<'de> for HomeFeed {
                             .ok_or_else(|| type_error("link", "string"))?
                             .to_string();
                         let query: Vec<(String, String)> =
-                            serde_urlencoded::from_str(link.split("?").last().unwrap())
+                            serde_urlencoded::from_str(link.split('?').last().unwrap())
                                 .map_err(|e| Error::custom(e.to_string()))?;
 
                         let mut similar_options = SimilarOptions::default();

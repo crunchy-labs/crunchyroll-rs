@@ -14,7 +14,7 @@ pub(crate) use crunchyroll_rs_internal::Request;
 #[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct V2BulkResult<T, M = crate::StrictValue>
+pub struct V2BulkResult<T, M = serde_json::Map<String, serde_json::Value>>
 where
     T: Default + DeserializeOwned + Request,
     M: Default + DeserializeOwned + Send,
