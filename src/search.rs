@@ -238,7 +238,7 @@ mod query {
         limit(u32, "n") = Some(20),
         /// "Type of result to return.
         result_type(QueryType, "type") = None,
-        /// Preferred audio language
+        /// Preferred audio language.
         preferred_audio_language(Locale, "preferred_audio_language") = None
     }
 

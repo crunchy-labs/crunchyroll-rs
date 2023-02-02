@@ -1,5 +1,5 @@
 use crate::categories::Category;
-use crate::common::{BulkResult, Image, V2BulkResult};
+use crate::common::{Image, V2BulkResult};
 use crate::media::{PlaybackStream, VideoStream};
 use crate::{options, Crunchyroll, Executor, Locale, Request, Result};
 use chrono::{DateTime, Duration, Utc};
@@ -853,7 +853,9 @@ options! {
     /// Limit of results to return.
     limit(u32, "n") = Some(20),
     /// Specifies the index from which the entries should be returned.
-    start(u32, "start") = None
+    start(u32, "start") = None,
+    /// Preferred audio language.
+    preferred_audio_language(Locale, "preferred_audio_language") = None
 }
 
 macro_rules! impl_media_video_collection {
@@ -861,10 +863,9 @@ macro_rules! impl_media_video_collection {
         $(
             impl $media_video {
                 /// Similar series or movie listing to the current item.
-                pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<MediaCollection>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/{}/similar_to", self.executor.details.account_id.clone()?);
+                pub async fn similar(&self, options: SimilarOptions) -> Result<V2BulkResult<MediaCollection>> {
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", self.executor.details.account_id.clone()?, &self.id);
                     self.executor.get(endpoint)
-                        .query(&[("guid", &self.id)])
                         .query(&options.into_query())
                         .apply_locale_query()
                         .request()
@@ -1035,17 +1036,15 @@ macro_rules! impl_media_video {
 
                 /// Get playhead information.
                 pub async fn playhead(&self) -> Result<Option<PlayheadInformation>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/playheads/{}/{}", self.executor.details.account_id.clone()?, &self.id);
-                    let result: serde_json::Value = self.executor.get(endpoint)
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/playheads", self.executor.details.account_id.clone()?);
+                    Ok(self.executor.get(endpoint)
+                        .query(&[("content_ids", &self.id)])
                         .apply_locale_query()
-                        .request()
-                        .await?;
-                    let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
-                    if as_map.is_empty() {
-                        Ok(None)
-                    } else {
-                        Ok(Some(serde_json::from_value(as_map.get(&self.id).unwrap().clone())?))
-                    }
+                        .request::<V2BulkResult<PlayheadInformation>>()
+                        .await?
+                        .data
+                        .get(0)
+                        .cloned())
                 }
 
                 /// Set the playhead (current playback position) for this episode / movie. Used unit
@@ -1053,7 +1052,7 @@ macro_rules! impl_media_video {
                 /// integration so if you update the playhead and have Crunchyroll connected to
                 /// Discord, this episode / movie will be shown as your Discord status.
                 pub async fn set_playhead(&self, position: u32) -> Result<()> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/playheads/{}", self.executor.details.account_id.clone()?);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/playheads", self.executor.details.account_id.clone()?);
                     self.executor.post(endpoint)
                         .apply_locale_query()
                         .json(&serde_json::json!({"content_id": &self.id, "playhead": position}))
