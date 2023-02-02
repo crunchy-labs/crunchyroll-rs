@@ -1,4 +1,5 @@
-use crate::{options, Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Result};
+use crate::common::V2BulkResult;
+use crate::{options, Crunchyroll, EmptyJsonProxy, Locale, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
@@ -8,6 +9,7 @@ use serde::Deserialize;
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 #[request(executor(panel))]
 pub struct WatchHistoryEntry {
+    /// Id of the episode or movie entry.
     pub id: String,
     pub parent_id: String,
 
@@ -20,25 +22,12 @@ pub struct WatchHistoryEntry {
     pub panel: MediaCollection,
 }
 
-#[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[request(executor(items))]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-struct BulkWatchHistoryResult {
-    items: Vec<WatchHistoryEntry>,
-
-    #[cfg(feature = "__test_strict")]
-    #[serde(default)]
-    #[default(crate::StrictValue::default())]
-    // field does not appear when `items` is `[]` (empty)
-    next_page: crate::StrictValue,
-}
-
 options! {
     WatchHistoryOptions;
     size(u32, "page_size") = Some(100),
-    page(u32, "page") = None
+    page(u32, "page") = None,
+    /// Preferred audio language.
+    preferred_audio_language(Locale, "preferred_audio_language") = None
 }
 
 impl Crunchyroll {
@@ -48,7 +37,7 @@ impl Crunchyroll {
         options: WatchHistoryOptions,
     ) -> Result<Vec<WatchHistoryEntry>> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/watch-history/{}",
+            "https://www.crunchyroll.com/content/v2/{}/watch-history",
             self.executor.details.account_id.clone()?
         );
         Ok(self
@@ -56,15 +45,15 @@ impl Crunchyroll {
             .get(endpoint)
             .query(&options.into_query())
             .apply_locale_query()
-            .request::<BulkWatchHistoryResult>()
+            .request::<V2BulkResult<WatchHistoryEntry>>()
             .await?
-            .items)
+            .data)
     }
 
     /// Clear your watch history.
     pub async fn clear_watch_history(&self) -> Result<()> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/watch-history/{}",
+            "https://www.crunchyroll.com/content/v2/{}/watch-history",
             self.executor.details.account_id.clone()?
         );
         self.executor
