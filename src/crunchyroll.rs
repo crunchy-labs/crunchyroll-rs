@@ -685,17 +685,6 @@ mod auth {
     ) -> serde_json::Map<String, serde_json::Value> {
         for (key, value) in map.clone() {
             if key.starts_with("__") && key.ends_with("__") {
-                if key == "__links__"
-                    && map
-                        .get("id")
-                        .unwrap_or(&serde_json::Value::default())
-                        .as_str()
-                        .unwrap_or("")
-                        .starts_with("dynamic_collection-")
-                {
-                    // `HomeFeed` has some implementations which require __links__ to be accessible
-                    continue;
-                }
                 map.remove(key.as_str());
             } else if let Some(object) = value.as_object() {
                 map.insert(
