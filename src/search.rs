@@ -1,6 +1,6 @@
 mod browse {
     use crate::categories::Category;
-    use crate::common::BulkResult;
+    use crate::common::V2BulkResult;
     use crate::media::MediaType;
     use crate::{enum_values, options, Crunchyroll, Locale, MediaCollection, Request, Result};
     use serde::Deserialize;
@@ -59,6 +59,8 @@ mod browse {
         sort(BrowseSortType, "sort") = Some(BrowseSortType::NewlyAdded),
         /// Specifies the media type of the entries.
         media_type(MediaType, "type") = None,
+        /// Preferred audio language.
+        preferred_audio_language(Locale, "preferred_audio_language") = None,
 
         /// Limit of results to return.
         limit(u32, "n") = Some(20),
@@ -69,8 +71,11 @@ mod browse {
     impl Crunchyroll {
         /// Browses the crunchyroll catalog filtered by the specified options and returns all found
         /// series and movies.
-        pub async fn browse(&self, options: BrowseOptions) -> Result<BulkResult<MediaCollection>> {
-            let endpoint = "https://www.crunchyroll.com/content/v1/browse";
+        pub async fn browse(
+            &self,
+            options: BrowseOptions,
+        ) -> Result<V2BulkResult<MediaCollection>> {
+            let endpoint = "https://www.crunchyroll.com/content/v2/discover/browse";
             self.executor
                 .get(endpoint)
                 .query(&options.into_query())
