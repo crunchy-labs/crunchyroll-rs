@@ -1,18 +1,11 @@
 use crate::utils::SESSION;
-use crunchyroll_rs::categories::TenantCategoryOptions;
+use crunchyroll_rs::categories::CategoryInformationOptions;
 
 mod utils;
 
 #[tokio::test]
-async fn tenant_categories() {
+async fn categories() {
     let crunchy = SESSION.get().await.unwrap();
-    let options = TenantCategoryOptions::default().include_subcategories(false);
-    assert_result!(crunchy.tenant_categories(options.clone()).await)
-}
-
-#[tokio::test]
-async fn tenant_categories_with_subcategories() {
-    let crunchy = SESSION.get().await.unwrap();
-    let options = TenantCategoryOptions::default().include_subcategories(true);
-    assert_result!(crunchy.tenant_categories(options.clone()).await)
+    let options = CategoryInformationOptions::default();
+    assert_result!(crunchy.categories(options.clone()).await)
 }
