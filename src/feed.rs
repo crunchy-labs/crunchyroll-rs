@@ -264,15 +264,16 @@ impl Crunchyroll {
     /// Returns the home feed (shown when visiting the Crunchyroll index page).
     pub fn home_feed(&self) -> Pagination<HomeFeed> {
         Pagination::new(
-            |start, executor, _| {
+            |options| {
                 async move {
                     let endpoint = format!(
                         "https://www.crunchyroll.com/content/v2/discover/{}/home_feed",
-                        executor.details.account_id.clone()?
+                        options.executor.details.account_id.clone()?
                     );
-                    let result: V2BulkResult<HomeFeed> = executor
+                    let result: V2BulkResult<HomeFeed> = options
+                        .executor
                         .get(endpoint)
-                        .query(&[("n", "20"), ("start", &start.to_string())])
+                        .query(&[("n", options.page_size), ("start", options.start)])
                         .apply_locale_query()
                         .request()
                         .await?;
@@ -289,13 +290,17 @@ impl Crunchyroll {
     pub fn news_feed(&self) -> NewsFeedResult {
         NewsFeedResult {
             top_news: Pagination::new(
-                |start, executor, _| {
+                |options| {
                     async move {
                         let endpoint = "https://www.crunchyroll.com/content/v2/discover/news_feed";
-                        let result: V2BulkResult<V2TypeBulkResult<NewsFeed>> = executor
+                        let result: V2BulkResult<V2TypeBulkResult<NewsFeed>> = options
+                            .executor
                             .get(endpoint)
                             .query(&[("latest_news_n", "0")])
-                            .query(&[("top_news_n", "20"), ("top_news_start", &start.to_string())])
+                            .query(&[
+                                ("top_news_n", options.page_size),
+                                ("top_news_start", options.start),
+                            ])
                             .apply_locale_query()
                             .request()
                             .await?;
@@ -312,15 +317,16 @@ impl Crunchyroll {
                 vec![],
             ),
             latest_news: Pagination::new(
-                |start, executor, _| {
+                |options| {
                     async move {
                         let endpoint = "https://www.crunchyroll.com/content/v2/discover/news_feed";
-                        let result: V2BulkResult<V2TypeBulkResult<NewsFeed>> = executor
+                        let result: V2BulkResult<V2TypeBulkResult<NewsFeed>> = options
+                            .executor
                             .get(endpoint)
                             .query(&[("top_news_n", "0")])
                             .query(&[
-                                ("latest_news_n", "20"),
-                                ("latest_news_start", &start.to_string()),
+                                ("latest_news_n", options.page_size),
+                                ("latest_news_start", options.start),
                             ])
                             .apply_locale_query()
                             .request()
@@ -343,15 +349,16 @@ impl Crunchyroll {
     /// Returns recommended series or movies to watch.
     pub fn recommendations(&self) -> Pagination<MediaCollection> {
         Pagination::new(
-            |start, executor, _| {
+            |options| {
                 async move {
                     let endpoint = format!(
                         "https://www.crunchyroll.com/content/v2/discover/{}/recommendations",
-                        executor.details.account_id.clone()?
+                        options.executor.details.account_id.clone()?
                     );
-                    let result: V2BulkResult<MediaCollection> = executor
+                    let result: V2BulkResult<MediaCollection> = options
+                        .executor
                         .get(endpoint)
-                        .query(&[("n", "20"), ("start", &start.to_string())])
+                        .query(&[("n", options.page_size), ("start", options.start)])
                         .apply_locale_query()
                         .request()
                         .await?;

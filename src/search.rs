@@ -69,14 +69,15 @@ mod browse {
         /// series and movies.
         pub fn browse(&self, options: BrowseOptions) -> Pagination<MediaCollection> {
             Pagination::new(
-                |start, executor, query| {
+                |options| {
                     async move {
                         let endpoint = "https://www.crunchyroll.com/content/v2/discover/browse";
-                        let result = executor
+                        let result = options
+                            .executor
                             .clone()
                             .get(endpoint)
-                            .query(&query)
-                            .query(&[("n", "20"), ("start", &start.to_string())])
+                            .query(&options.query)
+                            .query(&[("n", options.page_size), ("start", options.start)])
                             .request::<V2BulkResult<MediaCollection>>()
                             .await?;
                         Ok((result.data, result.total))
@@ -122,84 +123,108 @@ mod query {
 
     impl Crunchyroll {
         /// Search the Crunchyroll catalog by a given query / string.
-        pub fn query<S: AsRef<str>>(&self, query: S, ) -> QueryResults {
+        pub fn query<S: AsRef<str>>(&self, query: S) -> QueryResults {
             QueryResults {
-                top_results: Pagination::new(|start, executor, query| {
-                    async move {
-                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
-                        let result: V2BulkResult<V2TypeBulkResult<MediaCollection>> = executor
-                            .get(endpoint)
-                            .query(&query)
-                            .query(&[("type", "top_results")])
-                            .query(&[("limit", "20"), ("start", &start.to_string())])
-                            .apply_locale_query()
-                            .request()
-                            .await?;
-                        let top_results = result
-                            .data
-                            .into_iter()
-                            .find(|r| r.result_type == "top_results")
-                            .unwrap_or_default();
-                        Ok((top_results.items, top_results.total))
-                    }.boxed()
-                }, self.executor.clone(), vec![("q".to_string(), query.as_ref().to_string())]),
-                series: Pagination::new(|start, executor, query| {
-                    async move {
-                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
-                        let result: V2BulkResult<V2TypeBulkResult<Series>> = executor
-                            .get(endpoint)
-                            .query(&query)
-                            .query(&[("type", "series")])
-                            .query(&[("limit", "20"), ("start", &start.to_string())])
-                            .apply_locale_query()
-                            .request()
-                            .await?;
-                        let top_results = result
-                            .data
-                            .into_iter()
-                            .find(|r| r.result_type == "series")
-                            .unwrap_or_default();
-                        Ok((top_results.items, top_results.total))
-                    }.boxed()
-                }, self.executor.clone(), vec![("q".to_string(), query.as_ref().to_string())]),
-                movie_listing: Pagination::new(|start, executor, query| {
-                    async move {
-                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
-                        let result: V2BulkResult<V2TypeBulkResult<MovieListing>> = executor
-                            .get(endpoint)
-                            .query(&query)
-                            .query(&[("type", "movie_listing")])
-                            .query(&[("limit", "20"), ("start", &start.to_string())])
-                            .apply_locale_query()
-                            .request()
-                            .await?;
-                        let top_results = result
-                            .data
-                            .into_iter()
-                            .find(|r| r.result_type == "movie_listing")
-                            .unwrap_or_default();
-                        Ok((top_results.items, top_results.total))
-                    }.boxed()
-                }, self.executor.clone(), vec![("q".to_string(), query.as_ref().to_string())]),
-                episode: Pagination::new(|start, executor, query| {
-                    async move {
-                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
-                        let result: V2BulkResult<V2TypeBulkResult<Episode>> = executor
-                            .get(endpoint)
-                            .query(&query)
-                            .query(&[("type", "episode")])
-                            .query(&[("limit", "20"), ("start", &start.to_string())])
-                            .apply_locale_query()
-                            .request()
-                            .await?;
-                        let top_results = result
-                            .data
-                            .into_iter()
-                            .find(|r| r.result_type == "episode")
-                            .unwrap_or_default();
-                        Ok((top_results.items, top_results.total))
-                    }.boxed()
-                }, self.executor.clone(), vec![("q".to_string(), query.as_ref().to_string())])
+                top_results: Pagination::new(
+                    |options| {
+                        async move {
+                            let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
+                            let result: V2BulkResult<V2TypeBulkResult<MediaCollection>> = options
+                                .executor
+                                .get(endpoint)
+                                .query(&options.query)
+                                .query(&[("type", "top_results")])
+                                .query(&[("limit", options.page_size), ("start", options.start)])
+                                .apply_locale_query()
+                                .request()
+                                .await?;
+                            let top_results = result
+                                .data
+                                .into_iter()
+                                .find(|r| r.result_type == "top_results")
+                                .unwrap_or_default();
+                            Ok((top_results.items, top_results.total))
+                        }
+                        .boxed()
+                    },
+                    self.executor.clone(),
+                    vec![("q".to_string(), query.as_ref().to_string())],
+                ),
+                series: Pagination::new(
+                    |options| {
+                        async move {
+                            let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
+                            let result: V2BulkResult<V2TypeBulkResult<Series>> = options
+                                .executor
+                                .get(endpoint)
+                                .query(&options.query)
+                                .query(&[("type", "series")])
+                                .query(&[("limit", options.page_size), ("start", options.start)])
+                                .apply_locale_query()
+                                .request()
+                                .await?;
+                            let top_results = result
+                                .data
+                                .into_iter()
+                                .find(|r| r.result_type == "series")
+                                .unwrap_or_default();
+                            Ok((top_results.items, top_results.total))
+                        }
+                        .boxed()
+                    },
+                    self.executor.clone(),
+                    vec![("q".to_string(), query.as_ref().to_string())],
+                ),
+                movie_listing: Pagination::new(
+                    |options| {
+                        async move {
+                            let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
+                            let result: V2BulkResult<V2TypeBulkResult<MovieListing>> = options
+                                .executor
+                                .get(endpoint)
+                                .query(&options.query)
+                                .query(&[("type", "movie_listing")])
+                                .query(&[("limit", options.page_size), ("start", options.start)])
+                                .apply_locale_query()
+                                .request()
+                                .await?;
+                            let top_results = result
+                                .data
+                                .into_iter()
+                                .find(|r| r.result_type == "movie_listing")
+                                .unwrap_or_default();
+                            Ok((top_results.items, top_results.total))
+                        }
+                        .boxed()
+                    },
+                    self.executor.clone(),
+                    vec![("q".to_string(), query.as_ref().to_string())],
+                ),
+                episode: Pagination::new(
+                    |options| {
+                        async move {
+                            let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
+                            let result: V2BulkResult<V2TypeBulkResult<Episode>> = options
+                                .executor
+                                .get(endpoint)
+                                .query(&options.query)
+                                .query(&[("type", "episode")])
+                                .query(&[("limit", options.page_size), ("start", options.start)])
+                                .apply_locale_query()
+                                .request()
+                                .await?;
+                            let top_results = result
+                                .data
+                                .into_iter()
+                                .find(|r| r.result_type == "episode")
+                                .unwrap_or_default();
+                            Ok((top_results.items, top_results.total))
+                        }
+                        .boxed()
+                    },
+                    self.executor.clone(),
+                    vec![("q".to_string(), query.as_ref().to_string())],
+                ),
             }
         }
     }

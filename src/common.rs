@@ -44,6 +44,14 @@ pub(crate) struct V2TypeBulkResult<T: Default + DeserializeOwned + Request> {
     pub(crate) items: Vec<T>,
 }
 
+#[derive(Clone)]
+pub(crate) struct PaginationOptions {
+    pub(crate) executor: Arc<Executor>,
+    pub(crate) start: u32,
+    pub(crate) page_size: u32,
+    pub(crate) query: Vec<(String, String)>,
+}
+
 #[allow(clippy::type_complexity)]
 pub struct Pagination<T: Default + DeserializeOwned + Request> {
     data: Vec<T>,
@@ -51,15 +59,12 @@ pub struct Pagination<T: Default + DeserializeOwned + Request> {
     init: bool,
     next_fn: Box<
         dyn FnMut(
-            u32,
-            Arc<Executor>,
-            Vec<(String, String)>,
+            PaginationOptions,
         ) -> Pin<Box<dyn Future<Output = Result<(Vec<T>, u32)>> + Send + 'static>>,
     >,
     next_state: Option<Pin<Box<dyn Future<Output = Result<(Vec<T>, u32)>> + Send + 'static>>>,
 
-    fn_executor: Arc<Executor>,
-    fn_query: Vec<(String, String)>,
+    paginator_options: PaginationOptions,
 
     count: u32,
     total: u32,
@@ -73,11 +78,9 @@ impl<T: Default + DeserializeOwned + Request> Stream for Pagination<T> {
 
         if this.next_state.is_none() {
             let f = this.next_fn.as_mut();
-            this.next_state = Some(f(
-                this.count,
-                this.fn_executor.clone(),
-                this.fn_query.clone(),
-            ));
+            let options = &mut this.paginator_options;
+            options.start = this.count;
+            this.next_state = Some(f(options.clone()));
         }
 
         let fut = this.next_state.as_mut().unwrap();
@@ -95,7 +98,7 @@ impl<T: Default + DeserializeOwned + Request> Stream for Pagination<T> {
                     }
                     Err(e) => return Poll::Ready(Some(Err(e))),
                 }
-            },
+            }
             Poll::Pending => return Poll::Pending,
         }
 
@@ -118,9 +121,7 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
     ) -> Self
     where
         F: FnMut(
-                u32,
-                Arc<Executor>,
-                Vec<(String, String)>,
+                PaginationOptions,
             )
                 -> Pin<Box<dyn Future<Output = Result<(Vec<T>, u32)>> + Send + 'static>>
             + Send
@@ -131,11 +132,19 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
             init: false,
             next_fn: Box::new(pagination_fn),
             next_state: None,
-            fn_executor: executor,
-            fn_query: query_args,
+            paginator_options: PaginationOptions {
+                executor,
+                start: 0,
+                page_size: 0,
+                query: query_args,
+            },
             count: 0,
             total: 0,
         }
+    }
+
+    pub fn page_size(&mut self, size: u32) {
+        self.paginator_options.page_size = size
     }
 
     /// Return the total amount of items which can be fetched.
