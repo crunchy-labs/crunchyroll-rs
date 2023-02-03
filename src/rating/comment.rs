@@ -268,10 +268,7 @@ async fn create_comment<S: AsRef<str>>(
     locale: &Locale,
     parent_id: Option<&String>,
 ) -> Result<Comment> {
-    let endpoint = format!(
-        "https://www.crunchyroll.com/talkbox/guestbooks/{}/comments",
-        video_id
-    );
+    let endpoint = format!("https://www.crunchyroll.com/talkbox/guestbooks/{video_id}/comments");
     let flags = if is_spoiler { vec!["spoiler"] } else { vec![] };
     executor
         .post(endpoint)

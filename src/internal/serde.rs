@@ -22,8 +22,7 @@ impl<'de> Deserialize<'de> for EmptyJsonProxy {
             }
         }
         Err(Error::custom(format!(
-            "result must be empty object / map: '{}'",
-            value
+            "result must be empty object / map: '{value}'"
         )))
     }
 }

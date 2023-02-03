@@ -51,18 +51,18 @@ impl<T> Store<T> {
 }
 
 pub fn get_store(key: String) -> Result<String, std::io::Error> {
-    let path = env::temp_dir().join(format!(".crunchyroll-rs.{}", key));
+    let path = env::temp_dir().join(format!(".crunchyroll-rs.{key}"));
     fs::read_to_string(path)
 }
 
 pub fn set_store(key: String, value: String) -> Result<(), std::io::Error> {
-    let path = env::temp_dir().join(format!(".crunchyroll-rs.{}", key));
+    let path = env::temp_dir().join(format!(".crunchyroll-rs.{key}"));
     fs::write(path, value)?;
     Ok(())
 }
 
 pub fn has_store(key: String) -> bool {
     env::temp_dir()
-        .join(format!(".crunchyroll-rs.{}", key))
+        .join(format!(".crunchyroll-rs.{key}"))
         .exists()
 }

@@ -221,8 +221,7 @@ where
         "no" => Ok(Some(false)),
         "" => Ok(None),
         _ => Err(Error::custom(format!(
-            "could not deserialize rating value '{}'",
-            value
+            "could not deserialize rating value '{value}'"
         ))),
     }
 }

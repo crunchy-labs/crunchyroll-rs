@@ -30,11 +30,11 @@ pub enum CrunchyrollError {
 impl Display for CrunchyrollError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CrunchyrollError::Internal(context) => write!(f, "{}", context),
-            CrunchyrollError::Request(context) => write!(f, "{}", context),
-            CrunchyrollError::Decode(context) => write!(f, "{}", context),
-            CrunchyrollError::Authentication(context) => write!(f, "{}", context),
-            CrunchyrollError::Input(context) => write!(f, "{}", context),
+            CrunchyrollError::Internal(context) => write!(f, "{context}"),
+            CrunchyrollError::Request(context) => write!(f, "{context}"),
+            CrunchyrollError::Decode(context) => write!(f, "{context}"),
+            CrunchyrollError::Authentication(context) => write!(f, "{context}"),
+            CrunchyrollError::Input(context) => write!(f, "{context}"),
         }
     }
 }
@@ -68,8 +68,7 @@ impl From<reqwest::Error> for CrunchyrollError {
             CrunchyrollError::Internal(context)
         } else {
             CrunchyrollError::Internal(CrunchyrollErrorContext::new(format!(
-                "Could not determine request error type - {}",
-                err
+                "Could not determine request error type - {err}"
             )))
         }
     }
@@ -94,13 +93,13 @@ impl Display for CrunchyrollErrorContext {
         let mut res = self.message.clone();
 
         if let Some(url) = &self.url {
-            res.push_str(&format!(" ({})", url));
+            res.push_str(&format!(" ({url})"));
         }
         if let Some(value) = &self.value {
-            res.push_str(&format!(": {}", value));
+            res.push_str(&format!(": {value}"));
         }
 
-        write!(f, "{}", res)
+        write!(f, "{res}")
     }
 }
 
@@ -202,7 +201,7 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
                     e.code,
                     e.violated_constraints
                         .iter()
-                        .map(|(key, value)| format!("{}: {}", key, value))
+                        .map(|(key, value)| format!("{key}: {value}"))
                         .collect::<Vec<String>>()
                         .join(", ")
                 )
@@ -230,8 +229,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
             CrunchyrollErrorContext::new(format!(
                 "Rate limit detected. {}",
                 retry_secs.map_or("Try again later".to_string(), |secs| format!(
-                    "Try again in {} seconds",
-                    secs
+                    "Try again in {secs} seconds"
                 ))
             ))
             .with_url(resp.url()),
