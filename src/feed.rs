@@ -260,7 +260,8 @@ impl Crunchyroll {
                 .boxed()
             },
             self.executor.clone(),
-            vec![],
+            None,
+            None,
         )
     }
 
@@ -292,7 +293,8 @@ impl Crunchyroll {
                     .boxed()
                 },
                 self.executor.clone(),
-                vec![],
+                None,
+                None,
             ),
             latest_news: Pagination::new(
                 |options| {
@@ -319,7 +321,8 @@ impl Crunchyroll {
                     .boxed()
                 },
                 self.executor.clone(),
-                vec![],
+                None,
+                None,
             ),
         }
     }
@@ -345,7 +348,8 @@ impl Crunchyroll {
                 .boxed()
             },
             self.executor.clone(),
-            vec![],
+            None,
+            None,
         )
     }
 }

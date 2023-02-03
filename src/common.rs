@@ -2,7 +2,7 @@ use crate::{Executor, Result};
 use futures_util::{Stream, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -48,8 +48,10 @@ pub(crate) struct V2TypeBulkResult<T: Default + DeserializeOwned + Request> {
 pub(crate) struct PaginationOptions {
     pub(crate) executor: Arc<Executor>,
     pub(crate) start: u32,
+    pub(crate) page: u32,
     pub(crate) page_size: u32,
     pub(crate) query: Vec<(String, String)>,
+    pub(crate) extra: BTreeMap<&'static str, String>,
 }
 
 #[allow(clippy::type_complexity)]
@@ -84,9 +86,10 @@ impl<T: Default + DeserializeOwned + Request> Stream for Pagination<T> {
 
             if this.next_state.is_none() {
                 let f = this.next_fn.as_mut();
-                let mut options = this.paginator_options.clone();
+                let options = &mut this.paginator_options;
                 options.start = this.count;
-                this.next_state = Some(f(options));
+                options.page += 1;
+                this.next_state = Some(f(options.clone()));
             }
 
             let fut = this.next_state.as_mut().unwrap();
@@ -121,7 +124,8 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
     pub(crate) fn new<F>(
         pagination_fn: F,
         executor: Arc<Executor>,
-        query_args: Vec<(String, String)>,
+        query: Option<Vec<(String, String)>>,
+        extra: Option<Vec<(&'static str, String)>>,
     ) -> Self
     where
         F: FnMut(
@@ -139,8 +143,10 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
             paginator_options: PaginationOptions {
                 executor,
                 start: 0,
+                page: 0,
                 page_size: 20,
-                query: query_args,
+                query: query.unwrap_or_default(),
+                extra: extra.map_or(BTreeMap::new(), BTreeMap::from_iter),
             },
             count: 0,
             total: 0,

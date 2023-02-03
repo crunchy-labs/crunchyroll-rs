@@ -899,7 +899,7 @@ macro_rules! impl_media_video_collection {
                 pub fn similar(&self) -> Pagination<MediaCollection> {
                     Pagination::new(|options| {
                         async move {
-                            let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", options.executor.details.account_id.clone()?, options.query.get(0).unwrap().0);
+                            let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", options.executor.details.account_id.clone()?, options.extra.get("id").unwrap());
                             let result: V2BulkResult<MediaCollection> = options
                                 .executor
                                 .get(endpoint)
@@ -910,7 +910,7 @@ macro_rules! impl_media_video_collection {
                             Ok((result.data, result.total))
                         }
                         .boxed()
-                    }, self.executor.clone(), vec![(self.id.clone(), self.id.clone())]) // the id as query is a little hack to pass the id to the closure
+                    }, self.executor.clone(), None, Some(vec![("id", self.id.clone())]))
                 }
             }
         )*

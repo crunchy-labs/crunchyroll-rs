@@ -85,7 +85,8 @@ mod browse {
                     .boxed()
                 },
                 self.executor.clone(),
-                options.into_query(),
+                Some(options.into_query()),
+                None,
             )
         }
 
@@ -132,7 +133,7 @@ mod query {
                             let result: V2BulkResult<V2TypeBulkResult<MediaCollection>> = options
                                 .executor
                                 .get(endpoint)
-                                .query(&options.query)
+                                .query(&[("q", options.extra.get("q").unwrap())])
                                 .query(&[("type", "top_results")])
                                 .query(&[("limit", options.page_size), ("start", options.start)])
                                 .apply_locale_query()
@@ -148,7 +149,8 @@ mod query {
                         .boxed()
                     },
                     self.executor.clone(),
-                    vec![("q".to_string(), query.as_ref().to_string())],
+                    None,
+                    Some(vec![("q", query.as_ref().to_string())]),
                 ),
                 series: Pagination::new(
                     |options| {
@@ -157,7 +159,7 @@ mod query {
                             let result: V2BulkResult<V2TypeBulkResult<Series>> = options
                                 .executor
                                 .get(endpoint)
-                                .query(&options.query)
+                                .query(&[("q", options.extra.get("q").unwrap())])
                                 .query(&[("type", "series")])
                                 .query(&[("limit", options.page_size), ("start", options.start)])
                                 .apply_locale_query()
@@ -173,7 +175,8 @@ mod query {
                         .boxed()
                     },
                     self.executor.clone(),
-                    vec![("q".to_string(), query.as_ref().to_string())],
+                    None,
+                    Some(vec![("q", query.as_ref().to_string())]),
                 ),
                 movie_listing: Pagination::new(
                     |options| {
@@ -182,7 +185,7 @@ mod query {
                             let result: V2BulkResult<V2TypeBulkResult<MovieListing>> = options
                                 .executor
                                 .get(endpoint)
-                                .query(&options.query)
+                                .query(&[("q", options.extra.get("q").unwrap())])
                                 .query(&[("type", "movie_listing")])
                                 .query(&[("limit", options.page_size), ("start", options.start)])
                                 .apply_locale_query()
@@ -198,7 +201,8 @@ mod query {
                         .boxed()
                     },
                     self.executor.clone(),
-                    vec![("q".to_string(), query.as_ref().to_string())],
+                    None,
+                    Some(vec![("q", query.as_ref().to_string())]),
                 ),
                 episode: Pagination::new(
                     |options| {
@@ -207,7 +211,7 @@ mod query {
                             let result: V2BulkResult<V2TypeBulkResult<Episode>> = options
                                 .executor
                                 .get(endpoint)
-                                .query(&options.query)
+                                .query(&[("q", options.extra.get("q").unwrap())])
                                 .query(&[("type", "episode")])
                                 .query(&[("limit", options.page_size), ("start", options.start)])
                                 .apply_locale_query()
@@ -223,7 +227,8 @@ mod query {
                         .boxed()
                     },
                     self.executor.clone(),
-                    vec![("q".to_string(), query.as_ref().to_string())],
+                    None,
+                    Some(vec![("q", query.as_ref().to_string())]),
                 ),
             }
         }
