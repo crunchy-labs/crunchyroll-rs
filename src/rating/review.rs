@@ -1,6 +1,8 @@
-use crate::Result;
+use crate::common::{BulkResult, Pagination};
 use crate::{enum_values, options, EmptyJsonProxy, Executor, Locale, Request};
+use crate::{MovieListing, Result, Series};
 use chrono::{DateTime, Utc};
+use futures_util::FutureExt;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
@@ -236,14 +238,12 @@ enum_values! {
 
 options! {
     ReviewOptions;
-    page(u32, "page") = Some(1),
-    size(u32, "page_size") = Some(5),
     sort(ReviewSortType, "sort") = Some(ReviewSortType::Helpful),
     filter(RatingStar, "filter") = None
 }
 
 macro_rules! impl_rating {
-    ($($s:path, $endpoint:literal);*) => {
+    ($($s:path = $endpoint:literal),*) => {
         $(
             impl $s {
                 pub async fn rating(&self) -> Result<Rating> {
@@ -254,12 +254,24 @@ macro_rules! impl_rating {
                     self.executor.get(endpoint).request().await
                 }
 
-                pub async fn reviews(&self, options: ReviewOptions) -> Result<$crate::common::BulkResult<Review>> {
-                    let endpoint = format!(
-                        "https://www.crunchyroll.com/content-reviews/v2/{}/user/{}/review/{}/{}/list",
-                        self.executor.details.locale, self.executor.details.account_id.clone()?, $endpoint, self.id
-                    );
-                    self.executor.get(endpoint).query(&options.into_query()).request().await
+                pub fn reviews(&self, options: ReviewOptions) -> Result<Pagination<Review>> {
+                    Ok(Pagination::new(|options| {
+                        async move {
+                            let endpoint = format!(
+                                "https://www.crunchyroll.com/content-reviews/v2/{}/user/{}/review/{}/{}/list",
+                                options.extra.get("locale").unwrap(), options.extra.get("account_id").unwrap(), $endpoint, options.extra.get("id").unwrap()
+                            );
+                            let result: BulkResult<Review> = options
+                                .executor
+                                .get(endpoint)
+                                .query(&[("page", options.page), ("page_size", options.page_size)])
+                                .query(&options.query)
+                                .request()
+                                .await?;
+                            Ok((result.items, result.total))
+                        }
+                        .boxed()
+                    }, self.executor.clone(), Some(options.into_query()), Some(vec![("locale", self.executor.details.locale.to_string()), ("account_id", self.executor.details.account_id.clone()?), ("id", self.id.clone())])))
                 }
 
                 pub async fn rate(&self, stars: RatingStar) -> Result<Rating> {
@@ -300,6 +312,6 @@ macro_rules! impl_rating {
 }
 
 impl_rating! {
-    crate::media::Series, "series";
-    crate::media::MovieListing, "movie_listing"
+    Series = "series",
+    MovieListing = "movie_listing"
 }

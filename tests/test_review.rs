@@ -1,7 +1,7 @@
 use crate::utils::{Store, SESSION};
-use crunchyroll_rs::common::BulkResult;
 use crunchyroll_rs::rating::{RatingStar, Review, ReviewOptions};
 use crunchyroll_rs::Series;
+use futures_util::StreamExt;
 
 mod utils;
 
@@ -12,11 +12,11 @@ static SERIES: Store<Series> = Store::new(|| {
         Ok(series)
     })
 });
-static REVIEWS: Store<BulkResult<Review>> = Store::new(|| {
+static REVIEW: Store<Review> = Store::new(|| {
     Box::pin(async {
         let series = SERIES.get().await?;
-        let review = series.reviews(ReviewOptions::default()).await?;
-        Ok(review)
+        let mut review = series.reviews(ReviewOptions::default())?;
+        Ok(review.next().await.unwrap()?)
     })
 });
 
@@ -39,5 +39,5 @@ async fn rate() {
 
 #[tokio::test]
 async fn reviews() {
-    assert_result!(REVIEWS.get().await)
+    assert_result!(REVIEW.get().await)
 }
