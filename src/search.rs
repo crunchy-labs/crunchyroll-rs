@@ -1,8 +1,9 @@
 mod browse {
     use crate::categories::Category;
-    use crate::common::V2BulkResult;
+    use crate::common::{Pagination, V2BulkResult};
     use crate::media::MediaType;
     use crate::{enum_values, options, Crunchyroll, Locale, MediaCollection, Request, Result};
+    use futures_util::FutureExt;
     use serde::Deserialize;
 
     /// Human readable implementation of [`SimulcastSeason`].
@@ -60,28 +61,31 @@ mod browse {
         /// Specifies the media type of the entries.
         media_type(MediaType, "type") = None,
         /// Preferred audio language.
-        preferred_audio_language(Locale, "preferred_audio_language") = None,
-
-        /// Limit of results to return.
-        limit(u32, "n") = Some(20),
-        /// Specifies the index from which the entries should be returned.
-        start(u32, "start") = None
+        preferred_audio_language(Locale, "preferred_audio_language") = None
     }
 
     impl Crunchyroll {
         /// Browses the crunchyroll catalog filtered by the specified options and returns all found
         /// series and movies.
-        pub async fn browse(
-            &self,
-            options: BrowseOptions,
-        ) -> Result<V2BulkResult<MediaCollection>> {
-            let endpoint = "https://www.crunchyroll.com/content/v2/discover/browse";
-            self.executor
-                .get(endpoint)
-                .query(&options.into_query())
-                .apply_locale_query()
-                .request()
-                .await
+        pub fn browse(&self, options: BrowseOptions) -> Pagination<MediaCollection> {
+            Pagination::new(
+                |start, executor, query| {
+                    async move {
+                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/browse";
+                        let result = executor
+                            .clone()
+                            .get(endpoint)
+                            .query(&query)
+                            .query(&[("n", "20"), ("start", &start.to_string())])
+                            .request::<V2BulkResult<MediaCollection>>()
+                            .await?;
+                        Ok((result.data, result.total))
+                    }
+                    .boxed()
+                },
+                self.executor.clone(),
+                options.into_query(),
+            )
         }
 
         /// Returns all simulcast seasons. The locale specified which language the localization /
@@ -100,163 +104,103 @@ mod browse {
 }
 
 mod query {
-    use crate::common::{BulkResult, Request, V2BulkResult};
-    use crate::error::{CrunchyrollError, CrunchyrollErrorContext, Result};
+    use crate::common::{Pagination, V2BulkResult, V2TypeBulkResult};
     use crate::media::{Episode, MovieListing, Series};
-    use crate::{enum_values, options, Crunchyroll, Executor, Locale, MediaCollection};
-    use serde::Deserialize;
-    use std::sync::Arc;
+    use crate::{Crunchyroll, MediaCollection};
+    use futures_util::FutureExt;
 
     /// Results when querying Crunchyroll. Results depending on the input which was given via
     /// [`QueryOptions::result_type`]. If not specified, every field is populated, if one specific
     /// type, for example [`QueryType::Series`], were provided, only [`QueryResults::series`] will
     /// be populated.
-    #[derive(Clone, Debug, Default, Deserialize, Request)]
-    #[request(executor(top_results, series, movie_listing, episode))]
-    #[serde(try_from = "V2BulkResult<QueryBulkResult>")]
-    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     pub struct QueryResults {
-        #[serde(skip)]
-        executor: Arc<Executor>,
-
-        pub top_results: Option<BulkResult<MediaCollection>>,
-        pub series: Option<BulkResult<Series>>,
-        pub movie_listing: Option<BulkResult<MovieListing>>,
-        pub episode: Option<BulkResult<Episode>>,
-    }
-
-    impl TryFrom<V2BulkResult<QueryBulkResult>> for QueryResults {
-        type Error = CrunchyrollError;
-
-        fn try_from(
-            value: V2BulkResult<QueryBulkResult>,
-        ) -> std::result::Result<Self, Self::Error> {
-            let mut top_results: Option<BulkResult<MediaCollection>> = None;
-            let mut series: Option<BulkResult<Series>> = None;
-            let mut movie_listing: Option<BulkResult<MovieListing>> = None;
-            let mut episode: Option<BulkResult<Episode>> = None;
-
-            for item in value.data.clone() {
-                match item.result_type.as_str() {
-                    "top_results" => {
-                        top_results = Some(BulkResult {
-                            items: item.items,
-                            total: item.count,
-                        })
-                    }
-                    "series" => {
-                        series = Some(BulkResult {
-                            items: item
-                                .items
-                                .into_iter()
-                                .filter_map(|i| {
-                                    if let MediaCollection::Series(s) = i {
-                                        Some(s)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect::<Vec<Series>>(),
-                            total: item.count,
-                        })
-                    }
-                    "movie_listing" => {
-                        movie_listing = Some(BulkResult {
-                            items: item
-                                .items
-                                .into_iter()
-                                .filter_map(|i| {
-                                    if let MediaCollection::MovieListing(ml) = i {
-                                        Some(ml)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect::<Vec<MovieListing>>(),
-                            total: item.count,
-                        })
-                    }
-                    "episode" => {
-                        episode = Some(BulkResult {
-                            items: item
-                                .items
-                                .into_iter()
-                                .filter_map(|i| {
-                                    if let MediaCollection::Episode(e) = i {
-                                        Some(e)
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .collect::<Vec<Episode>>(),
-                            total: item.count,
-                        })
-                    }
-                    _ => {
-                        return Err(CrunchyrollError::Internal(
-                            CrunchyrollErrorContext::new(format!(
-                                "invalid result type found: '{}'",
-                                item.result_type
-                            ))
-                            .with_value(format!("{:?}", value).as_bytes()),
-                        ))
-                    }
-                };
-            }
-
-            Ok(Self {
-                executor: Default::default(),
-                top_results,
-                series,
-                movie_listing,
-                episode,
-            })
-        }
-    }
-
-    #[derive(Clone, Debug, Default, Deserialize, Request)]
-    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-    struct QueryBulkResult {
-        #[serde(rename = "type")]
-        result_type: String,
-        items: Vec<MediaCollection>,
-        count: u32,
-    }
-
-    enum_values! {
-        pub enum QueryType {
-            Series = "series"
-            MovieListing = "movie_listing"
-            Episode = "episode"
-        }
-    }
-
-    options! {
-        QueryOptions;
-        /// Limit of results to return.
-        limit(u32, "n") = Some(20),
-        /// "Type of result to return.
-        result_type(QueryType, "type") = None,
-        /// Preferred audio language.
-        preferred_audio_language(Locale, "preferred_audio_language") = None
+        pub top_results: Pagination<MediaCollection>,
+        pub series: Pagination<Series>,
+        pub movie_listing: Pagination<MovieListing>,
+        pub episode: Pagination<Episode>,
     }
 
     impl Crunchyroll {
         /// Search the Crunchyroll catalog by a given query / string.
-        pub async fn query<S: AsRef<str>>(
-            &self,
-            query: S,
-            options: QueryOptions,
-        ) -> Result<QueryResults> {
-            let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
-            self.executor
-                .get(endpoint)
-                .query(&options.into_query())
-                .query(&[("q", query.as_ref())])
-                .apply_locale_query()
-                .request()
-                .await
+        pub fn query<S: AsRef<str>>(&self, query: S, ) -> QueryResults {
+            QueryResults {
+                top_results: Pagination::new(|start, executor, query| {
+                    async move {
+                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
+                        let result: V2BulkResult<V2TypeBulkResult<MediaCollection>> = executor
+                            .get(endpoint)
+                            .query(&query)
+                            .query(&[("type", "top_results")])
+                            .query(&[("limit", "20"), ("start", &start.to_string())])
+                            .apply_locale_query()
+                            .request()
+                            .await?;
+                        let top_results = result
+                            .data
+                            .into_iter()
+                            .find(|r| r.result_type == "top_results")
+                            .unwrap_or_default();
+                        Ok((top_results.items, top_results.total))
+                    }.boxed()
+                }, self.executor.clone(), vec![("q".to_string(), query.as_ref().to_string())]),
+                series: Pagination::new(|start, executor, query| {
+                    async move {
+                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
+                        let result: V2BulkResult<V2TypeBulkResult<Series>> = executor
+                            .get(endpoint)
+                            .query(&query)
+                            .query(&[("type", "series")])
+                            .query(&[("limit", "20"), ("start", &start.to_string())])
+                            .apply_locale_query()
+                            .request()
+                            .await?;
+                        let top_results = result
+                            .data
+                            .into_iter()
+                            .find(|r| r.result_type == "series")
+                            .unwrap_or_default();
+                        Ok((top_results.items, top_results.total))
+                    }.boxed()
+                }, self.executor.clone(), vec![("q".to_string(), query.as_ref().to_string())]),
+                movie_listing: Pagination::new(|start, executor, query| {
+                    async move {
+                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
+                        let result: V2BulkResult<V2TypeBulkResult<MovieListing>> = executor
+                            .get(endpoint)
+                            .query(&query)
+                            .query(&[("type", "movie_listing")])
+                            .query(&[("limit", "20"), ("start", &start.to_string())])
+                            .apply_locale_query()
+                            .request()
+                            .await?;
+                        let top_results = result
+                            .data
+                            .into_iter()
+                            .find(|r| r.result_type == "movie_listing")
+                            .unwrap_or_default();
+                        Ok((top_results.items, top_results.total))
+                    }.boxed()
+                }, self.executor.clone(), vec![("q".to_string(), query.as_ref().to_string())]),
+                episode: Pagination::new(|start, executor, query| {
+                    async move {
+                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
+                        let result: V2BulkResult<V2TypeBulkResult<Episode>> = executor
+                            .get(endpoint)
+                            .query(&query)
+                            .query(&[("type", "episode")])
+                            .query(&[("limit", "20"), ("start", &start.to_string())])
+                            .apply_locale_query()
+                            .request()
+                            .await?;
+                        let top_results = result
+                            .data
+                            .into_iter()
+                            .find(|r| r.result_type == "episode")
+                            .unwrap_or_default();
+                        Ok((top_results.items, top_results.total))
+                    }.boxed()
+                }, self.executor.clone(), vec![("q".to_string(), query.as_ref().to_string())])
+            }
         }
     }
 }

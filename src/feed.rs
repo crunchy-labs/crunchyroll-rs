@@ -1,4 +1,4 @@
-use crate::common::{Pagination, V2BulkResult};
+use crate::common::{Pagination, V2BulkResult, V2TypeBulkResult};
 use crate::media::{MediaType, SimilarOptions};
 use crate::search::{BrowseOptions, BrowseSortType};
 use crate::{Crunchyroll, MediaCollection, Request, Series};
@@ -237,14 +237,6 @@ impl<'de> Deserialize<'de> for HomeFeed {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-struct NewsFeedResultProxy {
-    #[serde(rename = "type")]
-    news_type: String,
-    total: u32,
-    items: Vec<NewsFeed>,
-}
-
 pub struct NewsFeedResult {
     pub top_news: Pagination<NewsFeed>,
     pub latest_news: Pagination<NewsFeed>,
@@ -300,7 +292,7 @@ impl Crunchyroll {
                 |start, executor, _| {
                     async move {
                         let endpoint = "https://www.crunchyroll.com/content/v2/discover/news_feed";
-                        let result: V2BulkResult<NewsFeedResultProxy> = executor
+                        let result: V2BulkResult<V2TypeBulkResult<NewsFeed>> = executor
                             .get(endpoint)
                             .query(&[("latest_news_n", "0")])
                             .query(&[("top_news_n", "20"), ("top_news_start", &start.to_string())])
@@ -310,7 +302,7 @@ impl Crunchyroll {
                         let top_news = result
                             .data
                             .into_iter()
-                            .find(|p| p.news_type == "top_news")
+                            .find(|p| p.result_type == "top_news")
                             .unwrap_or_default();
                         Ok((top_news.items, top_news.total))
                     }
@@ -323,7 +315,7 @@ impl Crunchyroll {
                 |start, executor, _| {
                     async move {
                         let endpoint = "https://www.crunchyroll.com/content/v2/discover/news_feed";
-                        let result: V2BulkResult<NewsFeedResultProxy> = executor
+                        let result: V2BulkResult<V2TypeBulkResult<NewsFeed>> = executor
                             .get(endpoint)
                             .query(&[("top_news_n", "0")])
                             .query(&[
@@ -336,7 +328,7 @@ impl Crunchyroll {
                         let top_news = result
                             .data
                             .into_iter()
-                            .find(|p| p.news_type == "top_news")
+                            .find(|p| p.result_type == "top_news")
                             .unwrap_or_default();
                         Ok((top_news.items, top_news.total))
                     }

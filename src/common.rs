@@ -31,6 +31,19 @@ where
     pub(crate) meta: M,
 }
 
+#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[request(executor(items))]
+#[serde(bound = "T: Request + DeserializeOwned")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub(crate) struct V2TypeBulkResult<T: Default + DeserializeOwned + Request> {
+    #[serde(rename = "type")]
+    pub(crate) result_type: String,
+    #[serde(alias = "count")]
+    pub(crate) total: u32,
+    pub(crate) items: Vec<T>,
+}
+
 #[allow(clippy::type_complexity)]
 pub struct Pagination<T: Default + DeserializeOwned + Request> {
     data: Vec<T>,
@@ -56,36 +69,41 @@ impl<T: Default + DeserializeOwned + Request> Stream for Pagination<T> {
     type Item = Result<T>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if self.count < self.total || !self.init {
-            let this = self.get_mut();
+        let this = self.get_mut();
 
-            if this.next_state.is_none() {
-                let f = this.next_fn.as_mut();
-                this.next_state = Some(f(
-                    this.count,
-                    this.fn_executor.clone(),
-                    this.fn_query.clone(),
-                ))
-            }
+        if this.next_state.is_none() {
+            let f = this.next_fn.as_mut();
+            this.next_state = Some(f(
+                this.count,
+                this.fn_executor.clone(),
+                this.fn_query.clone(),
+            ));
+        }
 
-            let fut = this.next_state.as_mut().unwrap();
-            match Pin::new(fut).poll(cx) {
-                Poll::Ready(result) => match result {
+        let fut = this.next_state.as_mut().unwrap();
+        match Pin::new(fut).poll(cx) {
+            Poll::Ready(result) => {
+                this.next_state = None;
+                match result {
                     Ok((t, total)) => {
                         this.data = t;
                         this.total = total;
-                        this.next_state = None;
+
+                        if !this.init {
+                            this.init = true;
+                        }
                     }
                     Err(e) => return Poll::Ready(Some(Err(e))),
-                },
-                Poll::Pending => return Poll::Pending,
-            }
+                }
+            },
+            Poll::Pending => return Poll::Pending,
+        }
 
-            this.init = true;
+        if this.count >= this.total {
+            Poll::Ready(None)
+        } else {
             this.count += 1;
             Poll::Ready(Some(Ok(this.data.remove(0))))
-        } else {
-            Poll::Ready(None)
         }
     }
 }
