@@ -1,6 +1,6 @@
 use anyhow::Result;
-use crunchyroll_rs::search::QueryOptions;
 use crunchyroll_rs::Crunchyroll;
+use futures_util::StreamExt;
 use std::env;
 
 #[tokio::main]
@@ -12,18 +12,14 @@ async fn main() -> Result<()> {
         .login_with_credentials(user, password)
         .await?;
 
-    let options = QueryOptions::default()
-        // return 2o items max
-        .limit(20);
-    let result = crunchyroll.query("darling", options).await?;
+    while let Some(s) = crunchyroll.query("darling").series.next().await {
+        let series = s?;
 
-    let series = result.series.unwrap();
-    for s in series.items {
         println!(
             "Queried series {} which has {} seasons",
-            s.title, s.season_count
+            series.title, series.season_count
         );
-        let seasons = s.seasons(None).await?;
+        let seasons = series.seasons(None).await?;
         for season in seasons {
             println!(
                 "Found season {} with audio locale(s) {}",
