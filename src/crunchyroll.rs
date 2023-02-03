@@ -170,6 +170,14 @@ mod auth {
         pub(crate) account_id: Result<String>,
     }
 
+    /// Contains which fixes should be used to make the api more reliable as Crunchyroll does weird
+    /// stuff / delivers incorrect results.
+    #[derive(Clone, Debug)]
+    pub(crate) struct ExecutorFixes {
+        pub(crate) locale_name_parsing: bool,
+        pub(crate) season_number: bool,
+    }
+
     /// Internal struct to execute all request with.
     #[derive(Debug)]
     pub struct Executor {
@@ -179,6 +187,8 @@ mod auth {
         /// direct changes to the struct.
         pub(crate) config: Mutex<ExecutorConfig>,
         pub(crate) details: ExecutorDetails,
+
+        pub(crate) fixes: ExecutorFixes,
     }
 
     impl Executor {
@@ -361,6 +371,10 @@ mod auth {
                     policy: "".to_string(),
                     key_pair_id: "".to_string(),
                 },
+                fixes: ExecutorFixes {
+                    locale_name_parsing: false,
+                    season_number: false,
+                },
             }
         }
     }
@@ -416,6 +430,8 @@ mod auth {
     pub struct CrunchyrollBuilder {
         pub(crate) client: Client,
         pub(crate) locale: Locale,
+
+        pub(crate) fixes: ExecutorFixes,
     }
 
     impl Default for CrunchyrollBuilder {
@@ -451,6 +467,10 @@ mod auth {
             Self {
                 client,
                 locale: Locale::en_US,
+                fixes: ExecutorFixes {
+                    locale_name_parsing: false,
+                    season_number: false,
+                },
             }
         }
     }
@@ -470,6 +490,26 @@ mod auth {
         /// returned.
         pub fn locale(mut self, locale: Locale) -> CrunchyrollBuilder {
             self.locale = locale;
+            self
+        }
+
+        /// Set season and episode locales by parsing the season name and check if it contains
+        /// any language name.
+        /// Under special circumstances, this can slow down some methods as additional request must
+        /// be made. Currently, this applies to [`crate::Media<crate::Series>`]. Whenever a request
+        /// is made which returns [`crate::Media<crate::Series>`], internally
+        /// [`crate::Media<crate::Series>::seasons`] is called for every series.
+        /// See https://github.com/crunchy-labs/crunchyroll-rs/issues/3 for more information.
+        #[cfg(feature = "experimental-stabilizations")]
+        pub fn stabilization_locales(mut self, enable: bool) -> CrunchyrollBuilder {
+            self.fixes.locale_name_parsing = enable;
+            self
+        }
+
+        ///
+        #[cfg(feature = "experimental-stabilizations")]
+        pub fn stabilization_season_number(mut self, enable: bool) -> CrunchyrollBuilder {
+            self.fixes.season_number = enable;
             self
         }
 
@@ -638,6 +678,7 @@ mod auth {
                             )
                         }),
                     },
+                    fixes: self.fixes,
                 }),
             };
 
