@@ -76,37 +76,41 @@ impl<T: Default + DeserializeOwned + Request> Stream for Pagination<T> {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
 
-        if this.next_state.is_none() {
-            let f = this.next_fn.as_mut();
-            let options = &mut this.paginator_options;
-            options.start = this.count;
-            this.next_state = Some(f(options.clone()));
-        }
-
-        let fut = this.next_state.as_mut().unwrap();
-        match Pin::new(fut).poll(cx) {
-            Poll::Ready(result) => {
-                this.next_state = None;
-                match result {
-                    Ok((t, total)) => {
-                        this.data = t;
-                        this.total = total;
-
-                        if !this.init {
-                            this.init = true;
-                        }
-                    }
-                    Err(e) => return Poll::Ready(Some(Err(e))),
-                }
+        if this.count < this.total || !this.init {
+            if !this.data.is_empty() {
+                this.count += 1;
+                return Poll::Ready(Some(Ok(this.data.remove(0))));
             }
-            Poll::Pending => return Poll::Pending,
-        }
 
-        if this.count >= this.total {
-            Poll::Ready(None)
+            if this.next_state.is_none() {
+                let f = this.next_fn.as_mut();
+                let mut options = this.paginator_options.clone();
+                options.start = this.count;
+                this.next_state = Some(f(options));
+            }
+
+            let fut = this.next_state.as_mut().unwrap();
+            match Pin::new(fut).poll(cx) {
+                Poll::Ready(result) => {
+                    this.next_state = None;
+                    match result {
+                        Ok((t, total)) => {
+                            this.data = t;
+                            this.total = total;
+
+                            if !this.init {
+                                this.init = true;
+                            }
+
+                            Pin::new(this).poll_next(cx)
+                        }
+                        Err(e) => Poll::Ready(Some(Err(e))),
+                    }
+                }
+                Poll::Pending => Poll::Pending,
+            }
         } else {
-            this.count += 1;
-            Poll::Ready(Some(Ok(this.data.remove(0))))
+            Poll::Ready(None)
         }
     }
 }
@@ -135,7 +139,7 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
             paginator_options: PaginationOptions {
                 executor,
                 start: 0,
-                page_size: 0,
+                page_size: 20,
                 query: query_args,
             },
             count: 0,
@@ -143,6 +147,8 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
         }
     }
 
+    /// Set the amount of pages fetched when needed. Only recommended to change if you want a big
+    /// batch of data (> 100). Make sure that the size is never 0 as this will cause a dead loop.
     pub fn page_size(&mut self, size: u32) {
         self.paginator_options.page_size = size
     }
