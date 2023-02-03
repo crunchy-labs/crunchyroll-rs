@@ -18,7 +18,7 @@ pub(crate) use crunchyroll_rs_internal::Request;
 #[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct V2BulkResult<T, M = serde_json::Map<String, serde_json::Value>>
+pub(crate) struct V2BulkResult<T, M = serde_json::Map<String, serde_json::Value>>
 where
     T: Default + DeserializeOwned + Request,
     M: Default + DeserializeOwned + Send,
@@ -175,20 +175,9 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
 #[serde(bound = "T: Request + DeserializeOwned")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct BulkResult<T: Default + DeserializeOwned + Request> {
+pub(crate) struct BulkResult<T: Default + DeserializeOwned + Request> {
     pub items: Vec<T>,
     pub total: u32,
-}
-
-/// Just like [`BulkResult`] but without [`BulkResult::total`] because some request does not have
-/// this field (but should?!).
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[request(executor(items))]
-#[serde(bound = "T: Request + DeserializeOwned")]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct CrappyBulkResult<T: Default + DeserializeOwned + Request> {
-    pub items: Vec<T>,
 }
 
 /// The standard representation of images how the api returns them.
