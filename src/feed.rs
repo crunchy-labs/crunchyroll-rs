@@ -1,5 +1,5 @@
 use crate::common::{Pagination, V2BulkResult, V2TypeBulkResult};
-use crate::media::{MediaType, SimilarOptions};
+use crate::media::MediaType;
 use crate::search::{BrowseOptions, BrowseSortType};
 use crate::{Crunchyroll, MediaCollection, Request, Series};
 use chrono::{DateTime, Utc};
@@ -79,8 +79,6 @@ pub struct SimilarFeed {
 
     #[serde(skip)]
     pub similar_id: String,
-    #[serde(skip)]
-    pub similar_options: SimilarOptions,
 }
 
 #[derive(Clone, Debug, Request)]
@@ -187,31 +185,11 @@ impl<'de> Deserialize<'de> for HomeFeed {
                             .ok_or_else(|| type_error("source_media_id", "string"))?
                             .to_string();
 
-                        let link = get_value("link")?
-                            .as_str()
-                            .ok_or_else(|| type_error("link", "string"))?
-                            .to_string();
-                        let query: Vec<(String, String)> =
-                            serde_urlencoded::from_str(link.split('?').last().unwrap())
-                                .map_err(|e| Error::custom(e.to_string()))?;
-
-                        let mut similar_options = SimilarOptions::default();
-                        for (key, value) in query {
-                            if key.as_str() == "n" {
-                                similar_options = similar_options.limit(
-                                    value
-                                        .parse::<u32>()
-                                        .map_err(|e| Error::custom(e.to_string()))?,
-                                )
-                            }
-                        }
-
                         let mut similar_feed: SimilarFeed = serde_json::from_value(
                             serde_json::to_value(as_map).map_err(map_serde_error)?,
                         )
                         .map_err(map_serde_error)?;
                         similar_feed.similar_id = id;
-                        similar_feed.similar_options = similar_options;
 
                         Ok(Self::SimilarTo(similar_feed))
                     }

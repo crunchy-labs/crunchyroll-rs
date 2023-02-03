@@ -1,9 +1,10 @@
 use crate::categories::Category;
-use crate::common::{Image, V2BulkResult};
+use crate::common::{Image, Pagination, V2BulkResult};
 use crate::error::CrunchyrollError;
 use crate::media::{PlaybackStream, VideoStream};
-use crate::{options, Crunchyroll, Executor, Locale, Request, Result};
+use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use chrono::{DateTime, Duration, Utc};
+use futures_util::FutureExt;
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value};
@@ -890,28 +891,26 @@ impl_media_collection! {
     Series Season Episode MovieListing Movie
 }
 
-options! {
-    SimilarOptions;
-    /// Limit of results to return.
-    limit(u32, "n") = Some(20),
-    /// Specifies the index from which the entries should be returned.
-    start(u32, "start") = None,
-    /// Preferred audio language.
-    preferred_audio_language(Locale, "preferred_audio_language") = None
-}
-
 macro_rules! impl_media_video_collection {
     ($($media_video:ident)*) => {
         $(
             impl $media_video {
                 /// Similar series or movie listing to the current item.
-                pub async fn similar(&self, options: SimilarOptions) -> Result<V2BulkResult<MediaCollection>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", self.executor.details.account_id.clone()?, &self.id);
-                    self.executor.get(endpoint)
-                        .query(&options.into_query())
-                        .apply_locale_query()
-                        .request()
-                        .await
+                pub fn similar(&self) -> Pagination<MediaCollection> {
+                    Pagination::new(|options| {
+                        async move {
+                            let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", options.executor.details.account_id.clone()?, options.query.get(0).unwrap().0);
+                            let result: V2BulkResult<MediaCollection> = options
+                                .executor
+                                .get(endpoint)
+                                .query(&[("n", options.page_size), ("start", options.start)])
+                                .apply_locale_query()
+                                .request()
+                                .await?;
+                            Ok((result.data, result.total))
+                        }
+                        .boxed()
+                    }, self.executor.clone(), vec![(self.id.clone(), self.id.clone())]) // the id as query is a little hack to pass the id to the closure
                 }
             }
         )*

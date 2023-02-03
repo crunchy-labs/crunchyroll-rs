@@ -1,6 +1,6 @@
 use crate::utils::SESSION;
 use crunchyroll_rs::Locale;
-use futures_util::stream::StreamExt;
+use futures_util::StreamExt;
 
 mod utils;
 

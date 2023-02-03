@@ -1,7 +1,7 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::media::SimilarOptions;
 use crunchyroll_rs::Series;
+use futures_util::StreamExt;
 
 mod utils;
 
@@ -25,12 +25,5 @@ async fn series_seasons() {
 
 #[tokio::test]
 async fn series_similar() {
-    assert_result!(
-        SERIES
-            .get()
-            .await
-            .unwrap()
-            .similar(SimilarOptions::default())
-            .await
-    )
+    assert_result!(SERIES.get().await.unwrap().similar().next().await.unwrap())
 }
