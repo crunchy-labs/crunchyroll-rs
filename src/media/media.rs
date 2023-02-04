@@ -42,11 +42,7 @@ fn split_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> (String, Locale
 
 #[async_trait::async_trait(?Send)]
 pub trait Media {
-    async fn from_id<S: AsRef<str>>(
-        crunchyroll: &Crunchyroll,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<Self>
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self>
     where
         Self: Sized;
 
@@ -237,7 +233,6 @@ impl SeasonVersion {
                 executor: self.executor.clone(),
             },
             &self.id,
-            None,
         )
         .await
     }
@@ -344,7 +339,6 @@ impl EpisodeVersion {
                 executor: self.executor.clone(),
             },
             &self.id,
-            None,
         )
         .await
     }
@@ -722,16 +716,14 @@ impl Series {
 
 impl Season {
     /// Returns the series the season belongs to.
-    pub async fn series(&self, preferred_audio: Option<Locale>) -> Result<Season> {
+    pub async fn series(&self) -> Result<Season> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/series/{}",
             self.series_id
         );
-        Ok(
-            request_media(self.executor.clone(), endpoint, preferred_audio)
-                .await?
-                .remove(0),
-        )
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
     }
 
     /// Returns all episodes of this season.
@@ -746,29 +738,25 @@ impl Season {
 
 impl Episode {
     /// Returns the series the episode belongs to.
-    pub async fn series(&self, preferred_audio: Option<Locale>) -> Result<Series> {
+    pub async fn series(&self) -> Result<Series> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/series/{}",
             self.series_id
         );
-        Ok(
-            request_media(self.executor.clone(), endpoint, preferred_audio)
-                .await?
-                .remove(0),
-        )
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
     }
 
     /// Returns the season the episode belongs to.
-    pub async fn season(&self, preferred_audio: Option<Locale>) -> Result<Season> {
+    pub async fn season(&self) -> Result<Season> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
             self.season_id
         );
-        Ok(
-            request_media(self.executor.clone(), endpoint, preferred_audio)
-                .await?
-                .remove(0),
-        )
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
     }
 }
 
@@ -785,16 +773,14 @@ impl MovieListing {
 
 impl Movie {
     /// Returns the parent movie listing of this movie.
-    pub async fn movie_listing(&self, preferred_audio: Option<Locale>) -> Result<MovieListing> {
+    pub async fn movie_listing(&self) -> Result<MovieListing> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}",
             self.movie_listing_id
         );
-        Ok(
-            request_media(self.executor.clone(), endpoint, preferred_audio)
-                .await?
-                .remove(0),
-        )
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
     }
 }
 
@@ -816,18 +802,14 @@ async fn request_media<T: Default + DeserializeOwned + Request>(
 
 #[async_trait::async_trait(?Send)]
 impl Media for Series {
-    async fn from_id<S: AsRef<str>>(
-        crunchyroll: &Crunchyroll,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<Self> {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
                 "https://www.crunchyroll.com/content/v2/cms/series/{}",
                 id.as_ref()
             ),
-            preferred_audio,
+            None,
         )
         .await?
         .remove(0))
@@ -851,18 +833,14 @@ impl Media for Series {
 
 #[async_trait::async_trait(?Send)]
 impl Media for Season {
-    async fn from_id<S: AsRef<str>>(
-        crunchyroll: &Crunchyroll,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<Self> {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
                 "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
                 id.as_ref()
             ),
-            preferred_audio,
+            None,
         )
         .await?
         .remove(0))
@@ -889,18 +867,14 @@ impl Media for Season {
 
 #[async_trait::async_trait(?Send)]
 impl Media for Episode {
-    async fn from_id<S: AsRef<str>>(
-        crunchyroll: &Crunchyroll,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<Self> {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
                 "https://www.crunchyroll.com/content/v2/cms/episodes/{}",
                 id.as_ref()
             ),
-            preferred_audio,
+            None,
         )
         .await?
         .remove(0))
@@ -928,18 +902,14 @@ impl Media for Episode {
 
 #[async_trait::async_trait(?Send)]
 impl Media for MovieListing {
-    async fn from_id<S: AsRef<str>>(
-        crunchyroll: &Crunchyroll,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<Self> {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
                 "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}",
                 id.as_ref()
             ),
-            preferred_audio,
+            None,
         )
         .await?
         .remove(0))
@@ -948,18 +918,14 @@ impl Media for MovieListing {
 
 #[async_trait::async_trait(?Send)]
 impl Media for Movie {
-    async fn from_id<S: AsRef<str>>(
-        crunchyroll: &Crunchyroll,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<Self> {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
                 "https://www.crunchyroll.com/content/v2/cms/movies/{}",
                 id.as_ref()
             ),
-            preferred_audio,
+            None,
         )
         .await?
         .remove(0))
@@ -1047,27 +1013,16 @@ impl MediaCollection {
     pub async fn from_id<S: AsRef<str>>(
         crunchyroll: &Crunchyroll,
         id: S,
-        preferred_audio: Option<Locale>,
     ) -> Result<MediaCollection> {
-        if let Ok(episode) =
-            Episode::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
-        {
+        if let Ok(episode) = Episode::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::Episode(episode))
-        } else if let Ok(movie) =
-            Movie::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
-        {
+        } else if let Ok(movie) = Movie::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::Movie(movie))
-        } else if let Ok(series) =
-            Series::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
-        {
+        } else if let Ok(series) = Series::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::Series(series))
-        } else if let Ok(season) =
-            Season::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
-        {
+        } else if let Ok(season) = Season::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::Season(season))
-        } else if let Ok(movie_listing) =
-            MovieListing::from_id(crunchyroll, id.as_ref(), preferred_audio).await
-        {
+        } else if let Ok(movie_listing) = MovieListing::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::MovieListing(movie_listing))
         } else {
             Err(CrunchyrollError::Input(
@@ -1315,19 +1270,11 @@ impl_media_video! {
 }
 
 impl Crunchyroll {
-    pub async fn media_from_id<M: Media, S: AsRef<str>>(
-        &self,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<M> {
-        M::from_id(self, id, preferred_audio).await
+    pub async fn media_from_id<M: Media, S: AsRef<str>>(&self, id: S) -> Result<M> {
+        M::from_id(self, id).await
     }
 
-    pub async fn media_collection_from_id<S: AsRef<str>>(
-        &self,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<MediaCollection> {
-        MediaCollection::from_id(self, id, preferred_audio).await
+    pub async fn media_collection_from_id<S: AsRef<str>>(&self, id: S) -> Result<MediaCollection> {
+        MediaCollection::from_id(self, id).await
     }
 }
