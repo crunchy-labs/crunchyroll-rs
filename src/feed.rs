@@ -253,6 +253,7 @@ impl Crunchyroll {
                         .get(endpoint)
                         .query(&[("n", options.page_size), ("start", options.start)])
                         .apply_locale_query()
+                        .apply_preferred_audio_locale_query()
                         .request()
                         .await?;
                     Ok((result.data, result.total))
@@ -281,6 +282,7 @@ impl Crunchyroll {
                                 ("top_news_start", options.start),
                             ])
                             .apply_locale_query()
+                            .apply_preferred_audio_locale_query()
                             .request()
                             .await?;
                         let top_news = result
@@ -309,6 +311,7 @@ impl Crunchyroll {
                                 ("latest_news_start", options.start),
                             ])
                             .apply_locale_query()
+                            .apply_preferred_audio_locale_query()
                             .request()
                             .await?;
                         let top_news = result
@@ -341,6 +344,7 @@ impl Crunchyroll {
                         .get(endpoint)
                         .query(&[("n", options.page_size), ("start", options.start)])
                         .apply_locale_query()
+                        .apply_preferred_audio_locale_query()
                         .request()
                         .await?;
                     Ok((result.data, result.total))

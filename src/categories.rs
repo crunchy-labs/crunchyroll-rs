@@ -1,6 +1,6 @@
 use crate::common::{Image, V2BulkResult};
+use crate::Result;
 use crate::{enum_values, Crunchyroll, Locale, Request};
-use crate::{options, Result};
 use serde::Deserialize;
 
 enum_values! {
@@ -63,23 +63,13 @@ pub struct CategoryInformation {
     pub localization: CategoryInformationLocalization,
 }
 
-options! {
-    CategoryInformationOptions;
-    /// Preferred audio language.
-    preferred_audio_language(Locale, "preferred_audio_language") = None
-}
-
 impl Crunchyroll {
     /// Returns all video categories.
-    pub async fn categories(
-        &self,
-        options: CategoryInformationOptions,
-    ) -> Result<Vec<CategoryInformation>> {
+    pub async fn categories(&self) -> Result<Vec<CategoryInformation>> {
         let endpoint = "https://www.crunchyroll.com/content/v2/discover/categories";
         Ok(self
             .executor
             .get(endpoint)
-            .query(&options.into_query())
             .apply_locale_query()
             .request::<V2BulkResult<CategoryInformation>>()
             .await?

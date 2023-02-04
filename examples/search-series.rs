@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
             "Queried series {} which has {} seasons",
             series.title, series.season_count
         );
-        let seasons = series.seasons(None).await?;
+        let seasons = series.seasons().await?;
         for season in seasons {
             println!(
                 "Found season {} with audio locale(s) {}",

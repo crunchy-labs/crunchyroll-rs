@@ -156,6 +156,7 @@ mod auth {
     #[derive(Clone, Debug)]
     pub(crate) struct ExecutorDetails {
         pub(crate) locale: Locale,
+        pub(crate) preferred_audio_locale: Option<Locale>,
 
         pub(crate) bucket: String,
 
@@ -364,6 +365,7 @@ mod auth {
                 }),
                 details: ExecutorDetails {
                     locale: Default::default(),
+                    preferred_audio_locale: None,
                     account_id: Ok("".to_string()),
                     bucket: "".to_string(),
                     premium: false,
@@ -410,6 +412,14 @@ mod auth {
             self.query(&[("locale", locale)])
         }
 
+        pub(crate) fn apply_preferred_audio_locale_query(self) -> ExecutorRequestBuilder {
+            if let Some(locale) = self.executor.details.preferred_audio_locale.clone() {
+                self.query(&[("preferred_audio_locale", locale)])
+            } else {
+                self
+            }
+        }
+
         pub(crate) fn json<T: Serialize + ?Sized>(mut self, json: &T) -> ExecutorRequestBuilder {
             self.builder = self.builder.json(json);
 
@@ -430,6 +440,7 @@ mod auth {
     pub struct CrunchyrollBuilder {
         pub(crate) client: Client,
         pub(crate) locale: Locale,
+        pub(crate) preferred_audio_locale: Option<Locale>,
 
         pub(crate) fixes: ExecutorFixes,
     }
@@ -467,6 +478,7 @@ mod auth {
             Self {
                 client,
                 locale: Locale::en_US,
+                preferred_audio_locale: None,
                 fixes: ExecutorFixes {
                     locale_name_parsing: false,
                     season_number: false,
@@ -490,6 +502,20 @@ mod auth {
         /// returned.
         pub fn locale(mut self, locale: Locale) -> CrunchyrollBuilder {
             self.locale = locale;
+            self
+        }
+
+        /// Set the audio language of media (like episodes) which should be returned when querying
+        /// by any other method than the direct media id. For example, if the preferred audio locale
+        /// were set to [`Locale::en_US`], the seasons queried with [`Series::seasons`] would likely
+        /// have [`Locale::en_US`] as their audio locale. This might not always work on all endpoints
+        /// as Crunchyroll does Crunchyroll things (e.g. it seems to have no effect when changing the
+        /// locale and using [`Crunchyroll::query`]).
+        pub fn preferred_audio_locale(
+            mut self,
+            preferred_audio_locale: Locale,
+        ) -> CrunchyrollBuilder {
+            self.preferred_audio_locale = Some(preferred_audio_locale);
             self
         }
 
@@ -658,6 +684,7 @@ mod auth {
                     }),
                     details: ExecutorDetails {
                         locale: self.locale,
+                        preferred_audio_locale: self.preferred_audio_locale,
 
                         // '/' is trimmed so that urls which require it must be in .../{bucket}/... like format.
                         // this just looks cleaner

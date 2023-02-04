@@ -795,12 +795,12 @@ impl_playback! {
 
 impl Series {
     /// Returns all series seasons.
-    pub async fn seasons(&self, preferred_audio: Option<Locale>) -> Result<Vec<Season>> {
+    pub async fn seasons(&self) -> Result<Vec<Season>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/series/{}/seasons",
             self.id
         );
-        request_media(self.executor.clone(), endpoint, preferred_audio).await
+        request_media(self.executor.clone(), endpoint).await
     }
 }
 
@@ -811,18 +811,18 @@ impl Season {
             "https://www.crunchyroll.com/content/v2/cms/series/{}",
             self.series_id
         );
-        Ok(request_media(self.executor.clone(), endpoint, None)
+        Ok(request_media(self.executor.clone(), endpoint)
             .await?
             .remove(0))
     }
 
     /// Returns all episodes of this season.
-    pub async fn episodes(&self, preferred_audio: Option<Locale>) -> Result<Vec<Episode>> {
+    pub async fn episodes(&self) -> Result<Vec<Episode>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/seasons/{}/episodes",
             self.id
         );
-        request_media(self.executor.clone(), endpoint, preferred_audio).await
+        request_media(self.executor.clone(), endpoint).await
     }
 }
 
@@ -833,7 +833,7 @@ impl Episode {
             "https://www.crunchyroll.com/content/v2/cms/series/{}",
             self.series_id
         );
-        Ok(request_media(self.executor.clone(), endpoint, None)
+        Ok(request_media(self.executor.clone(), endpoint)
             .await?
             .remove(0))
     }
@@ -844,7 +844,7 @@ impl Episode {
             "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
             self.season_id
         );
-        Ok(request_media(self.executor.clone(), endpoint, None)
+        Ok(request_media(self.executor.clone(), endpoint)
             .await?
             .remove(0))
     }
@@ -852,12 +852,12 @@ impl Episode {
 
 impl MovieListing {
     /// Returns all movies for this movie listing.
-    pub async fn movies(&self, preferred_audio: Option<Locale>) -> Result<Vec<Movie>> {
+    pub async fn movies(&self) -> Result<Vec<Movie>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}/movies",
             self.id
         );
-        request_media(self.executor.clone(), endpoint, preferred_audio).await
+        request_media(self.executor.clone(), endpoint).await
     }
 }
 
@@ -868,7 +868,7 @@ impl Movie {
             "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}",
             self.movie_listing_id
         );
-        Ok(request_media(self.executor.clone(), endpoint, None)
+        Ok(request_media(self.executor.clone(), endpoint)
             .await?
             .remove(0))
     }
@@ -877,14 +877,11 @@ impl Movie {
 async fn request_media<T: Default + DeserializeOwned + Request>(
     executor: Arc<Executor>,
     endpoint: String,
-    preferred_audio: Option<Locale>,
 ) -> Result<Vec<T>> {
     let result: V2BulkResult<T> = executor
         .get(endpoint)
-        .query(&preferred_audio.map_or(vec![], |l| {
-            vec!["preferred_audio_language".to_string(), l.to_string()]
-        }))
         .apply_locale_query()
+        .apply_preferred_audio_locale_query()
         .request()
         .await?;
     Ok(result.data)
@@ -899,7 +896,6 @@ impl Media for Series {
                 "https://www.crunchyroll.com/content/v2/cms/series/{}",
                 id.as_ref()
             ),
-            None,
         )
         .await?
         .remove(0))
@@ -908,7 +904,7 @@ impl Media for Series {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_experimental_stabilizations(&mut self) {
         if self.executor.fixes.locale_name_parsing {
-            if let Ok(seasons) = self.seasons(None).await {
+            if let Ok(seasons) = self.seasons().await {
                 let mut locales = seasons
                     .into_iter()
                     .flat_map(|s| s.audio_locales)
@@ -930,7 +926,6 @@ impl Media for Season {
                 "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
                 id.as_ref()
             ),
-            None,
         )
         .await?
         .remove(0))
@@ -971,7 +966,6 @@ impl Media for Episode {
                 "https://www.crunchyroll.com/content/v2/cms/episodes/{}",
                 id.as_ref()
             ),
-            None,
         )
         .await?
         .remove(0))
@@ -1006,7 +1000,6 @@ impl Media for MovieListing {
                 "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}",
                 id.as_ref()
             ),
-            None,
         )
         .await?
         .remove(0))
@@ -1022,7 +1015,6 @@ impl Media for Movie {
                 "https://www.crunchyroll.com/content/v2/cms/movies/{}",
                 id.as_ref()
             ),
-            None,
         )
         .await?
         .remove(0))
@@ -1291,13 +1283,11 @@ macro_rules! impl_media_video {
 
                 /// Return the previous episode / movie. Is [`None`] if the current media is the
                 /// first in its season / has no previous media.
-                pub async fn previous(&self, preferred_audio: Option<Locale>) -> Result<Option<RelatedMedia<$media_video>>> {
+                pub async fn previous(&self) -> Result<Option<RelatedMedia<$media_video>>> {
                     let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/previous_episode/{}", &self.id);
                     let result: serde_json::Value = self.executor.get(endpoint)
-                        .query(&preferred_audio.map_or(vec![], |l| {
-                            vec!["preferred_audio_language".to_string(), l.to_string()]
-                        }))
                         .apply_locale_query()
+                        .apply_preferred_audio_locale_query()
                         .request()
                         .await?;
                     let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
@@ -1311,13 +1301,11 @@ macro_rules! impl_media_video {
 
                 /// Return the next episode / movie. Is [`None`] if the current media is the last in
                 /// its season / has no further media afterwards.
-                pub async fn next(&self, preferred_audio: Option<Locale>) -> Result<Option<RelatedMedia<$media_video>>> {
+                pub async fn next(&self) -> Result<Option<RelatedMedia<$media_video>>> {
                     let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/up_next/{}", self.id);
                     let result: serde_json::Value = self.executor.get(endpoint)
-                        .query(&preferred_audio.map_or(vec![], |l| {
-                            vec!["preferred_audio_language".to_string(), l.to_string()]
-                        }))
                         .apply_locale_query()
+                        .apply_preferred_audio_locale_query()
                         .request()
                         .await?;
                     let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;

@@ -18,5 +18,5 @@ async fn season_from_id() {
 
 #[tokio::test]
 async fn season_episodes() {
-    assert_result!(SEASON.get().await.unwrap().episodes(None).await)
+    assert_result!(SEASON.get().await.unwrap().episodes().await)
 }

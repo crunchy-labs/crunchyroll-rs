@@ -20,7 +20,7 @@ async fn series_from_id() {
 
 #[tokio::test]
 async fn series_seasons() {
-    assert_result!(SERIES.get().await.unwrap().seasons(None).await)
+    assert_result!(SERIES.get().await.unwrap().seasons().await)
 }
 
 #[tokio::test]

@@ -59,9 +59,7 @@ mod browse {
         /// Specifies how the entries should be sorted.
         sort(BrowseSortType, "sort") = Some(BrowseSortType::NewlyAdded),
         /// Specifies the media type of the entries.
-        media_type(MediaType, "type") = None,
-        /// Preferred audio language.
-        preferred_audio_language(Locale, "preferred_audio_language") = None
+        media_type(MediaType, "type") = None
     }
 
     impl Crunchyroll {
@@ -78,6 +76,8 @@ mod browse {
                             .get(endpoint)
                             .query(&options.query)
                             .query(&[("n", options.page_size), ("start", options.start)])
+                            .apply_locale_query()
+                            .apply_preferred_audio_locale_query()
                             .request::<V2BulkResult<MediaCollection>>()
                             .await?;
                         Ok((result.data, result.total))
