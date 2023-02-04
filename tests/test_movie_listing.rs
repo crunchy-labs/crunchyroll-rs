@@ -19,5 +19,5 @@ async fn movie_listing_from_id() {
 
 #[tokio::test]
 async fn movies() {
-    assert_result!(MOVIE_LISTING.get().await.unwrap().movies(None).await)
+    assert_result!(MOVIE_LISTING.get().await.unwrap().movies().await)
 }

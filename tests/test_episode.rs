@@ -56,26 +56,26 @@ async fn episode_set_playhead() {
 async fn episode_some_previous() {
     let episode = END_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.previous(None).await)
+    assert_result!(episode.previous().await)
 }
 
 #[tokio::test]
 async fn episode_none_previous() {
     let episode = START_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.previous(None).await)
+    assert_result!(episode.previous().await)
 }
 
 #[tokio::test]
 async fn episode_some_next() {
     let episode = START_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.next(None).await)
+    assert_result!(episode.next().await)
 }
 
 #[tokio::test]
 async fn episode_none_next() {
     let episode = END_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.next(None).await)
+    assert_result!(episode.next().await)
 }
