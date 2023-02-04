@@ -17,13 +17,13 @@ pub struct WatchlistEntry {
     executor: Arc<Executor>,
 
     pub new: bool,
-    pub new_content: bool,
 
     pub is_favorite: bool,
 
-    pub playhead: u32,
     pub never_watched: bool,
-    pub completion_status: bool,
+    pub fully_watched: bool,
+
+    pub playhead: u32,
 
     /// Should only be [`MediaCollection::Series`] or [`MediaCollection::MovieListing`].
     pub panel: MediaCollection,
