@@ -46,8 +46,12 @@ pub trait Media {
     where
         Self: Sized;
 
-    #[cfg(feature = "experimental-stabilizations")]
+    #[doc(hidden)]
     async fn __apply_fixes(&mut self) {}
+
+    #[doc(hidden)]
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {}
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -128,7 +132,7 @@ pub struct SearchMetadata {
 
 /// Metadata for a series.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -139,8 +143,8 @@ pub struct Series {
     pub id: String,
     pub channel_id: String,
 
-    #[serde(default)]
-    pub content_provider: String,
+    /// Sometimes none, sometimes not
+    pub content_provider: Option<String>,
 
     pub slug: String,
     pub title: String,
@@ -208,7 +212,7 @@ pub struct Series {
     seo_description: Option<crate::StrictValue>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SeasonVersion {
@@ -239,14 +243,8 @@ impl SeasonVersion {
 }
 
 /// Metadata for a season.
-/// The deserializing requires a proxy struct because the season json response has two similar
-/// fields, `audio_locale` and `audio_locales`. Sometimes the first is populated, sometimes the
-/// second and sometimes both. They're representing the season audio but why it needs two fields
-/// for this, who knows. `audio_locale` is also a [`Vec`] of locales but, if populated, contains
-/// always only one locale.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[request(executor(versions))]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -279,7 +277,7 @@ pub struct Season {
     pub is_subbed: bool,
     pub is_dubbed: bool,
     pub is_simulcast: bool,
-    pub audio_locale: Locale,
+    audio_locale: Option<Locale>,
     /// Most of the time, like 99%, this contains only one locale. But sometimes Crunchyroll does
     /// weird stuff and marks a season which clearly has only one locale with two locales. See
     /// [this](https://github.com/crunchy-labs/crunchy-cli/issues/81#issuecomment-1351813787) issue
@@ -294,6 +292,9 @@ pub struct Season {
     /// If the season is not available this might contain some information why.
     pub availability_notes: String,
 
+    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
+    /// re-request it to get other versions. Crunchyroll :)
+    #[serde(default)]
     pub versions: Vec<SeasonVersion>,
 
     #[cfg(feature = "__test_strict")]
@@ -309,7 +310,7 @@ pub struct Season {
     seo_description: Option<crate::StrictValue>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct EpisodeVersion {
@@ -346,8 +347,7 @@ impl EpisodeVersion {
 
 /// Metadata for a episode.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[request(executor(versions))]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -442,6 +442,9 @@ pub struct Episode {
 
     pub eligible_region: String,
 
+    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
+    /// re-request it to get other versions. Crunchyroll :)
+    #[serde(default)]
     pub versions: Vec<EpisodeVersion>,
 
     #[cfg(feature = "__test_strict")]
@@ -479,10 +482,13 @@ pub struct Episode {
     hd_flag: Option<crate::StrictValue>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct MovieListingVersion {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
     #[serde(rename = "guid")]
     pub id: String,
 
@@ -493,9 +499,22 @@ pub struct MovieListingVersion {
     pub variant: String,
 }
 
+impl MovieListingVersion {
+    /// Return the full [`MovieListing`] struct of this version.
+    pub async fn movie_listing(&self) -> Result<MovieListing> {
+        MovieListing::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
+    }
+}
+
 /// Metadata for a movie listing.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -505,7 +524,6 @@ pub struct MovieListing {
 
     pub id: String,
     pub channel_id: String,
-    pub identifier: String,
 
     pub slug: String,
     pub title: String,
@@ -513,12 +531,14 @@ pub struct MovieListing {
     pub description: String,
     pub extended_description: String,
 
-    pub content_provider: String,
+    /// Sometimes none, sometimes not
+    pub content_provider: Option<String>,
 
     pub movie_release_year: u32,
 
-    /// Sometimes empty, sometimes not. Not recommended to rely on this.
-    pub audio_locale: Locale,
+    /// May be [`None`] if requested by some functions like [`Crunchyroll::browse`]. You might have
+    /// to re-request it to get the audio locale. Crunchyroll :)
+    pub audio_locale: Option<Locale>,
     /// Sometimes empty, sometimes not. Not recommended to rely on this.
     pub subtitle_locales: Vec<Locale>,
 
@@ -550,25 +570,51 @@ pub struct MovieListing {
     pub available_offline: bool,
     pub availability_notes: String,
 
+    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
+    /// re-request it to get other versions. Crunchyroll :)
+    #[serde(default)]
     pub versions: Vec<MovieListingVersion>,
 
     #[cfg(feature = "__test_strict")]
-    pub(crate) extended_maturity_rating: crate::StrictValue,
+    extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    pub(crate) available_date: crate::StrictValue,
+    identifier: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    pub(crate) premium_date: crate::StrictValue,
+    available_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    premium_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    duration_ms: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    external_id: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    first_movie_id: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    new: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_title: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     seo_title: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_description: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     seo_description: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     hd_flag: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    last_public: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    linked_resource_key: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    playback: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    #[serde(rename = "type")]
+    _type: Option<crate::StrictValue>,
 }
 
 /// Metadata for a movie.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -668,6 +714,49 @@ impl_manual_media_deserialize! {
     Episode = "episode_metadata"
     MovieListing = "movie_listing_metadata"
     Movie = "movie_metadata"
+}
+
+macro_rules! impl_media_request {
+    ($($media:ident)*) => {
+        $(
+            #[async_trait::async_trait(?Send)]
+            impl Request for $media {
+                async fn __set_executor(&mut self, executor: Arc<Executor>) {
+                    self.executor = executor;
+
+                    self.__apply_fixes().await;
+                    self.__apply_experimental_stabilizations().await;
+                }
+            }
+        )*
+    }
+}
+
+impl_media_request! {
+    Series Movie
+}
+
+macro_rules! impl_media_request_with_version {
+    ($($media:ident)*) => {
+        $(
+            #[async_trait::async_trait(?Send)]
+            impl Request for $media {
+                async fn __set_executor(&mut self, executor: Arc<Executor>) {
+                    for version in self.versions.iter_mut() {
+                        version.executor = executor.clone();
+                    }
+                    self.executor = executor;
+
+                    self.__apply_fixes().await;
+                    self.__apply_experimental_stabilizations().await;
+                }
+            }
+        )*
+    }
+}
+
+impl_media_request_with_version! {
+    Season Episode MovieListing
 }
 
 macro_rules! media_eq {
@@ -816,7 +905,7 @@ impl Media for Series {
     }
 
     #[cfg(feature = "experimental-stabilizations")]
-    async fn __apply_fixes(&mut self) {
+    async fn __apply_experimental_stabilizations(&mut self) {
         if self.executor.fixes.locale_name_parsing {
             if let Ok(seasons) = self.seasons(None).await {
                 let mut locales = seasons
@@ -846,8 +935,15 @@ impl Media for Season {
         .remove(0))
     }
 
-    #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_fixes(&mut self) {
+        if let Some(audio_locale) = &self.audio_locale {
+            self.audio_locales.push(audio_locale.clone());
+            self.audio_locales.dedup()
+        }
+    }
+
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {
         if self.executor.fixes.locale_name_parsing {
             self.audio_locales = vec![parse_locale_from_slug_title(&self.slug_title)]
         }
@@ -881,7 +977,7 @@ impl Media for Episode {
     }
 
     #[cfg(feature = "experimental-stabilizations")]
-    async fn __apply_fixes(&mut self) {
+    async fn __apply_experimental_stabilizations(&mut self) {
         if self.executor.fixes.locale_name_parsing {
             self.audio_locale = parse_locale_from_slug_title(&self.season_slug_title)
         }
@@ -994,7 +1090,7 @@ impl Default for MediaCollection {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl Request for MediaCollection {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         match self {

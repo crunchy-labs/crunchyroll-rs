@@ -65,8 +65,8 @@ pub struct Image {
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
 #[doc(hidden)]
-#[async_trait::async_trait]
-pub trait Request: Send {
+#[async_trait::async_trait(?Send)]
+pub trait Request {
     /// Set a usable [`Executor`] instance to the struct if required
     async fn __set_executor(&mut self, _: Arc<Executor>) {}
 }
@@ -75,6 +75,6 @@ pub trait Request: Send {
 /// explicit result.
 impl Request for () {}
 
-impl<K: Send, V: Send> Request for HashMap<K, V> {}
+impl<K, V> Request for HashMap<K, V> {}
 
 impl Request for serde_json::Value {}
