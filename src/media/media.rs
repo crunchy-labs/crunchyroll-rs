@@ -216,6 +216,9 @@ pub struct Series {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SeasonVersion {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
     #[serde(rename = "guid")]
     pub id: String,
 
@@ -226,6 +229,20 @@ pub struct SeasonVersion {
     pub variant: String,
 }
 
+impl SeasonVersion {
+    /// Return the full [`Season`] struct of this version.
+    pub async fn season(&self) -> Result<Season> {
+        Season::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+            None,
+        )
+        .await
+    }
+}
+
 /// Metadata for a season.
 /// The deserializing requires a proxy struct because the season json response has two similar
 /// fields, `audio_locale` and `audio_locales`. Sometimes the first is populated, sometimes the
@@ -234,6 +251,7 @@ pub struct SeasonVersion {
 /// always only one locale.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(versions))]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -300,9 +318,15 @@ pub struct Season {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct EpisodeVersion {
-    pub guid: String,
-    pub media_guid: String,
-    pub season_guid: String,
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    #[serde(rename = "guid")]
+    pub id: String,
+    #[serde(rename = "media_guid")]
+    pub media_id: String,
+    #[serde(rename = "season_guid")]
+    pub season_id: String,
 
     pub audio_locale: Locale,
 
@@ -312,9 +336,24 @@ pub struct EpisodeVersion {
     pub variant: String,
 }
 
+impl EpisodeVersion {
+    /// Return the full [`Episode`] struct of this version.
+    pub async fn episode(&self) -> Result<Episode> {
+        Episode::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+            None,
+        )
+        .await
+    }
+}
+
 /// Metadata for a episode.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(versions))]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
