@@ -41,9 +41,9 @@ fn split_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> (String, Locale
     (title, Locale::ja_JP)
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 pub trait Media {
-    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self>
+    async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self>
     where
         Self: Sized;
 
@@ -720,7 +720,7 @@ impl_manual_media_deserialize! {
 macro_rules! impl_media_request {
     ($($media:ident)*) => {
         $(
-            #[async_trait::async_trait(?Send)]
+            #[async_trait::async_trait]
             impl Request for $media {
                 async fn __set_executor(&mut self, executor: Arc<Executor>) {
                     self.executor = executor;
@@ -740,7 +740,7 @@ impl_media_request! {
 macro_rules! impl_media_request_with_version {
     ($($media:ident)*) => {
         $(
-            #[async_trait::async_trait(?Send)]
+            #[async_trait::async_trait]
             impl Request for $media {
                 async fn __set_executor(&mut self, executor: Arc<Executor>) {
                     for version in self.versions.iter_mut() {
@@ -890,9 +890,9 @@ async fn request_media<T: Default + DeserializeOwned + Request>(
     Ok(result.data)
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Media for Series {
-    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+    async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
@@ -921,9 +921,9 @@ impl Media for Series {
     }
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Media for Season {
-    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+    async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
@@ -962,9 +962,9 @@ impl Media for Season {
     }
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Media for Episode {
-    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+    async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
@@ -997,9 +997,9 @@ impl Media for Episode {
     }
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Media for MovieListing {
-    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+    async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
@@ -1013,9 +1013,9 @@ impl Media for MovieListing {
     }
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Media for Movie {
-    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+    async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
@@ -1091,7 +1091,7 @@ impl Default for MediaCollection {
     }
 }
 
-#[async_trait::async_trait(?Send)]
+#[async_trait::async_trait]
 impl Request for MediaCollection {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         match self {
@@ -1365,7 +1365,7 @@ impl_media_video! {
 }
 
 impl Crunchyroll {
-    pub async fn media_from_id<M: Media, S: AsRef<str>>(&self, id: S) -> Result<M> {
+    pub async fn media_from_id<M: Media>(&self, id: impl AsRef<str> + Send) -> Result<M> {
         M::from_id(self, id).await
     }
 
