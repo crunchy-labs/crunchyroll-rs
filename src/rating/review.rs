@@ -301,6 +301,6 @@ macro_rules! impl_rating {
 }
 
 impl_rating! {
-    crate::Media<crate::media::Series>, "series";
-    crate::Media<crate::media::MovieListing>, "movie_listing"
+    crate::media::Series, "series";
+    crate::media::MovieListing, "movie_listing"
 }

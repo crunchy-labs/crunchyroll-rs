@@ -29,11 +29,11 @@ async fn modify_crunchylist() {
 
     let crunchylist = new_crunchylist.unwrap();
 
-    let series = SESSION
+    let series: Series = SESSION
         .get()
         .await
         .unwrap()
-        .media_from_id::<Series>("GY8VEQ95Y")
+        .media_from_id("GY8VEQ95Y")
         .await
         .unwrap();
     let crunchylist_add_result = crunchylist.add(MediaCollection::from(series)).await;

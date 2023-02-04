@@ -1,11 +1,10 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::media::Season;
-use crunchyroll_rs::Media;
+use crunchyroll_rs::Season;
 
 mod utils;
 
-static SEASON: Store<Media<Season>> = Store::new(|| {
+static SEASON: Store<Season> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
         Ok(crunchy.media_from_id("GRZX8KNGY").await?)
@@ -19,5 +18,5 @@ async fn season_from_id() {
 
 #[tokio::test]
 async fn season_episodes() {
-    assert_result!(SEASON.get().await.unwrap().episodes().await)
+    assert_result!(SEASON.get().await.unwrap().episodes(None).await)
 }

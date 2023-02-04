@@ -1,7 +1,8 @@
+use crate::common::Image;
 use crate::error::{CrunchyrollError, CrunchyrollErrorContext};
 use crate::{Request, Result};
 use chrono::Duration;
-use serde::de::{DeserializeOwned, Error, IntoDeserializer};
+use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::str::FromStr;
@@ -113,26 +114,6 @@ where
     Ok(value.unwrap_or_default())
 }
 
-/// Sometimes response values are `"none"` but should actually be `null`. This function implements
-/// this functionality.
-pub(crate) fn deserialize_maybe_none_to_option<'de, D>(
-    deserializer: D,
-) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value: Option<String> = Deserialize::deserialize(deserializer)?;
-    if let Some(maybe_none) = &value {
-        if maybe_none == "none" || maybe_none.is_empty() {
-            Ok(None)
-        } else {
-            Ok(value)
-        }
-    } else {
-        Ok(None)
-    }
-}
-
 /// Deserializes a empty string (`""`) to `None`.
 pub(crate) fn deserialize_empty_pre_string_to_none<'de, D, T>(
     deserializer: D,
@@ -149,57 +130,31 @@ where
     }
 }
 
-pub(crate) fn deserialize_stream_id<'de, D: Deserializer<'de>>(
+pub(crate) fn deserialize_thumbnail_image<'de, D: Deserializer<'de>>(
     deserializer: D,
-) -> Result<String, D::Error> {
-    #[derive(Deserialize)]
-    struct StreamHref {
-        href: String,
-    }
-    #[derive(Deserialize)]
-    struct Streams {
-        streams: StreamHref,
-    }
+) -> Result<Vec<Image>, D::Error> {
+    let as_map = serde_json::Map::deserialize(deserializer)?;
 
-    let streams: Streams = Streams::deserialize(deserializer)?;
-
-    let mut split_streams = streams
-        .streams
-        .href
-        .split('/')
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
-    split_streams.reverse();
-    if let Some(stream_id) = split_streams.get(1) {
-        Ok(stream_id.clone())
+    if let Some(thumbnail) = as_map.get("thumbnail") {
+        Ok(serde_json::from_value::<Vec<Vec<Image>>>(thumbnail.clone())
+            .map_err(|e| Error::custom(e.to_string()))?
+            .into_iter()
+            .flatten()
+            .collect())
     } else {
-        Err(Error::custom("cannot extract stream id"))
+        Ok(vec![])
     }
 }
 
-pub(crate) fn deserialize_resource<'de, D: Deserializer<'de>>(
+pub(crate) fn deserialize_streams_link<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<String, D::Error> {
-    #[derive(Deserialize)]
-    struct ResourceHref {
-        href: String,
-    }
-    #[derive(Deserialize)]
-    struct Resource {
-        resource: ResourceHref,
-    }
+    let as_string = String::deserialize(deserializer)?;
 
-    let resource: Resource = Resource::deserialize(deserializer)?;
-    Ok(resource.resource.href)
-}
-
-pub(crate) fn deserialize_stream_id_option<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Option<String>, D::Error> {
-    if let Some(value) = Option::<Value>::deserialize(deserializer)? {
-        if let Ok(stream_id) = deserialize_stream_id(value.into_deserializer()) {
-            return Ok(Some(stream_id));
-        }
-    }
-    Ok(None)
+    Ok(as_string
+        .trim_end_matches("/streams")
+        .split('/')
+        .last()
+        .ok_or_else(|| Error::custom("cannot extract stream id"))?
+        .to_string())
 }

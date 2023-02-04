@@ -1,3 +1,4 @@
+use crate::common::V2BulkResult;
 use crate::error::CrunchyrollError;
 use crate::{
     enum_values, options, Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result,
@@ -87,19 +88,6 @@ impl SimpleWatchlistEntry {
     }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-struct BulkWatchlistResult {
-    items: Vec<WatchlistEntry>,
-
-    total: u32,
-
-    #[cfg(feature = "__test_strict")]
-    total_before_filter: u32,
-}
-
 enum_values! {
     pub enum WatchlistSort {
         Updated = "date_updated"
@@ -148,7 +136,7 @@ impl Crunchyroll {
         options.language = None;
 
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/{}/watchlist",
+            "https://www.crunchyroll.com/content/v2/discover/{}/watchlist",
             self.executor.details.account_id.clone()?
         );
         Ok(self
@@ -157,9 +145,9 @@ impl Crunchyroll {
             .query(&options.into_query())
             .query(&[language_field])
             .apply_locale_query()
-            .request::<BulkWatchlistResult>()
+            .request::<V2BulkResult<WatchlistEntry>>()
             .await?
-            .items)
+            .data)
     }
 }
 
@@ -169,10 +157,10 @@ macro_rules! add_to_watchlist {
             impl $s {
                 #[doc = $add]
                 pub async fn add_to_watchlist(&self) -> Result<()> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/watchlist/{}", self.executor.details.account_id.clone()?);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/watchlist", self.executor.details.account_id.clone()?);
                     let _: EmptyJsonProxy = self.executor.post(endpoint)
                         .json(&json!({"content_id": &self.id}))
-                        .query(&[("locale", &self.executor.details.locale)])
+                        .apply_locale_query()
                         .request()
                         .await?;
                     Ok(())
@@ -180,16 +168,16 @@ macro_rules! add_to_watchlist {
 
                 #[doc = $as]
                 pub async fn into_watchlist_entry(&self) -> Result<Option<SimpleWatchlistEntry>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/watchlist/{}/{}", self.executor.details.account_id.clone()?, self.id);
-                    let result: serde_json::Value = self.executor.get(endpoint).request().await?;
-                    let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
-                    if as_map.is_empty() {
-                        Ok(None)
-                    } else {
-                        let mut entry: SimpleWatchlistEntry = serde_json::from_value(as_map.get(&self.id).unwrap().clone())?;
-                        entry.executor = self.executor.clone();
-                        Ok(Some(entry))
-                    }
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/watchlist", self.executor.details.account_id.clone()?);
+                    Ok(self.executor
+                        .get(endpoint)
+                        .query(&[("content_ids", &self.id)])
+                        .apply_locale_query()
+                        .request::<V2BulkResult<SimpleWatchlistEntry>>()
+                        .await?
+                        .data
+                        .get(0)
+                        .cloned())
                 }
             }
         )*
@@ -199,10 +187,10 @@ macro_rules! add_to_watchlist {
 add_to_watchlist! {
     #[doc = "Add this series to your watchlist."]
     #[doc = "Check and convert this series to a watchlist entry (to check if this series was watched before)."]
-    crate::Media<crate::media::Series>;
+    crate::media::Series;
     #[doc = "Add this movie to your watchlist."]
     #[doc = "Check and convert this movie to a watchlist entry (to check if this movie was watched before)."]
-    crate::Media<crate::media::MovieListing>
+    crate::media::MovieListing
 }
 
 async fn mark_favorite_watchlist(
@@ -211,7 +199,7 @@ async fn mark_favorite_watchlist(
     favorite: bool,
 ) -> Result<()> {
     let endpoint = format!(
-        "https://www.crunchyroll.com/content/v1/watchlist/{}/{}",
+        "https://www.crunchyroll.com/content/v2/{}/watchlist/{}",
         executor.details.account_id.clone()?,
         id
     );
@@ -225,7 +213,7 @@ async fn mark_favorite_watchlist(
 
 async fn remove_from_watchlist(executor: Arc<Executor>, id: String) -> Result<()> {
     let endpoint = format!(
-        "https://www.crunchyroll.com/content/v1/watchlist/{}/{}",
+        "https://www.crunchyroll.com/content/v2/{}/watchlist/{}",
         executor.details.account_id.clone()?,
         id
     );

@@ -1,4 +1,4 @@
-use crate::error::CrunchyrollError;
+use crate::common::V2BulkResult;
 use crate::{Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -26,11 +26,11 @@ pub struct CrunchylistEntry {
 
 impl CrunchylistEntry {
     /// Delete this entry from the parent crunchylist.
-    pub async fn delete(self, entry: &CrunchylistEntry) -> Result<()> {
+    pub async fn delete(self) -> Result<()> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}/{}",
+            "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}/{}",
             self.executor.details.account_id.clone()?,
-            entry.list_id,
+            self.list_id,
             self.id
         );
         self.executor
@@ -61,12 +61,12 @@ pub struct Crunchylists {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 struct CrunchylistCreate {
+    title: String,
+
     list_id: String,
 
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     modified_at: DateTime<Utc>,
-
-    total: u32,
 }
 
 impl Crunchylists {
@@ -75,23 +75,25 @@ impl Crunchylists {
     /// are allowed ([`Crunchylists::max_private`]; usually 10).
     pub async fn create<S: AsRef<str>>(&self, title: S) -> Result<CrunchylistPreview> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/custom-lists/{}",
+            "https://www.crunchyroll.com/content/v2/{}/custom-lists",
             self.executor.details.account_id.clone()?
         );
-        let create_result: CrunchylistCreate = self
+        let create_result = self
             .executor
             .post(endpoint)
             .json(&json!({ "title": title.as_ref() }))
             .apply_locale_query()
-            .request()
-            .await?;
+            .request::<V2BulkResult<CrunchylistCreate>>()
+            .await?
+            .data
+            .remove(0);
         Ok(CrunchylistPreview {
             executor: self.executor.clone(),
             list_id: create_result.list_id,
-            title: title.as_ref().to_string(),
+            title: create_result.title,
             modified_at: create_result.modified_at,
             is_public: false,
-            total: create_result.total,
+            total: 0,
         })
     }
 }
@@ -116,27 +118,23 @@ pub struct Crunchylist {
     pub modified_at: DateTime<Utc>,
 
     pub is_public: bool,
-    pub total: u32,
     pub max: u32,
 }
 
 impl Crunchylist {
-    /// Add a new entry to the current crunchylist. Note that [`MediaCollection::Season`] is not
-    /// supported to add and will return an error.
+    /// Add a new entry to the current crunchylist.
     pub async fn add(&self, media: MediaCollection) -> Result<()> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
+            "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}",
             self.executor.details.account_id.clone()?,
             self.id
         );
         let id = match media {
             MediaCollection::Series(series) => series.id,
-            MediaCollection::Season(_) => {
-                return Err(CrunchyrollError::Input("seasons are not supported".into()))
-            }
-            MediaCollection::Episode(episode) => episode.metadata.series_id,
+            MediaCollection::Season(season) => season.series_id,
+            MediaCollection::Episode(episode) => episode.series_id,
             MediaCollection::MovieListing(movie_listing) => movie_listing.id,
-            MediaCollection::Movie(movie) => movie.metadata.movie_listing_id,
+            MediaCollection::Movie(movie) => movie.movie_listing_id,
         };
         self.executor
             .post(endpoint)
@@ -150,7 +148,7 @@ impl Crunchylist {
     /// Rename the current crunchylist.
     pub async fn rename<S: AsRef<str>>(&self, name: S) -> Result<()> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
+            "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}",
             self.executor.details.account_id.clone()?,
             self.id
         );
@@ -166,7 +164,7 @@ impl Crunchylist {
     /// Delete the current crunchylist.
     pub async fn delete(self) -> Result<()> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
+            "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}",
             self.executor.details.account_id.clone()?,
             self.id
         );
@@ -202,33 +200,69 @@ pub struct CrunchylistPreview {
 impl CrunchylistPreview {
     /// Return the "real" [`Crunchylist`].
     pub async fn crunchylist(&self) -> Result<Crunchylist> {
+        #[derive(Deserialize, smart_default::SmartDefault)]
+        struct Meta {
+            title: String,
+
+            is_public: bool,
+
+            #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+            modified_at: DateTime<Utc>,
+
+            max: u32,
+        }
+
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/custom-lists/{}/{}",
+            "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}",
             self.executor.details.account_id.clone()?,
             self.list_id
         );
-        let mut crunchylist: Crunchylist = self
+        let crunchylist: V2BulkResult<CrunchylistEntry, Meta> = self
             .executor
             .get(endpoint)
             .apply_locale_query()
             .request()
             .await?;
-        crunchylist.id = self.list_id.clone();
-        Ok(crunchylist)
+
+        Ok(Crunchylist {
+            executor: self.executor.clone(),
+            id: self.list_id.clone(),
+            items: crunchylist.data,
+            title: crunchylist.meta.title,
+            modified_at: crunchylist.meta.modified_at,
+            is_public: crunchylist.meta.is_public,
+            max: crunchylist.meta.max,
+        })
     }
 }
 
 impl Crunchyroll {
     /// Return your crunchylists.
     pub async fn crunchylists(&self) -> Result<Crunchylists> {
+        #[derive(Default, Deserialize)]
+        struct Meta {
+            total_private: u32,
+            max_private: u32,
+            total_public: u32,
+        }
+
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/custom-lists/{}",
+            "https://www.crunchyroll.com/content/v2/{}/custom-lists",
             self.executor.details.account_id.clone()?
         );
-        self.executor
+        let crunchylists: V2BulkResult<CrunchylistPreview, Meta> = self
+            .executor
             .get(endpoint)
             .apply_locale_query()
             .request()
-            .await
+            .await?;
+
+        Ok(Crunchylists {
+            executor: self.executor.clone(),
+            items: crunchylists.data,
+            total_private: crunchylists.meta.total_private,
+            max_private: crunchylists.meta.max_private,
+            total_public: crunchylists.meta.total_public,
+        })
     }
 }

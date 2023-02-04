@@ -1,49 +1,117 @@
 use crate::categories::Category;
-use crate::common::{BulkResult, Image};
-use crate::error::{CrunchyrollError, CrunchyrollErrorContext};
-use crate::media::old_media::{OldEpisode, OldMovie, OldSeason};
+use crate::common::{Image, V2BulkResult};
+use crate::error::CrunchyrollError;
 use crate::media::{PlaybackStream, VideoStream};
 use crate::{options, Crunchyroll, Executor, Locale, Request, Result};
 use chrono::{DateTime, Duration, Utc};
-use serde::de::{DeserializeOwned, IntoDeserializer};
+use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::sync::Arc;
 
-#[async_trait::async_trait]
-pub trait Video: Default + DeserializeOwned + Request {
-    #[cfg(feature = "experimental-stabilizations")]
-    async fn __apply_fixes(_: Arc<Executor>, _: &mut Media<Self>) {}
+#[cfg(feature = "experimental-stabilizations")]
+fn parse_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> Locale {
+    split_locale_from_slug_title(slug_title).1
 }
 
 #[cfg(feature = "experimental-stabilizations")]
-pub(crate) fn parse_locale_from_slug_title(mut title: String) -> Locale {
-    title = title.trim_end_matches("-dub").to_string();
+fn split_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> (String, Locale) {
+    let title = slug_title.as_ref().trim_end_matches("-dub").to_string();
 
-    if title.ends_with("-arabic") {
-        Locale::ar_SA
-    } else if title.ends_with("-castilian") {
-        Locale::es_ES
-    } else if title.ends_with("-english") {
-        Locale::en_US
-    } else if title.ends_with("-english-in") {
-        Locale::en_IN
-    } else if title.ends_with("-french") {
-        Locale::fr_FR
-    } else if title.ends_with("-german") {
-        Locale::de_DE
-    } else if title.ends_with("-hindi") {
-        Locale::hi_IN
-    } else if title.ends_with("-italian") {
-        Locale::it_IT
-    } else if title.ends_with("-portuguese") {
-        Locale::pt_BR
-    } else if title.ends_with("-russian") {
-        Locale::ru_RU
-    } else if title.ends_with("-spanish") {
-        Locale::es_419
-    } else {
-        Locale::ja_JP
+    let locales = vec![
+        ("-arabic", Locale::ar_SA),
+        ("-castilian", Locale::es_ES),
+        ("-english", Locale::en_US),
+        ("-english-in", Locale::en_IN),
+        ("-french", Locale::fr_FR),
+        ("-german", Locale::de_DE),
+        ("-hindi", Locale::hi_IN),
+        ("-italian", Locale::it_IT),
+        ("-portuguese", Locale::pt_BR),
+        ("-russian", Locale::ru_RU),
+        ("-spanish", Locale::es_419),
+        ("-japanese-audio", Locale::ja_JP),
+    ];
+    for (end, locale) in locales {
+        if title.ends_with(end) {
+            return (title.trim_end_matches(end).to_string(), locale);
+        }
+    }
+    (title, Locale::ja_JP)
+}
+
+#[async_trait::async_trait(?Send)]
+pub trait Media {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self>
+    where
+        Self: Sized;
+
+    #[doc(hidden)]
+    async fn __apply_fixes(&mut self) {}
+
+    #[doc(hidden)]
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {}
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(try_from = "Map<String, Value>")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct ThumbnailImages {
+    pub thumbnail: Vec<Image>,
+}
+
+impl TryFrom<Map<String, Value>> for ThumbnailImages {
+    type Error = serde_json::Error;
+
+    fn try_from(value: Map<String, Value>) -> std::result::Result<Self, Self::Error> {
+        if let Some(thumbnail) = value.get("thumbnail") {
+            let thumbnail = serde_json::from_value::<Vec<Vec<Image>>>(thumbnail.clone())?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<Image>>();
+            Ok(ThumbnailImages { thumbnail })
+        } else {
+            Ok(ThumbnailImages { thumbnail: vec![] })
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(try_from = "Map<String, Value>")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct PosterImages {
+    pub poster_tall: Vec<Image>,
+    pub poster_wide: Vec<Image>,
+}
+
+impl TryFrom<Map<String, Value>> for PosterImages {
+    type Error = serde_json::Error;
+
+    fn try_from(value: Map<String, Value>) -> std::result::Result<Self, Self::Error> {
+        let tall = if let Some(tall) = value.get("poster_tall") {
+            serde_json::from_value::<Vec<Vec<Image>>>(tall.clone())?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<Image>>()
+        } else {
+            vec![]
+        };
+        let wide = if let Some(wide) = value.get("poster_wide") {
+            serde_json::from_value::<Vec<Vec<Image>>>(wide.clone())?
+                .into_iter()
+                .flatten()
+                .collect::<Vec<Image>>()
+        } else {
+            vec![]
+        };
+
+        Ok(Self {
+            poster_tall: tall,
+            poster_wide: wide,
+        })
     }
 }
 
@@ -62,18 +130,37 @@ pub struct SearchMetadata {
     pub popularity_score: Option<f64>,
 }
 
-/// Metadata for a [`Media`] series.
+/// Metadata for a series.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Series {
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
+
+    pub id: String,
+    pub channel_id: String,
+
+    /// Sometimes none, sometimes not
+    pub content_provider: Option<String>,
+
+    pub slug: String,
+    pub title: String,
+    pub slug_title: String,
+    pub description: String,
     pub extended_description: String,
 
     pub series_launch_year: Option<u32>,
 
     pub episode_count: u32,
     pub season_count: u32,
+    #[serde(default)]
+    pub media_count: u32,
+
+    #[serde(default)]
+    pub season_tags: Vec<String>,
 
     pub is_subbed: bool,
     pub is_dubbed: bool,
@@ -83,9 +170,14 @@ pub struct Series {
     /// Might be empty. Some series have this field populated with locales, others not.
     pub subtitle_locales: Vec<Locale>,
 
+    pub images: PosterImages,
+
     #[serde(default)]
     #[serde(rename = "tenant_categories")]
     pub categories: Vec<Category>,
+
+    #[serde(default)]
+    pub keywords: Vec<String>,
 
     pub maturity_ratings: Vec<String>,
     pub is_mature: bool,
@@ -95,145 +187,207 @@ pub struct Series {
 
     #[cfg(feature = "__test_strict")]
     pub(crate) extended_maturity_rating: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    external_id: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    last_public: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    linked_resource_key: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    new: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    new_content: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_title: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_description: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    search_metadata: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    #[serde(rename = "type")]
+    _type: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    seo_title: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    seo_description: Option<crate::StrictValue>,
 }
 
-#[async_trait::async_trait]
-impl Video for Series {
-    #[cfg(feature = "experimental-stabilizations")]
-    async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
-        if executor.fixes.locale_name_parsing {
-            if let Ok(seasons) = media.seasons().await {
-                let mut locales = seasons
-                    .into_iter()
-                    .flat_map(|s| s.metadata.audio_locales)
-                    .collect::<Vec<Locale>>();
-                locales.dedup();
+#[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct SeasonVersion {
+    #[serde(skip)]
+    executor: Arc<Executor>,
 
-                media.metadata.audio_locales = locales
-            }
-        }
+    #[serde(rename = "guid")]
+    pub id: String,
+
+    pub audio_locale: Locale,
+
+    pub original: bool,
+
+    pub variant: String,
+}
+
+impl SeasonVersion {
+    /// Return the full [`Season`] struct of this version.
+    pub async fn season(&self) -> Result<Season> {
+        Season::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
     }
 }
 
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-struct SeasonProxy {
-    audio_locale: Locale,
-    audio_locales: Vec<Locale>,
-    subtitle_locales: Vec<Locale>,
-
-    #[serde(default)]
-    season_number: u32,
-
-    maturity_ratings: Vec<String>,
-    is_mature: bool,
-    mature_blocked: bool,
-
-    #[cfg(feature = "__test_strict")]
-    pub(crate) season_display_number: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    pub(crate) season_sequence_number: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    pub(crate) extended_maturity_rating: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    pub(crate) versions: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    pub(crate) identifier: crate::StrictValue,
-}
-
-/// Metadata for a [`Media`] season.
-/// The deserializing requires a proxy struct because the season json response has two similar
-/// fields, `audio_locale` and `audio_locales`. Sometimes the first is populated, sometimes the
-/// second and sometimes both. They're representing the season audio but why it needs two fields
-/// for this, who knows. `audio_locale` is also a [`Vec`] of locales but, if populated, contains
-/// always only one locale.
+/// Metadata for a season.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[serde(from = "SeasonProxy")]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Season {
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
+
+    pub id: String,
+    pub series_id: String,
+    pub channel_id: String,
+    #[serde(default)]
+    pub identifier: String,
+
+    pub title: String,
+    pub slug_title: String,
+    pub description: String,
+
+    pub season_number: u32,
+    pub season_sequence_number: u32,
+
+    pub number_of_episodes: u32,
+
+    pub is_complete: bool,
+
+    #[serde(default)]
+    pub keywords: Vec<String>,
+    #[serde(default)]
+    pub season_tags: Vec<String>,
+
+    pub is_subbed: bool,
+    pub is_dubbed: bool,
+    pub is_simulcast: bool,
+    audio_locale: Option<Locale>,
     /// Most of the time, like 99%, this contains only one locale. But sometimes Crunchyroll does
     /// weird stuff and marks a season which clearly has only one locale with two locales. See
     /// [this](https://github.com/crunchy-labs/crunchy-cli/issues/81#issuecomment-1351813787) issue
     /// comment for an example.
     pub audio_locales: Vec<Locale>,
-    /// Sometimes populated, sometimes not. idk why. Crunchyroll.
     pub subtitle_locales: Vec<Locale>,
-
-    /// Currently only populated if this season got generated by [`Media<Series>::seasons`].
-    #[serde(default)]
-    pub season_number: u32,
 
     pub maturity_ratings: Vec<String>,
     pub is_mature: bool,
     pub mature_blocked: bool,
 
+    /// If the season is not available this might contain some information why.
+    pub availability_notes: String,
+
+    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
+    /// re-request it to get other versions. Crunchyroll :)
+    #[serde(default)]
+    pub versions: Vec<SeasonVersion>,
+
     #[cfg(feature = "__test_strict")]
-    pub(crate) season_display_number: crate::StrictValue,
+    // currently empty (on all of my tests) but its might be filled in the future
+    images: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    pub(crate) season_sequence_number: crate::StrictValue,
+    season_display_number: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    pub(crate) extended_maturity_rating: crate::StrictValue,
+    extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    pub(crate) versions: crate::StrictValue,
+    seo_title: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    pub(crate) identifier: crate::StrictValue,
+    seo_description: Option<crate::StrictValue>,
 }
 
-#[async_trait::async_trait]
-impl Video for Season {
-    #[cfg(feature = "experimental-stabilizations")]
-    async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
-        if executor.fixes.locale_name_parsing {
-            media.metadata.audio_locales =
-                vec![parse_locale_from_slug_title(media.slug_title.clone())]
-        }
+#[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct EpisodeVersion {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    #[serde(rename = "guid")]
+    pub id: String,
+    #[serde(rename = "media_guid")]
+    pub media_id: String,
+    #[serde(rename = "season_guid")]
+    pub season_id: String,
+
+    pub audio_locale: Locale,
+
+    pub is_premium_only: bool,
+    pub original: bool,
+
+    pub variant: String,
+}
+
+impl EpisodeVersion {
+    /// Return the full [`Episode`] struct of this version.
+    pub async fn episode(&self) -> Result<Episode> {
+        Episode::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
     }
 }
 
-impl From<SeasonProxy> for Season {
-    fn from(mut season_proxy: SeasonProxy) -> Self {
-        if season_proxy.audio_locale != Locale::default() {
-            season_proxy.audio_locales.push(season_proxy.audio_locale);
-            season_proxy.audio_locales.dedup()
-        }
-        Self {
-            audio_locales: season_proxy.audio_locales,
-            subtitle_locales: season_proxy.subtitle_locales,
-            season_number: season_proxy.season_number,
-            maturity_ratings: season_proxy.maturity_ratings,
-            is_mature: season_proxy.is_mature,
-            mature_blocked: season_proxy.mature_blocked,
-            #[cfg(feature = "__test_strict")]
-            season_display_number: season_proxy.season_display_number,
-            #[cfg(feature = "__test_strict")]
-            season_sequence_number: season_proxy.season_sequence_number,
-            #[cfg(feature = "__test_strict")]
-            extended_maturity_rating: season_proxy.extended_maturity_rating,
-            #[cfg(feature = "__test_strict")]
-            versions: season_proxy.versions,
-            #[cfg(feature = "__test_strict")]
-            identifier: season_proxy.identifier,
-        }
-    }
-}
-
-/// Metadata for a [`Media`] episode.
+/// Metadata for a episode.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Episode {
-    pub series_id: String,
-    pub series_title: String,
-    pub series_slug_title: String,
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
+
+    pub id: String,
+    #[serde(alias = "streams_link")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_streams_link")]
+    pub stream_id: String,
+    pub channel_id: String,
+    #[serde(alias = "playback")]
+    pub playback_url: String,
+    pub identifier: String,
+
+    pub slug: String,
+    pub title: String,
+    pub slug_title: String,
+    pub description: String,
+
+    // both missing if the episode is the last one in its season unpopulated
+    #[serde(default)]
+    pub next_episode_id: String,
+    #[serde(default)]
+    pub next_episode_title: String,
 
     pub season_id: String,
     pub season_title: String,
     pub season_slug_title: String,
-    pub season_number: u32,
+    #[serde(default)]
+    pub season_tags: Vec<String>,
+
+    pub series_id: String,
+    pub series_title: String,
+    pub series_slug_title: String,
+
+    // probably empty
+    #[serde(default)]
+    pub production_episode_id: String,
 
     /// Usually the same as [`Episode::episode_number`], just as string.
     pub episode: String,
@@ -243,6 +397,12 @@ pub struct Episode {
     /// occurs for the first AOT episode, which is a preview, for example) this might be a floating
     /// number like 0.5.
     pub sequence_number: f32,
+
+    pub season_number: u32,
+
+    pub audio_locale: Locale,
+    pub subtitle_locales: Vec<Locale>,
+
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[default(Duration::milliseconds(0))]
@@ -262,73 +422,135 @@ pub struct Episode {
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub availability_ends: DateTime<Utc>,
 
-    pub is_subbed: bool,
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_thumbnail_image")]
+    pub images: Vec<Image>,
+
     pub is_dubbed: bool,
-    pub closed_captions_available: bool,
+    pub is_subbed: bool,
 
-    pub audio_locale: Locale,
-    pub subtitle_locales: Vec<Locale>,
-
-    pub is_clip: bool,
     pub is_premium_only: bool,
+    pub is_clip: bool,
 
-    #[serde(default)]
-    #[serde(rename = "tenant_categories")]
-    pub categories: Vec<Category>,
-
-    pub maturity_ratings: Vec<String>,
     pub is_mature: bool,
+    pub maturity_ratings: Vec<String>,
     pub mature_blocked: bool,
 
     pub available_offline: bool,
     pub availability_notes: String,
 
+    pub closed_captions_available: bool,
+
     pub eligible_region: String,
 
+    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
+    /// re-request it to get other versions. Crunchyroll :)
+    #[serde(default)]
+    pub versions: Vec<EpisodeVersion>,
+
     #[cfg(feature = "__test_strict")]
-    pub(crate) extended_maturity_rating: crate::StrictValue,
+    media_type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    pub(crate) available_date: crate::StrictValue,
+    external_id: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    pub(crate) premium_date: crate::StrictValue,
+    linked_resource_key: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    pub(crate) versions: crate::StrictValue,
+    new: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    pub(crate) identifier: crate::StrictValue,
+    promo_title: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_description: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    search_metadata: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    #[serde(rename = "type")]
+    _type: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    extended_maturity_rating: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    tenant_categories: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    available_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    premium_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    seo_title: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    seo_description: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    listing_id: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    hd_flag: Option<crate::StrictValue>,
 }
 
-#[async_trait::async_trait]
-impl Video for Episode {
-    #[cfg(feature = "experimental-stabilizations")]
-    async fn __apply_fixes(executor: Arc<Executor>, media: &mut Media<Self>) {
-        if executor.fixes.locale_name_parsing {
-            media.metadata.audio_locale =
-                parse_locale_from_slug_title(media.metadata.season_slug_title.clone())
-        }
+#[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct MovieListingVersion {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    #[serde(rename = "guid")]
+    pub id: String,
+
+    pub audio_locale: Locale,
+
+    pub original: bool,
+
+    pub variant: String,
+}
+
+impl MovieListingVersion {
+    /// Return the full [`MovieListing`] struct of this version.
+    pub async fn movie_listing(&self) -> Result<MovieListing> {
+        MovieListing::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
     }
 }
 
-/// Metadata for a [`Media`] movie listing.
+/// Metadata for a movie listing.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct MovieListing {
-    // wtf is this again
-    pub first_movie_id: String,
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
 
+    pub id: String,
+    pub channel_id: String,
+
+    pub slug: String,
+    pub title: String,
+    pub slug_title: String,
+    pub description: String,
     pub extended_description: String,
+
+    /// Sometimes none, sometimes not
+    pub content_provider: Option<String>,
 
     pub movie_release_year: u32,
 
-    #[serde(alias = "duration_ms")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
-    #[default(Duration::milliseconds(0))]
-    pub duration: Duration,
+    /// May be [`None`] if requested by some functions like [`Crunchyroll::browse`]. You might have
+    /// to re-request it to get the audio locale. Crunchyroll :)
+    pub audio_locale: Option<Locale>,
+    /// Sometimes empty, sometimes not. Not recommended to rely on this.
+    pub subtitle_locales: Vec<Locale>,
 
     pub is_subbed: bool,
     pub is_dubbed: bool,
-    pub subtitle_locales: Vec<Locale>,
+
+    pub images: PosterImages,
+
+    #[serde(default)]
+    pub keywords: Vec<String>,
+    #[serde(default)]
+    pub season_tags: Vec<String>,
 
     pub is_premium_only: bool,
 
@@ -348,32 +570,87 @@ pub struct MovieListing {
     pub available_offline: bool,
     pub availability_notes: String,
 
+    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
+    /// re-request it to get other versions. Crunchyroll :)
+    #[serde(default)]
+    pub versions: Vec<MovieListingVersion>,
+
     #[cfg(feature = "__test_strict")]
-    pub(crate) extended_maturity_rating: crate::StrictValue,
+    extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    pub(crate) available_date: crate::StrictValue,
+    identifier: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    pub(crate) premium_date: crate::StrictValue,
+    available_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    premium_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    duration_ms: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    external_id: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    first_movie_id: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    new: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_title: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    seo_title: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_description: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    seo_description: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    hd_flag: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    last_public: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    linked_resource_key: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    playback: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    #[serde(rename = "type")]
+    _type: Option<crate::StrictValue>,
 }
 
-#[async_trait::async_trait]
-impl Video for MovieListing {}
-
-/// Metadata for a [`Media`] movie.
+/// Metadata for a movie.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Movie {
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
+
+    pub id: String,
+    #[serde(alias = "streams_link")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_streams_link")]
+    pub stream_id: String,
+    #[serde(alias = "playback")]
+    pub playback_url: String,
+    pub channel_id: String,
+
+    pub slug: String,
+    pub title: String,
+    pub slug_title: String,
+    pub description: String,
+
+    #[serde(alias = "listing_id")]
     pub movie_listing_id: String,
 
     pub movie_listing_title: String,
-    pub movie_listing_slug_title: String,
 
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[default(Duration::milliseconds(0))]
     pub duration: Duration,
+
+    pub images: ThumbnailImages,
+
+    #[default(DateTime::< Utc >::from(std::time::SystemTime::UNIX_EPOCH))]
+    free_available_date: DateTime<Utc>,
+    #[default(DateTime::< Utc >::from(std::time::SystemTime::UNIX_EPOCH))]
+    premium_available_date: DateTime<Utc>,
 
     pub is_subbed: bool,
     pub is_dubbed: bool,
@@ -389,31 +666,431 @@ pub struct Movie {
     pub availability_notes: String,
 
     #[cfg(feature = "__test_strict")]
-    pub(crate) extended_maturity_rating: crate::StrictValue,
+    media_type: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    extended_maturity_rating: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    available_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    premium_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    #[serde(default)]
+    movie_listing_slug_title: crate::StrictValue,
 }
 
-#[async_trait::async_trait]
-impl Video for Movie {}
+macro_rules! impl_manual_media_deserialize {
+    ($($media:ident = $metadata:literal)*) => {
+        $(
+            impl<'de> Deserialize<'de> for $media {
+                fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+                where
+                    D: Deserializer<'de>,
+                {
+                    let mut as_map = serde_json::Map::deserialize(deserializer)?;
+
+                    if let Some(mut metadata) = as_map.remove($metadata) {
+                        if let Some(object) = metadata.as_object_mut() {
+                            as_map.append(object);
+                        } else {
+                            as_map.insert($metadata.to_string(), metadata);
+                        }
+                    }
+
+                    $media::deserialize(
+                        serde_json::to_value(as_map)
+                            .map_err(|e| Error::custom(e.to_string()))?
+                            .into_deserializer(),
+                    )
+                    .map_err(|e| Error::custom(e.to_string()))
+                }
+            }
+        )*
+    }
+}
+
+impl_manual_media_deserialize! {
+    Series = "series_metadata"
+    Season = "season_metadata"
+    Episode = "episode_metadata"
+    MovieListing = "movie_listing_metadata"
+    Movie = "movie_metadata"
+}
+
+macro_rules! impl_media_request {
+    ($($media:ident)*) => {
+        $(
+            #[async_trait::async_trait(?Send)]
+            impl Request for $media {
+                async fn __set_executor(&mut self, executor: Arc<Executor>) {
+                    self.executor = executor;
+
+                    self.__apply_fixes().await;
+                    self.__apply_experimental_stabilizations().await;
+                }
+            }
+        )*
+    }
+}
+
+impl_media_request! {
+    Series Movie
+}
+
+macro_rules! impl_media_request_with_version {
+    ($($media:ident)*) => {
+        $(
+            #[async_trait::async_trait(?Send)]
+            impl Request for $media {
+                async fn __set_executor(&mut self, executor: Arc<Executor>) {
+                    for version in self.versions.iter_mut() {
+                        version.executor = executor.clone();
+                    }
+                    self.executor = executor;
+
+                    self.__apply_fixes().await;
+                    self.__apply_experimental_stabilizations().await;
+                }
+            }
+        )*
+    }
+}
+
+impl_media_request_with_version! {
+    Season Episode MovieListing
+}
+
+macro_rules! media_eq {
+    ($($media:ident)*) => {
+        $(
+            impl PartialEq<Self> for $media {
+                fn eq(&self, other: &Self) -> bool {
+                    self.id == other.id
+                }
+            }
+        )*
+    }
+}
+
+media_eq! {
+    Series Season Episode
+    MovieListing Movie
+}
+
+macro_rules! impl_playback {
+    ($($media:ident)*) => {
+        $(
+            impl $media {
+                pub async fn playback(&self) -> Result<PlaybackStream> {
+                    self.executor.get(&self.playback_url).request().await
+                }
+            }
+        )*
+    }
+}
+
+impl_playback! {
+    Episode Movie
+}
+
+impl Series {
+    /// Returns all series seasons.
+    pub async fn seasons(&self, preferred_audio: Option<Locale>) -> Result<Vec<Season>> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/cms/series/{}/seasons",
+            self.id
+        );
+        request_media(self.executor.clone(), endpoint, preferred_audio).await
+    }
+}
+
+impl Season {
+    /// Returns the series the season belongs to.
+    pub async fn series(&self) -> Result<Season> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/cms/series/{}",
+            self.series_id
+        );
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
+    }
+
+    /// Returns all episodes of this season.
+    pub async fn episodes(&self, preferred_audio: Option<Locale>) -> Result<Vec<Episode>> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/cms/seasons/{}/episodes",
+            self.id
+        );
+        request_media(self.executor.clone(), endpoint, preferred_audio).await
+    }
+}
+
+impl Episode {
+    /// Returns the series the episode belongs to.
+    pub async fn series(&self) -> Result<Series> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/cms/series/{}",
+            self.series_id
+        );
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
+    }
+
+    /// Returns the season the episode belongs to.
+    pub async fn season(&self) -> Result<Season> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
+            self.season_id
+        );
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
+    }
+}
+
+impl MovieListing {
+    /// Returns all movies for this movie listing.
+    pub async fn movies(&self, preferred_audio: Option<Locale>) -> Result<Vec<Movie>> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}/movies",
+            self.id
+        );
+        request_media(self.executor.clone(), endpoint, preferred_audio).await
+    }
+}
+
+impl Movie {
+    /// Returns the parent movie listing of this movie.
+    pub async fn movie_listing(&self) -> Result<MovieListing> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}",
+            self.movie_listing_id
+        );
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
+    }
+}
+
+async fn request_media<T: Default + DeserializeOwned + Request>(
+    executor: Arc<Executor>,
+    endpoint: String,
+    preferred_audio: Option<Locale>,
+) -> Result<Vec<T>> {
+    let result: V2BulkResult<T> = executor
+        .get(endpoint)
+        .query(&preferred_audio.map_or(vec![], |l| {
+            vec!["preferred_audio_language".to_string(), l.to_string()]
+        }))
+        .apply_locale_query()
+        .request()
+        .await?;
+    Ok(result.data)
+}
+
+#[async_trait::async_trait(?Send)]
+impl Media for Series {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/series/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
+
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {
+        if self.executor.fixes.locale_name_parsing {
+            if let Ok(seasons) = self.seasons(None).await {
+                let mut locales = seasons
+                    .into_iter()
+                    .flat_map(|s| s.audio_locales)
+                    .collect::<Vec<Locale>>();
+                locales.dedup();
+
+                self.audio_locales = locales
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl Media for Season {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
+
+    async fn __apply_fixes(&mut self) {
+        if let Some(audio_locale) = &self.audio_locale {
+            self.audio_locales.push(audio_locale.clone());
+            self.audio_locales.dedup()
+        }
+    }
+
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {
+        if self.executor.fixes.locale_name_parsing {
+            self.audio_locales = vec![parse_locale_from_slug_title(&self.slug_title)]
+        }
+        if self.executor.fixes.season_number {
+            let mut split = self.identifier.splitn(2, '|');
+            let (_, season) = (
+                split.next().unwrap_or_default(),
+                split.next().unwrap_or_default(),
+            );
+
+            if let Ok(season_num) = season.trim_start_matches('S').parse() {
+                self.season_number = season_num
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl Media for Episode {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/episodes/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
+
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {
+        if self.executor.fixes.locale_name_parsing {
+            self.audio_locale = parse_locale_from_slug_title(&self.season_slug_title)
+        }
+        if self.executor.fixes.season_number {
+            let mut split = self.identifier.splitn(3, '|');
+            let (_, season, _) = (
+                split.next().unwrap_or_default(),
+                split.next().unwrap_or_default(),
+                split.next().unwrap_or_default(),
+            );
+
+            if let Ok(season_num) = season.trim_start_matches('S').parse() {
+                self.season_number = season_num
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl Media for MovieListing {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl Media for Movie {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/movies/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
+}
 
 /// Collection of all media types. Useful in situations where [`Media`] can contain more than one
 /// specific media.
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum MediaCollection {
-    Series(Media<Series>),
-    Season(Media<Season>),
-    Episode(Media<Episode>),
-    MovieListing(Media<MovieListing>),
-    Movie(Media<Movie>),
+    Series(Series),
+    Season(Season),
+    Episode(Episode),
+    MovieListing(MovieListing),
+    Movie(Movie),
+}
+
+impl<'de> Deserialize<'de> for MediaCollection {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let as_map = serde_json::Map::deserialize(deserializer)?;
+
+        let err_conv = |e: serde_json::Error| Error::custom(e.to_string());
+
+        if as_map.contains_key("series_metadata") || as_map.contains_key("series_launch_year") {
+            Ok(MediaCollection::Series(
+                serde_json::from_value(Value::from(as_map)).map_err(err_conv)?,
+            ))
+        } else if as_map.contains_key("season_metadata")
+            || as_map.contains_key("number_of_episodes")
+        {
+            Ok(MediaCollection::Season(
+                serde_json::from_value(Value::from(as_map)).map_err(err_conv)?,
+            ))
+        } else if as_map.contains_key("episode_metadata") || as_map.contains_key("sequence_number")
+        {
+            Ok(MediaCollection::Episode(
+                serde_json::from_value(Value::from(as_map)).map_err(err_conv)?,
+            ))
+        } else if as_map.contains_key("movie_listing_metadata")
+            || as_map.contains_key("movie_release_year")
+        {
+            Ok(MediaCollection::MovieListing(
+                serde_json::from_value(Value::from(as_map)).map_err(err_conv)?,
+            ))
+        } else if as_map.contains_key("movie_metadata")
+            || as_map.contains_key("movie_listing_title")
+        {
+            Ok(MediaCollection::Movie(
+                serde_json::from_value(Value::from(as_map)).map_err(err_conv)?,
+            ))
+        } else {
+            Err(Error::custom(
+                "could not deserialize into media collection".to_string(),
+            ))
+        }
+    }
 }
 
 impl Default for MediaCollection {
     fn default() -> Self {
-        Self::Series(Media::default())
+        Self::Series(Series::default())
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl Request for MediaCollection {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         match self {
@@ -428,378 +1105,43 @@ impl Request for MediaCollection {
     }
 }
 
-impl<'de> Deserialize<'de> for MediaCollection {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let as_map = serde_json::Map::deserialize(deserializer)?;
-
-        let err_conv = |e: serde_json::Error| serde::de::Error::custom(e.to_string());
-
-        if as_map.contains_key("series_metadata") {
-            Ok(MediaCollection::Series(
-                Media::deserialize(Value::from(as_map).into_deserializer()).map_err(err_conv)?,
-            ))
-        } else if as_map.contains_key("season_metadata") {
-            Ok(MediaCollection::Season(
-                Media::deserialize(Value::from(as_map).into_deserializer()).map_err(err_conv)?,
-            ))
-        } else if as_map.contains_key("episode_metadata") {
-            Ok(MediaCollection::Episode(
-                Media::deserialize(Value::from(as_map).into_deserializer()).map_err(err_conv)?,
-            ))
-        } else if as_map.contains_key("movie_listing_metadata") {
-            Ok(MediaCollection::MovieListing(
-                Media::deserialize(Value::from(as_map).into_deserializer()).map_err(err_conv)?,
-            ))
-        } else if as_map.contains_key("movie_metadata") {
-            Ok(MediaCollection::Movie(
-                Media::deserialize(Value::from(as_map).into_deserializer()).map_err(err_conv)?,
-            ))
-        } else {
-            Err(serde::de::Error::custom(
-                "no metadata were found".to_string(),
-            ))
-        }
-    }
-}
-
 impl MediaCollection {
-    pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<MediaCollection> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/cms/v2/{}/objects/{}",
-            crunchy.executor.details.bucket, &id
-        );
-        let result: BulkResult<MediaCollection> = crunchy
-            .executor
-            .get(endpoint)
-            .apply_media_query()
-            .apply_locale_query()
-            .request()
-            .await?;
-
-        if result.items.is_empty() {
-            Err(CrunchyrollError::Input(
-                format!("no media could be found for id '{}'", id).into(),
-            ))
-        } else if result.items.len() >= 2 {
-            // if this ever gets fired, crunchyroll hopefully unified episode and movie on the api
-            // level (this functions was only implemented so `crunchyroll_rs::parse_url` can work
-            // easily)
-            Err(CrunchyrollError::Internal(format!("multiple media were found for id '{}'. this shouldn't happen, please report it immediately!", id).into()))
+    pub async fn from_id<S: AsRef<str>>(
+        crunchyroll: &Crunchyroll,
+        id: S,
+    ) -> Result<MediaCollection> {
+        if let Ok(episode) = Episode::from_id(crunchyroll, id.as_ref()).await {
+            Ok(MediaCollection::Episode(episode))
+        } else if let Ok(movie) = Movie::from_id(crunchyroll, id.as_ref()).await {
+            Ok(MediaCollection::Movie(movie))
+        } else if let Ok(series) = Series::from_id(crunchyroll, id.as_ref()).await {
+            Ok(MediaCollection::Series(series))
+        } else if let Ok(season) = Season::from_id(crunchyroll, id.as_ref()).await {
+            Ok(MediaCollection::Season(season))
+        } else if let Ok(movie_listing) = MovieListing::from_id(crunchyroll, id.as_ref()).await {
+            Ok(MediaCollection::MovieListing(movie_listing))
         } else {
-            Ok(result.items.into_iter().next().unwrap())
+            Err(CrunchyrollError::Input(
+                format!("failed to find valid media with id '{}'", id.as_ref()).into(),
+            ))
         }
     }
 }
 
-macro_rules! impl_try_into_media {
-    ($($generic:path = $enum_field:ident)*) => {
+macro_rules! impl_media_collection {
+    ($($media:ident)*) => {
         $(
-            impl TryInto<Media<$generic>> for MediaCollection {
-                type Error = CrunchyrollError;
-
-                fn try_into(self) -> std::result::Result<Media<$generic>, Self::Error> {
-                    if let MediaCollection::$enum_field(value) = self {
-                        Ok(value)
-                    } else {
-                        Err(CrunchyrollError::Input(CrunchyrollErrorContext::new(format!("collection is no '{}'", stringify!($generic)).to_string())))
-                    }
+            impl From<$media> for MediaCollection {
+                fn from(value: $media) -> Self {
+                    MediaCollection::$media(value)
                 }
             }
         )*
     }
 }
 
-impl_try_into_media! {
-    Series = Series
-    Season = Season
-    Episode = Episode
-    MovieListing = MovieListing
-    Movie = Movie
-}
-
-macro_rules! impl_from_media {
-    ($($generic:path = $enum_field:ident)*) => {
-        $(
-            impl From<Media<$generic>> for MediaCollection {
-                fn from(value: Media<$generic>) -> Self {
-                    Self::$enum_field(value)
-                }
-            }
-        )*
-    }
-}
-
-impl_from_media! {
-    Series = Series
-    Season = Season
-    Episode = Episode
-    MovieListing = MovieListing
-    Movie = Movie
-}
-
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct MediaImages {
-    pub thumbnail: Option<Vec<Vec<Image>>>,
-    pub poster_tall: Option<Vec<Vec<Image>>>,
-    pub poster_wide: Option<Vec<Vec<Image>>>,
-    pub promo_image: Option<Vec<Vec<Image>>>,
-}
-
-/// Base struct which stores all information about series, seasons, episodes, movie listings and
-/// movies. The generic this struct takes specifies which media type it actually contains.
-#[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
-#[serde(bound = "M: Video")]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct Media<M: Video> {
-    #[serde(skip)]
-    pub(crate) executor: Arc<Executor>,
-
-    pub id: String,
-    #[serde(rename = "__links__")]
-    #[serde(default)]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_stream_id_option")]
-    pub stream_id: Option<String>,
-    #[serde(rename = "playback")]
-    pub playback_url: Option<String>,
-    pub external_id: String,
-    pub channel_id: String,
-
-    pub slug: String,
-    pub title: String,
-    pub slug_title: String,
-    pub promo_title: String,
-    pub description: String,
-    pub promo_description: String,
-
-    #[serde(alias = "series_metadata")]
-    #[serde(alias = "season_metadata")]
-    #[serde(alias = "episode_metadata")]
-    #[serde(alias = "movie_listing_metadata")]
-    #[serde(alias = "movie_metadata")]
-    pub metadata: M,
-
-    /// only populated if `Panel` results from search query 'src/search-series'
-    pub search_metadata: Option<SearchMetadata>,
-
-    pub images: Option<MediaImages>,
-
-    #[cfg(feature = "__test_strict")]
-    #[serde(alias = "type")]
-    pub(crate) collection_type: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    pub(crate) new: Option<crate::StrictValue>,
-    #[cfg(feature = "__test_strict")]
-    pub(crate) new_content: Option<crate::StrictValue>,
-    #[cfg(feature = "__test_strict")]
-    pub(crate) last_public: Option<crate::StrictValue>,
-    #[cfg(feature = "__test_strict")]
-    pub(crate) linked_resource_key: crate::StrictValue,
-}
-
-#[async_trait::async_trait]
-impl<M: Video> Request for Media<M> {
-    async fn __set_executor(&mut self, executor: Arc<Executor>) {
-        self.executor = executor.clone();
-
-        #[cfg(feature = "experimental-stabilizations")]
-        M::__apply_fixes(executor, self).await;
-    }
-}
-
-impl<M: Video> PartialEq for Media<M> {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl<M: Video> Eq for Media<M> {}
-
-impl<M: Video> Media<M> {
-    pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Media<M>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/cms/v2/{}/objects/{}",
-            crunchy.executor.details.bucket, &id
-        );
-        let result: BulkResult<Media<M>> = crunchy
-            .executor
-            .get(endpoint)
-            .apply_media_query()
-            .apply_locale_query()
-            .request()
-            .await?;
-
-        if result.items.is_empty() {
-            Err(CrunchyrollError::Input(
-                format!("no media could be found for id '{}'", id).into(),
-            ))
-        } else if result.items.len() >= 2 {
-            // if this ever gets fired, crunchyroll hopefully unified episode and movie on the api
-            // level (this functions was only implemented so `crunchyroll_rs::parse_url` can work
-            // easily)
-            Err(CrunchyrollError::Internal(format!("multiple media were found for id '{}'. this shouldn't happen, please report it immediately!", id).into()))
-        } else {
-            Ok(result.items.into_iter().next().unwrap())
-        }
-    }
-
-    pub async fn playback(&self) -> Result<PlaybackStream> {
-        if let Some(playback_url) = &self.playback_url {
-            self.executor.get(playback_url).request().await
-        } else {
-            Err(CrunchyrollError::Request("no playback id available".into()))
-        }
-    }
-}
-
-impl Media<Series> {
-    /// Return the season of the series.
-    pub async fn seasons(&self) -> Result<Vec<Media<Season>>> {
-        Media::<Season>::from_series_id(
-            &Crunchyroll {
-                executor: self.executor.clone(),
-            },
-            self.id.clone(),
-        )
-        .await
-    }
-}
-
-impl Media<Season> {
-    pub async fn from_series_id(
-        crunchy: &Crunchyroll,
-        series_id: String,
-    ) -> Result<Vec<Media<Season>>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/cms/v2/{}/seasons",
-            crunchy.executor.details.bucket
-        );
-        let result: BulkResult<OldSeason> = crunchy
-            .executor
-            .get(endpoint)
-            .query(&[("series_id", series_id)])
-            .apply_media_query()
-            .apply_locale_query()
-            .request()
-            .await?;
-        Ok(result.items.into_iter().map(|i| i.into()).collect())
-    }
-
-    /// Returns the episodes of the season.
-    pub async fn episodes(&self) -> Result<Vec<Media<Episode>>> {
-        Media::<Episode>::from_season_id(
-            &Crunchyroll {
-                executor: self.executor.clone(),
-            },
-            self.id.clone(),
-        )
-        .await
-    }
-}
-
-impl Media<Episode> {
-    pub async fn from_season_id(
-        crunchy: &Crunchyroll,
-        season_id: String,
-    ) -> Result<Vec<Media<Episode>>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/cms/v2/{}/episodes",
-            crunchy.executor.details.bucket
-        );
-        let result: BulkResult<OldEpisode> = crunchy
-            .executor
-            .get(endpoint)
-            .query(&[("season_id", season_id)])
-            .apply_media_query()
-            .apply_locale_query()
-            .request()
-            .await?;
-        Ok(result.items.into_iter().map(|i| i.into()).collect())
-    }
-
-    /// Returns the season the episode belongs to.
-    pub async fn season(&self) -> Result<Media<Season>> {
-        Season::from_id(
-            &Crunchyroll {
-                executor: self.executor.clone(),
-            },
-            self.metadata.season_id.clone(),
-        )
-        .await
-    }
-
-    /// Returns the series the episode belongs to.
-    pub async fn series(&self) -> Result<Media<Series>> {
-        Series::from_id(
-            &Crunchyroll {
-                executor: self.executor.clone(),
-            },
-            self.metadata.series_id.clone(),
-        )
-        .await
-    }
-}
-
-impl Media<MovieListing> {
-    pub async fn movies(&self) -> Result<Vec<Media<Movie>>> {
-        Media::<Movie>::from_movie_listing_id(
-            &Crunchyroll {
-                executor: self.executor.clone(),
-            },
-            self.id.clone(),
-        )
-        .await
-    }
-}
-
-impl Media<Movie> {
-    pub async fn from_movie_listing_id(
-        crunchy: &Crunchyroll,
-        movie_listing_id: String,
-    ) -> Result<Vec<Media<Movie>>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/cms/v2/{}/movies",
-            crunchy.executor.details.bucket
-        );
-        let result: BulkResult<OldMovie> = crunchy
-            .executor
-            .get(endpoint)
-            .query(&[("movie_listing_id", movie_listing_id)])
-            .apply_media_query()
-            .apply_locale_query()
-            .request()
-            .await?;
-        Ok(result.items.into_iter().map(|i| i.into()).collect())
-    }
-
-    /// Returns the movie listing this movie belongs to.
-    pub async fn movie_listing(&self) -> Result<Media<MovieListing>> {
-        MovieListing::from_id(
-            &Crunchyroll {
-                executor: self.executor.clone(),
-            },
-            self.metadata.movie_listing_id.clone(),
-        )
-        .await
-    }
-}
-
-impl Crunchyroll {
-    /// Get a media by its id. The `M` generic says what media exactly should be requested. Available
-    /// options are [`Series`], [`Season`], [`Episode`], [`MovieListing`] and [`Movie`].
-    pub async fn media_from_id<M: Video>(&self, id: impl AsRef<str>) -> Result<Media<M>> {
-        Media::from_id(self, id.as_ref().to_string()).await
-    }
-
-    pub async fn media_collection_from_id<S: AsRef<str>>(&self, id: S) -> Result<MediaCollection> {
-        MediaCollection::from_id(self, id.as_ref().to_string()).await
-    }
+impl_media_collection! {
+    Series Season Episode MovieListing Movie
 }
 
 options! {
@@ -807,36 +1149,19 @@ options! {
     /// Limit of results to return.
     limit(u32, "n") = Some(20),
     /// Specifies the index from which the entries should be returned.
-    start(u32, "start") = None
-}
-
-macro_rules! impl_from_id {
-    ($($media:ident)*) => {
-        $(
-            impl $media {
-                /// Return a [`Media`] implementation of this type by its id.
-                pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Media<$media>> {
-                    Media::from_id(crunchy, id).await
-                }
-            }
-        )*
-    }
-}
-
-impl_from_id! {
-    Series Season Episode
-    MovieListing Movie
+    start(u32, "start") = None,
+    /// Preferred audio language.
+    preferred_audio_language(Locale, "preferred_audio_language") = None
 }
 
 macro_rules! impl_media_video_collection {
     ($($media_video:ident)*) => {
         $(
-            impl Media<$media_video> {
+            impl $media_video {
                 /// Similar series or movie listing to the current item.
-                pub async fn similar(&self, options: SimilarOptions) -> Result<BulkResult<MediaCollection>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/{}/similar_to", self.executor.details.account_id.clone()?);
+                pub async fn similar(&self, options: SimilarOptions) -> Result<V2BulkResult<MediaCollection>> {
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", self.executor.details.account_id.clone()?, &self.id);
                     self.executor.get(endpoint)
-                        .query(&[("guid", &self.id)])
                         .query(&options.into_query())
                         .apply_locale_query()
                         .request()
@@ -877,19 +1202,36 @@ struct VideoIntroResult {
     last_updated: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Request)]
-#[serde(bound = "M: Video")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct RelatedMedia<M: Video> {
+pub struct RelatedMedia<T: Request + DeserializeOwned> {
     pub fully_watched: bool,
-    pub never_watched: bool,
 
     pub playhead: u32,
 
-    #[serde(alias = "episode_metadata")]
-    #[serde(alias = "movie_metadata")]
-    pub panel: Media<M>,
+    #[serde(alias = "panel")]
+    #[serde(deserialize_with = "deserialize_panel")]
+    pub media: T,
+
+    #[cfg(feature = "__test_strict")]
+    shortcut: Option<crate::StrictValue>,
+}
+
+pub(crate) fn deserialize_panel<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: DeserializeOwned,
+{
+    let mut as_map = Map::deserialize(deserializer)?;
+
+    if let Some(mut episode_metadata) = as_map.remove("episode_metadata") {
+        as_map.append(episode_metadata.as_object_mut().unwrap())
+    }
+
+    serde_json::from_value(serde_json::to_value(as_map).map_err(|e| Error::custom(e.to_string()))?)
+        .map_err(|e| Error::custom(e.to_string()))
 }
 
 #[allow(dead_code)]
@@ -911,12 +1253,12 @@ pub struct PlayheadInformation {
 macro_rules! impl_media_video {
     ($($media_video:ident)*) => {
         $(
-            impl Media<$media_video> {
+            impl $media_video {
                 /// Streams for this episode / movie.
                 pub async fn streams(&self) -> Result<VideoStream> {
                     let endpoint = format!(
                         "https://www.crunchyroll.com/cms/v2/{}/videos/{}/streams",
-                        self.executor.details.bucket, self.stream_id.as_ref().unwrap_or(&self.id)
+                        self.executor.details.bucket, self.stream_id
                     );
                     self.executor.get(endpoint)
                         .apply_media_query()
@@ -927,7 +1269,7 @@ macro_rules! impl_media_video {
 
                 /// Check if the episode / movie can be watched.
                 pub async fn available(&self) -> bool {
-                    self.executor.details.premium || !self.metadata.is_premium_only
+                    self.executor.details.premium || !self.is_premium_only
                 }
 
                 /// Get time _in seconds_ when the episode / movie intro begins and ends.
@@ -950,9 +1292,12 @@ macro_rules! impl_media_video {
 
                 /// Return the previous episode / movie. Is [`None`] if the current media is the
                 /// first in its season / has no previous media.
-                pub async fn previous(&self) -> Result<Option<RelatedMedia<$media_video>>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/previous_episode/{}", &self.id);
+                pub async fn previous(&self, preferred_audio: Option<Locale>) -> Result<Option<RelatedMedia<$media_video>>> {
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/previous_episode/{}", &self.id);
                     let result: serde_json::Value = self.executor.get(endpoint)
+                        .query(&preferred_audio.map_or(vec![], |l| {
+                            vec!["preferred_audio_language".to_string(), l.to_string()]
+                        }))
                         .apply_locale_query()
                         .request()
                         .await?;
@@ -960,16 +1305,19 @@ macro_rules! impl_media_video {
                     if as_map.is_empty() {
                         Ok(None)
                     } else {
-                        Ok(Some(serde_json::from_value(result)?))
+                        let mut previous: V2BulkResult<RelatedMedia<$media_video>> = serde_json::from_value(result)?;
+                        Ok(Some(previous.data.remove(0)))
                     }
                 }
 
                 /// Return the next episode / movie. Is [`None`] if the current media is the last in
                 /// its season / has no further media afterwards.
-                pub async fn next(&self) -> Result<Option<RelatedMedia<$media_video>>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/up_next_episode");
+                pub async fn next(&self, preferred_audio: Option<Locale>) -> Result<Option<RelatedMedia<$media_video>>> {
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/up_next/{}", self.id);
                     let result: serde_json::Value = self.executor.get(endpoint)
-                        .query(&[("episode_id", &self.id)])
+                        .query(&preferred_audio.map_or(vec![], |l| {
+                            vec!["preferred_audio_language".to_string(), l.to_string()]
+                        }))
                         .apply_locale_query()
                         .request()
                         .await?;
@@ -977,23 +1325,22 @@ macro_rules! impl_media_video {
                     if as_map.is_empty() {
                         Ok(None)
                     } else {
-                        Ok(Some(serde_json::from_value(result)?))
+                        let mut next: V2BulkResult<RelatedMedia<$media_video>> = serde_json::from_value(result)?;
+                        Ok(Some(next.data.remove(0)))
                     }
                 }
 
                 /// Get playhead information.
                 pub async fn playhead(&self) -> Result<Option<PlayheadInformation>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/playheads/{}/{}", self.executor.details.account_id.clone()?, &self.id);
-                    let result: serde_json::Value = self.executor.get(endpoint)
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/playheads", self.executor.details.account_id.clone()?);
+                    Ok(self.executor.get(endpoint)
+                        .query(&[("content_ids", &self.id)])
                         .apply_locale_query()
-                        .request()
-                        .await?;
-                    let as_map: serde_json::Map<String, serde_json::Value> = serde_json::from_value(result.clone())?;
-                    if as_map.is_empty() {
-                        Ok(None)
-                    } else {
-                        Ok(Some(serde_json::from_value(as_map.get(&self.id).unwrap().clone())?))
-                    }
+                        .request::<V2BulkResult<PlayheadInformation>>()
+                        .await?
+                        .data
+                        .get(0)
+                        .cloned())
                 }
 
                 /// Set the playhead (current playback position) for this episode / movie. Used unit
@@ -1001,7 +1348,7 @@ macro_rules! impl_media_video {
                 /// integration so if you update the playhead and have Crunchyroll connected to
                 /// Discord, this episode / movie will be shown as your Discord status.
                 pub async fn set_playhead(&self, position: u32) -> Result<()> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v1/playheads/{}", self.executor.details.account_id.clone()?);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/playheads", self.executor.details.account_id.clone()?);
                     self.executor.post(endpoint)
                         .apply_locale_query()
                         .json(&serde_json::json!({"content_id": &self.id, "playhead": position}))
@@ -1016,4 +1363,14 @@ macro_rules! impl_media_video {
 
 impl_media_video! {
     Episode Movie
+}
+
+impl Crunchyroll {
+    pub async fn media_from_id<M: Media, S: AsRef<str>>(&self, id: S) -> Result<M> {
+        M::from_id(self, id).await
+    }
+
+    pub async fn media_collection_from_id<S: AsRef<str>>(&self, id: S) -> Result<MediaCollection> {
+        MediaCollection::from_id(self, id).await
+    }
 }

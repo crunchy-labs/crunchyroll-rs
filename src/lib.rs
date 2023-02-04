@@ -38,12 +38,12 @@
 //! of the media. [`Media<Season>`] would represent a season for example.
 //!
 //! ```
-//! let series: Media<Series> = crunchy
+//! let series: Series = crunchy
 //!     // get the series with the id 'GY8VEQ95Y'
 //!     .media_from_id("GY8VEQ95Y")
 //!     .await?;
 //!
-//! let episode: Media<Episode> = crunchy
+//! let episode: Episode = crunchy
 //!     // get the episode with the id 'GRDKJZ81Y'
 //!     .media_from_id("GRDKJZ81Y")
 //!     .await?;
@@ -119,6 +119,7 @@ pub mod account;
 pub mod categories;
 pub mod common;
 pub mod crunchyroll;
+pub mod devices;
 pub mod error;
 pub mod feed;
 pub mod list;
@@ -140,7 +141,7 @@ pub(crate) use internal::serde::EmptyJsonProxy;
 pub(crate) use macros::{enum_values, options};
 
 pub use crunchyroll::{Crunchyroll, Locale};
-pub use media::{Episode, Media, MediaCollection, Movie, MovieListing, Season, Series};
+pub use media::{Episode, MediaCollection, Movie, MovieListing, Season, Series};
 #[cfg(feature = "parse")]
 pub use parse::{parse_url, UrlType};
 

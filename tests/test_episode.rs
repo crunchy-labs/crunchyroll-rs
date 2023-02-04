@@ -1,17 +1,17 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::{Episode, Media};
+use crunchyroll_rs::Episode;
 
 mod utils;
 
-static START_EPISODE: Store<Media<Episode>> = Store::new(|| {
+static START_EPISODE: Store<Episode> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
         let episode = crunchy.media_from_id("GRDKJZ81Y").await?;
         Ok(episode)
     })
 });
-static END_EPISODE: Store<Media<Episode>> = Store::new(|| {
+static END_EPISODE: Store<Episode> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
         let episode = crunchy.media_from_id("G6QW40DE6").await?;
@@ -56,26 +56,26 @@ async fn episode_set_playhead() {
 async fn episode_some_previous() {
     let episode = END_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.previous().await)
+    assert_result!(episode.previous(None).await)
 }
 
 #[tokio::test]
 async fn episode_none_previous() {
     let episode = START_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.previous().await)
+    assert_result!(episode.previous(None).await)
 }
 
 #[tokio::test]
 async fn episode_some_next() {
     let episode = START_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.next().await)
+    assert_result!(episode.next(None).await)
 }
 
 #[tokio::test]
 async fn episode_none_next() {
     let episode = END_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.next().await)
+    assert_result!(episode.next(None).await)
 }

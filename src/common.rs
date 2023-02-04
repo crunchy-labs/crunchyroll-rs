@@ -8,6 +8,27 @@ pub(crate) use crunchyroll_rs_internal::Request;
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[request(executor(data))]
+#[serde(bound = "T: Request + DeserializeOwned")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct V2BulkResult<T, M = serde_json::Map<String, serde_json::Value>>
+where
+    T: Default + DeserializeOwned + Request,
+    M: Default + DeserializeOwned + Send,
+{
+    pub data: Vec<T>,
+    #[serde(default)]
+    pub total: u32,
+
+    #[serde(default)]
+    pub(crate) meta: M,
+}
+
+/// Contains a variable amount of items and the maximum / total of item which are available.
+/// Mostly used when fetching pagination results.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(items))]
 #[serde(bound = "T: Request + DeserializeOwned")]
@@ -44,8 +65,8 @@ pub struct Image {
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
 #[doc(hidden)]
-#[async_trait::async_trait]
-pub trait Request: Send {
+#[async_trait::async_trait(?Send)]
+pub trait Request {
     /// Set a usable [`Executor`] instance to the struct if required
     async fn __set_executor(&mut self, _: Arc<Executor>) {}
 }
@@ -54,6 +75,6 @@ pub trait Request: Send {
 /// explicit result.
 impl Request for () {}
 
-impl<K: Send, V: Send> Request for HashMap<K, V> {}
+impl<K, V> Request for HashMap<K, V> {}
 
 impl Request for serde_json::Value {}

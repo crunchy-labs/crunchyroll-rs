@@ -1,4 +1,4 @@
-use crate::common::{BulkResult, Image};
+use crate::common::{Image, V2BulkResult};
 use crate::{enum_values, Crunchyroll, Locale, Request};
 use crate::{options, Result};
 use serde::Deserialize;
@@ -24,16 +24,16 @@ enum_values! {
     }
 }
 
-impl From<TenantCategory> for Category {
-    fn from(tenant_category: TenantCategory) -> Self {
-        Self::from(tenant_category.category)
+impl From<CategoryInformation> for Category {
+    fn from(category_information: CategoryInformation) -> Self {
+        category_information.category
     }
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct TenantCategoryImages {
+pub struct CategoryInformationImages {
     pub background: Vec<Image>,
     pub low: Vec<Image>,
 }
@@ -42,66 +42,47 @@ pub struct TenantCategoryImages {
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct TenantCategoryLocalization {
+pub struct CategoryInformationLocalization {
     pub title: String,
     pub description: String,
     pub locale: Locale,
-}
-
-/// Just like [`TenantCategory`] and sub category of it.
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct SubTenantCategory {
-    #[serde(rename = "tenant_category")]
-    pub category: String,
-    pub parent_category: String,
-    pub slug: String,
-
-    /// A human readable title & description about the category.
-    pub localization: TenantCategoryLocalization,
 }
 
 /// A anime category / genre.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct TenantCategory {
-    #[serde(rename = "tenant_category")]
-    pub category: String,
+pub struct CategoryInformation {
+    #[serde(rename = "id")]
+    pub category: Category,
     pub slug: String,
 
-    /// Sub categories of this (parent) category. This field is missing if requested with
-    /// `include_subcategories=false`. Why it isn't null... who knows.
-    #[serde(default)]
-    pub sub_categories: Vec<SubTenantCategory>,
-
-    pub images: TenantCategoryImages,
+    pub images: CategoryInformationImages,
 
     /// A human readable title & description about the category.
-    pub localization: TenantCategoryLocalization,
+    pub localization: CategoryInformationLocalization,
 }
 
 options! {
-    TenantCategoryOptions;
-    /// If tenant categories should contains subcategories.
-    include_subcategories(bool, "include_subcategories") = Some(false)
+    CategoryInformationOptions;
+    /// Preferred audio language.
+    preferred_audio_language(Locale, "preferred_audio_language") = None
 }
 
 impl Crunchyroll {
     /// Returns all video categories.
-    pub async fn tenant_categories(
+    pub async fn categories(
         &self,
-        options: TenantCategoryOptions,
-    ) -> Result<Vec<TenantCategory>> {
-        let endpoint = "https://www.crunchyroll.com/content/v1/tenant_categories";
+        options: CategoryInformationOptions,
+    ) -> Result<Vec<CategoryInformation>> {
+        let endpoint = "https://www.crunchyroll.com/content/v2/discover/categories";
         Ok(self
             .executor
             .get(endpoint)
             .query(&options.into_query())
             .apply_locale_query()
-            .request::<BulkResult<TenantCategory>>()
+            .request::<V2BulkResult<CategoryInformation>>()
             .await?
-            .items)
+            .data)
     }
 }

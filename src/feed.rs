@@ -1,214 +1,277 @@
-use crate::common::{BulkResult, CrappyBulkResult};
-use crate::error::CrunchyrollError;
-use crate::media::MediaType;
+use crate::common::{BulkResult, V2BulkResult};
+use crate::media::{MediaType, SimilarOptions};
 use crate::search::{BrowseOptions, BrowseSortType};
-use crate::{options, Crunchyroll, Executor, MediaCollection, Request, Result};
+use crate::{options, Crunchyroll, Locale, MediaCollection, Request, Result, Series};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
-use std::sync::Arc;
+use serde::de::Error;
+use serde::{Deserialize, Deserializer};
 
-/// Item of [`HomeFeedType`]. Contains a title and description with matching media to it.
+#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct FeedCarouselImages {
+    pub landscape_poster: Option<String>,
+    #[serde(alias = "portrait_image")]
+    pub portrait_poster: Option<String>,
+}
+
+/// The carousel / sliding images showed at first when visiting crunchyroll.com
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct CuratedFeed {
-    pub id: String,
-    pub channel_id: String,
-
+pub struct FeedCarousel {
     pub title: String,
+    pub slug: String,
     pub description: String,
 
-    pub items: Vec<MediaCollection>,
-
-    #[cfg(feature = "__test_strict")]
-    feed_type: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    version: crate::StrictValue,
-}
-
-impl CuratedFeed {
-    pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/curated_feeds/{}",
-            id
-        );
-        crunchy
-            .executor
-            .get(endpoint)
-            .apply_locale_query()
-            .request()
-            .await
-    }
-}
-
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct CarouselFeedImages {
-    pub landscape_poster: String,
-    pub portrait_poster: String,
-}
-
-/// Item of [`HomeFeedType`]. Contains a feed which should be shown first to the user (the top feed
-/// which can be moved to the right and left at the top of the Crunchyroll index page).
-#[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct CarouselFeed {
-    pub id: u32,
+    /// Link to a crunchyroll series or article.
     pub link: String,
 
-    pub slug: String,
-    pub title: String,
-    pub description: String,
+    pub images: FeedCarouselImages,
 
     pub button_text: String,
 
-    pub images: CarouselFeedImages,
-
+    #[cfg(feature = "__test_strict")]
+    id: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     third_party_impression_tracker: crate::StrictValue,
 }
 
-impl CarouselFeed {
-    pub async fn collection_from_id(
-        crunchy: &Crunchyroll,
-        id: String,
-    ) -> Result<Vec<CarouselFeed>> {
-        let endpoint = format!("https://www.crunchyroll.com/content/v1/carousel/{}", id);
-        Ok(crunchy
-            .executor
-            .get(endpoint)
-            .apply_locale_query()
-            .request::<BulkResult<CarouselFeed>>()
-            .await?
-            .items)
-    }
-}
-
-/// Contains all feeds which can be obtained via [`HomeFeed`].
-#[derive(Clone, Debug)]
-pub enum HomeFeedType {
-    /// The feed at the top of the Crunchyroll website. Call [`CarouselFeed::collection_from_id`]
-    /// with the value of this field to get a collection of usable [`CarouselFeed`] structs.
-    CarouselFeed(String),
-    /// Represents a series. Call [`crate::Media<Series>::from_id`] with the value of this field to
-    /// get a usable [`crate::Media<Series>`] struct.
-    Series(String),
-    /// Results similar to a series. Call [`crate::Media<Series>::similar`] with the value of this field as first
-    /// argument to get similar series.
-    SimilarTo(String),
-    /// Represents a separate feed. Call [`CuratedFeed::from_id`] with the value of this field to
-    /// get a usable [`CuratedFeed`] struct.
-    CuratedFeed(String),
-    /// Recommendations for you. Use [`Crunchyroll::recommendations`] to get them.
-    Recommendation,
-    /// A episode to continue watching. Use [`Crunchyroll::up_next`] to get it.
-    UpNext,
-    /// Your watchlist. Use [`Crunchyroll::watchlist`] to get it.
-    Watchlist,
-    /// News feed. Use [`Crunchyroll::news_feed`] to get it.
-    NewsFeed,
-    /// Browse content. Use [`Crunchyroll::browse`] with the value of this field as argument. Do not
-    /// overwrite [`BrowseOptions::sort`] and [`BrowseOptions::media_type`], this might cause
-    /// confusing results.
-    Browse(BrowseOptions),
-    /// Banner with a link to a Crunchyroll series. Use the first value of this field to get the
-    /// series link and the second to get image links. Note that no id is provided (for whatever
-    /// reason), so you cannot use [`crate::Media<Series>::from_id`] to get the series as api element.
-    Banner(String, HomeFeedBannerImages),
-}
-
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct HomeFeedBannerImages {
+pub struct FeedBannerImages {
     pub mobile_small: String,
     pub mobile_large: String,
     pub desktop_small: String,
     pub desktop_large: String,
 }
 
-/// Feed which is shown when visiting the Crunchyroll index page.
-#[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct HomeFeed {
-    #[serde(skip)]
-    executor: Arc<Executor>,
-
-    pub id: String,
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_none_to_option")]
-    pub source_media_id: Option<String>,
-
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct FeedBanner {
     pub title: String,
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_none_to_option")]
-    pub source_media_title: Option<String>,
+
     pub description: String,
 
-    pub display_type: String,
-    pub resource_type: String,
+    /// Link to a crunchyroll series or article.
+    pub link: String,
 
-    #[serde(rename = "__links__")]
-    #[serde(default)]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_resource")]
-    resource: String,
-
-    // only populated if `resource_type` is `in_feed_banner`
-    link: Option<String>,
-    // only populated if `resource_type` is `in_feed_banner`
-    banner_images: Option<HomeFeedBannerImages>,
-
-    #[cfg(feature = "__test_strict")]
-    new_window: Option<crate::StrictValue>,
-    #[cfg(feature = "__test_strict")]
-    promo_image: Option<crate::StrictValue>,
+    pub images: FeedBannerImages,
 }
 
-impl HomeFeed {
-    pub async fn home_feed_type(&self) -> Result<HomeFeedType> {
-        match self.resource_type.as_str() {
-            "hero_carousel" => Ok(HomeFeedType::CarouselFeed(
-                self.id.clone().split('-').last().unwrap().to_string(),
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct SeriesFeed {
+    pub title: String,
+
+    pub description: String,
+
+    /// Ids to series. Use [`Series::from_id`] to get the series.
+    pub ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct SimilarFeed {
+    pub title: String,
+
+    pub description: String,
+
+    #[serde(skip)]
+    pub similar_id: String,
+    #[serde(skip)]
+    pub similar_options: SimilarOptions,
+}
+
+#[derive(Clone, Debug, Request)]
+pub enum HomeFeed {
+    /// The feed at the top of the Crunchyroll website.
+    CarouselFeed(Vec<FeedCarousel>),
+    /// A series recommendation.
+    Series(Series),
+    /// Recommendations for you. Use [`Crunchyroll::recommendations`] to get them.
+    Recommendation,
+    /// Your watch history. Use [`Crunchyroll::watch_history`] to get it.
+    History,
+    /// A banner containing a link to a series or article.
+    Banner(FeedBanner),
+    /// Your watchlist. Use [`Crunchyroll::watchlist`] to get it.
+    Watchlist,
+    /// A feed containing a title with description and multiple series (ids) matching to title and
+    /// description.
+    SeriesFeed(SeriesFeed),
+    /// News feed. Use [`Crunchyroll::news_feed`] to get it.
+    NewsFeed,
+    /// Browse content. Use [`Crunchyroll::browse`] with the value of this field as argument. Do not
+    /// overwrite [`BrowseOptions::sort`] and [`BrowseOptions::media_type`], this might cause
+    /// confusing results.
+    Browse(BrowseOptions),
+    /// Results similar to a series. Get the series struct via [`SimilarFeed::similar_id`] and call
+    /// [`Series::similar`] with [`SimilarFeed::similar_options`] to get similar series.
+    SimilarTo(SimilarFeed),
+}
+
+impl Default for HomeFeed {
+    fn default() -> Self {
+        Self::CarouselFeed(vec![])
+    }
+}
+
+impl<'de> Deserialize<'de> for HomeFeed {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut as_map = serde_json::Map::deserialize(deserializer)?;
+
+        let type_error = |k: &str, t: &str| Error::custom(format!("home feed '{}' is no {}", k, t));
+        let mut get_value = |k: &str| {
+            as_map
+                .remove(k)
+                .ok_or_else(|| Error::custom(format!("cannot get '{}' on home feed", k)))
+        };
+        let map_serde_error = |e: serde_json::Error| Error::custom(e.to_string());
+
+        let resource_type = get_value("resource_type")?
+            .as_str()
+            .ok_or_else(|| type_error("resource_type", "string"))?
+            .to_string();
+
+        match resource_type.as_str() {
+            "hero_carousel" => Ok(Self::CarouselFeed(
+                serde_json::from_value(get_value("items")?).map_err(map_serde_error)?,
             )),
-            "panel" => Ok(HomeFeedType::Series(self.id.clone())),
+            "panel" => Ok(Self::Series(
+                serde_json::from_value(get_value("panel")?).map_err(map_serde_error)?,
+            )),
             "dynamic_collection" => {
-                if self.resource.contains("recommendations") {
-                    Ok(HomeFeedType::Recommendation)
-                } else if self.resource.contains("similar_to") {
-                    Ok(HomeFeedType::SimilarTo(self.id.clone()))
-                } else {
-                    Err(CrunchyrollError::Internal(
-                        format!("invalid dynamic collection type `{}`", self.resource).into(),
-                    ))
+                let response_type = get_value("response_type")?
+                    .as_str()
+                    .ok_or_else(|| type_error("response_type", "string"))?
+                    .to_string();
+
+                match response_type.as_str() {
+                    "recommendations" => Ok(Self::Recommendation),
+                    "history" => Ok(Self::History),
+                    "watchlist" => Ok(Self::Watchlist),
+                    "news_feed" => Ok(Self::NewsFeed),
+                    "browse" | "recent_episodes" => {
+                        let link = get_value("link")?
+                            .as_str()
+                            .ok_or_else(|| type_error("link", "string"))?
+                            .to_string();
+                        let query: Vec<(String, String)> =
+                            serde_urlencoded::from_str(link.split('?').last().unwrap())
+                                .map_err(|e| Error::custom(e.to_string()))?;
+
+                        let mut browse_options = BrowseOptions::default();
+                        for (key, value) in query {
+                            match key.as_str() {
+                                "n" => {
+                                    browse_options = browse_options.limit(
+                                        value
+                                            .parse::<u32>()
+                                            .map_err(|e| Error::custom(e.to_string()))?,
+                                    )
+                                }
+                                "sort_by" => {
+                                    browse_options =
+                                        browse_options.sort(BrowseSortType::from(value))
+                                }
+                                "type" => {
+                                    browse_options =
+                                        browse_options.media_type(MediaType::from(value))
+                                }
+                                _ => (),
+                            }
+                        }
+
+                        Ok(Self::Browse(browse_options))
+                    }
+                    "because_you_watched" => {
+                        let id = get_value("source_media_id")?
+                            .as_str()
+                            .ok_or_else(|| type_error("source_media_id", "string"))?
+                            .to_string();
+
+                        let link = get_value("link")?
+                            .as_str()
+                            .ok_or_else(|| type_error("link", "string"))?
+                            .to_string();
+                        let query: Vec<(String, String)> =
+                            serde_urlencoded::from_str(link.split('?').last().unwrap())
+                                .map_err(|e| Error::custom(e.to_string()))?;
+
+                        let mut similar_options = SimilarOptions::default();
+                        for (key, value) in query {
+                            if key.as_str() == "n" {
+                                similar_options = similar_options.limit(
+                                    value
+                                        .parse::<u32>()
+                                        .map_err(|e| Error::custom(e.to_string()))?,
+                                )
+                            }
+                        }
+
+                        let mut similar_feed: SimilarFeed = serde_json::from_value(
+                            serde_json::to_value(as_map).map_err(map_serde_error)?,
+                        )
+                        .map_err(map_serde_error)?;
+                        similar_feed.similar_id = id;
+                        similar_feed.similar_options = similar_options;
+
+                        Ok(Self::SimilarTo(similar_feed))
+                    }
+                    _ => Err(Error::custom(format!(
+                        "cannot parse home feed response type '{}'",
+                        response_type
+                    ))),
                 }
             }
-            "continue_watching" => Ok(HomeFeedType::UpNext),
-            "dynamic_watchlist" => Ok(HomeFeedType::Watchlist),
-            "news_feed" => Ok(HomeFeedType::NewsFeed),
-            "recent_episodes" => Ok(HomeFeedType::Browse(
-                BrowseOptions::default()
-                    .sort(BrowseSortType::NewlyAdded)
-                    .media_type(MediaType::Custom("episode".to_string())),
+            "in_feed_banner" => Ok(Self::Banner(
+                serde_json::from_value(serde_json::to_value(as_map).map_err(map_serde_error)?)
+                    .map_err(map_serde_error)?,
             )),
-            "in_feed_banner" => Ok(HomeFeedType::Banner(
-                self.link.clone().unwrap(),
-                self.banner_images.clone().unwrap(),
+            "curated_collection" => Ok(Self::SeriesFeed(
+                serde_json::from_value(serde_json::to_value(as_map).map_err(map_serde_error)?)
+                    .map_err(map_serde_error)?,
             )),
-            "curated_collection" => Ok(HomeFeedType::CuratedFeed(self.id.clone())),
-            _ => Err(CrunchyrollError::Internal(
-                format!("invalid resource type `{}`", self.resource_type).into(),
-            )),
+            _ => Err(Error::custom(format!(
+                "cannot parse home feed resource type '{}' ({})",
+                resource_type,
+                serde_json::to_value(&as_map).unwrap()
+            ))),
         }
     }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+struct NewsFeedResultProxy {
+    #[serde(rename = "type")]
+    news_type: String,
+    total: u32,
+    items: Vec<NewsFeed>,
+}
+
+#[allow(clippy::from_over_into)]
+impl Into<NewsFeedResult> for Vec<NewsFeedResultProxy> {
+    fn into(self) -> NewsFeedResult {
+        let top_news = self.iter().find(|p| p.news_type == "top_news");
+        let latest_news = self.iter().find(|p| p.news_type == "latest_news");
+
+        NewsFeedResult {
+            top_news: BulkResult {
+                items: top_news.map_or(vec![], |p| p.items.clone()),
+                total: top_news.map_or(0, |p| p.total),
+            },
+            latest_news: BulkResult {
+                items: latest_news.map_or(vec![], |p| p.items.clone()),
+                total: latest_news.map_or(0, |p| p.total),
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct NewsFeedResult {
     pub top_news: BulkResult<NewsFeed>,
     pub latest_news: BulkResult<NewsFeed>,
@@ -232,22 +295,6 @@ pub struct NewsFeed {
     pub news_link: String,
 }
 
-/// Suggested next episode or movie to watch.
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[request(executor(panel))]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct UpNextEntry {
-    pub new: bool,
-    pub new_content: bool,
-
-    pub playhead: u32,
-    pub fully_watched: bool,
-
-    /// Should be one of [`MediaCollection::Series`] or [`MediaCollection::Movie`].
-    pub panel: MediaCollection,
-}
-
 options! {
     HomeFeedOptions;
     /// Limit of results to return.
@@ -265,7 +312,9 @@ options! {
     /// Limit number of latest news.
     latest_limit(u32, "latest_news_n") = Some(20),
     /// Specifies the index from which latest news should be returned.
-    latest_start(u32, "latest_news_start") = None
+    latest_start(u32, "latest_news_start") = None,
+    /// Preferred audio language.
+    preferred_audio_language(Locale, "preferred_audio_language") = None
 }
 
 options! {
@@ -276,63 +325,42 @@ options! {
     start(u32, "start") = None
 }
 
-options! {
-    UpNextOptions;
-    /// Limit of results to return.
-    limit(u32, "n") = Some(20),
-    /// Specifies the index from which the entries should be returned.
-    start(u32, "start") = None
-}
-
 impl Crunchyroll {
     /// Returns the home feed (shown when visiting the Crunchyroll index page).
-    pub async fn home_feed(&self, options: HomeFeedOptions) -> Result<Vec<HomeFeed>> {
+    pub async fn home_feed(&self, options: HomeFeedOptions) -> Result<V2BulkResult<HomeFeed>> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/{}/home_feed",
+            "https://www.crunchyroll.com/content/v2/discover/{}/home_feed",
             self.executor.details.account_id.clone()?
         );
+        self.executor
+            .get(endpoint)
+            .query(&options.into_query())
+            .apply_locale_query()
+            .request::<V2BulkResult<HomeFeed>>()
+            .await
+    }
+
+    /// Returns Crunchyroll news.
+    pub async fn news_feed(&self, options: NewsFeedOptions) -> Result<NewsFeedResult> {
+        let endpoint = "https://www.crunchyroll.com/content/v2/discover/news_feed";
         Ok(self
             .executor
             .get(endpoint)
             .query(&options.into_query())
             .apply_locale_query()
-            .request::<CrappyBulkResult<HomeFeed>>()
+            .request::<V2BulkResult<NewsFeedResultProxy>>()
             .await?
-            .items)
-    }
-
-    /// Returns Crunchyroll news.
-    pub async fn news_feed(&self, options: NewsFeedOptions) -> Result<NewsFeedResult> {
-        let endpoint = "https://www.crunchyroll.com/content/v1/news_feed";
-        self.executor
-            .get(endpoint)
-            .query(&options.into_query())
-            .apply_locale_query()
-            .request()
-            .await
+            .data
+            .into())
     }
 
     /// Returns recommended series or movies to watch.
     pub async fn recommendations(
         &self,
         options: RecommendationOptions,
-    ) -> Result<BulkResult<MediaCollection>> {
+    ) -> Result<V2BulkResult<MediaCollection>> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/{}/recommendations",
-            self.executor.details.account_id.clone()?
-        );
-        self.executor
-            .get(endpoint)
-            .query(&options.into_query())
-            .apply_locale_query()
-            .request()
-            .await
-    }
-
-    /// Suggests next episode or movie to watch.
-    pub async fn up_next(&self, options: UpNextOptions) -> Result<BulkResult<UpNextEntry>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/content/v1/{}/up_next_account",
+            "https://www.crunchyroll.com/content/v2/discover/{}/recommendations",
             self.executor.details.account_id.clone()?
         );
         self.executor

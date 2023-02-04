@@ -173,9 +173,9 @@ mod auth {
     /// Contains which fixes should be used to make the api more reliable as Crunchyroll does weird
     /// stuff / delivers incorrect results.
     #[derive(Clone, Debug)]
-    #[cfg(feature = "experimental-stabilizations")]
     pub(crate) struct ExecutorFixes {
         pub(crate) locale_name_parsing: bool,
+        pub(crate) season_number: bool,
     }
 
     /// Internal struct to execute all request with.
@@ -188,7 +188,6 @@ mod auth {
         pub(crate) config: Mutex<ExecutorConfig>,
         pub(crate) details: ExecutorDetails,
 
-        #[cfg(feature = "experimental-stabilizations")]
         pub(crate) fixes: ExecutorFixes,
     }
 
@@ -372,9 +371,9 @@ mod auth {
                     policy: "".to_string(),
                     key_pair_id: "".to_string(),
                 },
-                #[cfg(feature = "experimental-stabilizations")]
                 fixes: ExecutorFixes {
                     locale_name_parsing: false,
+                    season_number: false,
                 },
             }
         }
@@ -432,7 +431,6 @@ mod auth {
         pub(crate) client: Client,
         pub(crate) locale: Locale,
 
-        #[cfg(feature = "experimental-stabilizations")]
         pub(crate) fixes: ExecutorFixes,
     }
 
@@ -469,9 +467,9 @@ mod auth {
             Self {
                 client,
                 locale: Locale::en_US,
-                #[cfg(feature = "experimental-stabilizations")]
                 fixes: ExecutorFixes {
                     locale_name_parsing: false,
+                    season_number: false,
                 },
             }
         }
@@ -505,6 +503,13 @@ mod auth {
         #[cfg(feature = "experimental-stabilizations")]
         pub fn stabilization_locales(mut self, enable: bool) -> CrunchyrollBuilder {
             self.fixes.locale_name_parsing = enable;
+            self
+        }
+
+        ///
+        #[cfg(feature = "experimental-stabilizations")]
+        pub fn stabilization_season_number(mut self, enable: bool) -> CrunchyrollBuilder {
+            self.fixes.season_number = enable;
             self
         }
 
@@ -673,7 +678,6 @@ mod auth {
                             )
                         }),
                     },
-                    #[cfg(feature = "experimental-stabilizations")]
                     fixes: self.fixes,
                 }),
             };
@@ -722,27 +726,6 @@ mod auth {
     ) -> serde_json::Map<String, serde_json::Value> {
         for (key, value) in map.clone() {
             if key.starts_with("__") && key.ends_with("__") {
-                if key == "__links__" {
-                    let classic_crunchyroll_exception: serde_json::Map<String, serde_json::Value> =
-                        serde_json::from_value(value).unwrap();
-                    #[allow(clippy::if_same_then_else)]
-                    if classic_crunchyroll_exception.contains_key("episode/series")
-                        && classic_crunchyroll_exception.contains_key("streams")
-                    {
-                        // `Episode` requires the __links__ field because crunchyroll does not provide another
-                        // way to obtain a stream id
-                        continue;
-                    } else if map
-                        .get("id")
-                        .unwrap_or(&serde_json::Value::default())
-                        .as_str()
-                        .unwrap_or("")
-                        .starts_with("dynamic_collection-")
-                    {
-                        // `HomeFeed` has some implementations which require __links__ to be accessible
-                        continue;
-                    }
-                }
                 map.remove(key.as_str());
             } else if let Some(object) = value.as_object() {
                 map.insert(

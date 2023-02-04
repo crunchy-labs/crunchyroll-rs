@@ -1,10 +1,10 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::{Media, Movie};
+use crunchyroll_rs::Movie;
 
 mod utils;
 
-static MOVIE: Store<Media<Movie>> = Store::new(|| {
+static MOVIE: Store<Movie> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
         let movie = crunchy.media_from_id("G25FVGDEK").await?;

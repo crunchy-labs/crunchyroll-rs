@@ -1,14 +1,14 @@
 use crate::utils::{Store, SESSION};
 use crunchyroll_rs::common::BulkResult;
 use crunchyroll_rs::rating::{Comment, CommentFlag, CommentsOptions};
-use crunchyroll_rs::{Episode, Media};
+use crunchyroll_rs::Episode;
 
 mod utils;
 
 static COMMENTS: Store<BulkResult<Comment>> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let episode: Media<Episode> = crunchy.media_from_id("GRDKJZ81Y").await.unwrap();
+        let episode: Episode = crunchy.media_from_id("GRDKJZ81Y").await.unwrap();
         Ok(episode.comments(CommentsOptions::default()).await?)
     })
 });
