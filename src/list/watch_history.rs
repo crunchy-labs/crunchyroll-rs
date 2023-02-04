@@ -1,6 +1,7 @@
-use crate::common::V2BulkResult;
-use crate::{options, Crunchyroll, EmptyJsonProxy, Locale, MediaCollection, Request, Result};
+use crate::common::{Pagination, V2BulkResult};
+use crate::{Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
+use futures_util::FutureExt;
 use serde::Deserialize;
 
 /// Entry of your watchlist.
@@ -22,32 +23,31 @@ pub struct WatchHistoryEntry {
     pub panel: MediaCollection,
 }
 
-options! {
-    WatchHistoryOptions;
-    size(u32, "page_size") = Some(100),
-    page(u32, "page") = None,
-    /// Preferred audio language.
-    preferred_audio_language(Locale, "preferred_audio_language") = None
-}
-
 impl Crunchyroll {
     /// Get the history which episodes / movies you've watched.
-    pub async fn watch_history(
-        &self,
-        options: WatchHistoryOptions,
-    ) -> Result<Vec<WatchHistoryEntry>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/content/v2/{}/watch-history",
-            self.executor.details.account_id.clone()?
-        );
-        Ok(self
-            .executor
-            .get(endpoint)
-            .query(&options.into_query())
-            .apply_locale_query()
-            .request::<V2BulkResult<WatchHistoryEntry>>()
-            .await?
-            .data)
+    pub fn watch_history(&self) -> Pagination<WatchHistoryEntry> {
+        Pagination::new(
+            |options| {
+                async move {
+                    let endpoint = format!(
+                        "https://www.crunchyroll.com/content/v2/{}/watch-history",
+                        options.executor.details.account_id.clone()?
+                    );
+                    let result = options
+                        .executor
+                        .get(endpoint)
+                        .query(&[("page", options.page), ("page_size", options.page_size)])
+                        .apply_locale_query()
+                        .request::<V2BulkResult<WatchHistoryEntry>>()
+                        .await?;
+                    Ok((result.data, result.total))
+                }
+                .boxed()
+            },
+            self.executor.clone(),
+            None,
+            None,
+        )
     }
 
     /// Clear your watch history.

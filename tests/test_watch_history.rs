@@ -1,12 +1,11 @@
 use crate::utils::SESSION;
-use crunchyroll_rs::list::WatchHistoryOptions;
-
 mod utils;
+use futures_util::StreamExt;
 
 #[tokio::test]
 async fn watch_history() {
     let crunchy = SESSION.get().await.unwrap();
-    assert_result!(crunchy.watch_history(WatchHistoryOptions::default()).await)
+    assert_result!(crunchy.watch_history().next().await.unwrap())
 }
 
 #[tokio::test]
