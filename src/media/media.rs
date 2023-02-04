@@ -10,15 +10,49 @@ use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value};
 use std::sync::Arc;
 
+#[cfg(feature = "experimental-stabilizations")]
+fn parse_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> Locale {
+    split_locale_from_slug_title(slug_title).1
+}
+
+#[cfg(feature = "experimental-stabilizations")]
+fn split_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> (String, Locale) {
+    let title = slug_title.as_ref().trim_end_matches("-dub").to_string();
+
+    let locales = vec![
+        ("-arabic", Locale::ar_SA),
+        ("-castilian", Locale::es_ES),
+        ("-english", Locale::en_US),
+        ("-english-in", Locale::en_IN),
+        ("-french", Locale::fr_FR),
+        ("-german", Locale::de_DE),
+        ("-hindi", Locale::hi_IN),
+        ("-italian", Locale::it_IT),
+        ("-portuguese", Locale::pt_BR),
+        ("-russian", Locale::ru_RU),
+        ("-spanish", Locale::es_419),
+        ("-japanese-audio", Locale::ja_JP),
+    ];
+    for (end, locale) in locales {
+        if title.ends_with(end) {
+            return (title.trim_end_matches(end).to_string(), locale);
+        }
+    }
+    (title, Locale::ja_JP)
+}
+
 #[async_trait::async_trait(?Send)]
 pub trait Media {
-    async fn from_id<S: AsRef<str>>(
-        crunchyroll: &Crunchyroll,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<Self>
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self>
     where
         Self: Sized;
+
+    #[doc(hidden)]
+    async fn __apply_fixes(&mut self) {}
+
+    #[doc(hidden)]
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {}
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -97,9 +131,9 @@ pub struct SearchMetadata {
     pub popularity_score: Option<f64>,
 }
 
-/// Metadata for a [`Media`] series.
+/// Metadata for a series.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -110,8 +144,8 @@ pub struct Series {
     pub id: String,
     pub channel_id: String,
 
-    #[serde(default)]
-    pub content_provider: String,
+    /// Sometimes none, sometimes not
+    pub content_provider: Option<String>,
 
     pub slug: String,
     pub title: String,
@@ -179,10 +213,13 @@ pub struct Series {
     seo_description: Option<crate::StrictValue>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SeasonVersion {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
     #[serde(rename = "guid")]
     pub id: String,
 
@@ -193,14 +230,22 @@ pub struct SeasonVersion {
     pub variant: String,
 }
 
-/// Metadata for a [`Media`] season.
-/// The deserializing requires a proxy struct because the season json response has two similar
-/// fields, `audio_locale` and `audio_locales`. Sometimes the first is populated, sometimes the
-/// second and sometimes both. They're representing the season audio but why it needs two fields
-/// for this, who knows. `audio_locale` is also a [`Vec`] of locales but, if populated, contains
-/// always only one locale.
+impl SeasonVersion {
+    /// Return the full [`Season`] struct of this version.
+    pub async fn season(&self) -> Result<Season> {
+        Season::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
+    }
+}
+
+/// Metadata for a season.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -211,6 +256,8 @@ pub struct Season {
     pub id: String,
     pub series_id: String,
     pub channel_id: String,
+    #[serde(default)]
+    pub identifier: String,
 
     pub title: String,
     pub slug_title: String,
@@ -231,7 +278,7 @@ pub struct Season {
     pub is_subbed: bool,
     pub is_dubbed: bool,
     pub is_simulcast: bool,
-    pub audio_locale: Locale,
+    audio_locale: Option<Locale>,
     /// Most of the time, like 99%, this contains only one locale. But sometimes Crunchyroll does
     /// weird stuff and marks a season which clearly has only one locale with two locales. See
     /// [this](https://github.com/crunchy-labs/crunchy-cli/issues/81#issuecomment-1351813787) issue
@@ -246,6 +293,9 @@ pub struct Season {
     /// If the season is not available this might contain some information why.
     pub availability_notes: String,
 
+    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
+    /// re-request it to get other versions. Crunchyroll :)
+    #[serde(default)]
     pub versions: Vec<SeasonVersion>,
 
     #[cfg(feature = "__test_strict")]
@@ -256,20 +306,24 @@ pub struct Season {
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    identifier: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
     seo_title: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     seo_description: Option<crate::StrictValue>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct EpisodeVersion {
-    pub guid: String,
-    pub media_guid: String,
-    pub season_guid: String,
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    #[serde(rename = "guid")]
+    pub id: String,
+    #[serde(rename = "media_guid")]
+    pub media_id: String,
+    #[serde(rename = "season_guid")]
+    pub season_id: String,
 
     pub audio_locale: Locale,
 
@@ -279,9 +333,22 @@ pub struct EpisodeVersion {
     pub variant: String,
 }
 
-/// Metadata for a [`Media`] episode.
+impl EpisodeVersion {
+    /// Return the full [`Episode`] struct of this version.
+    pub async fn episode(&self) -> Result<Episode> {
+        Episode::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
+    }
+}
+
+/// Metadata for a episode.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -376,6 +443,9 @@ pub struct Episode {
 
     pub eligible_region: String,
 
+    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
+    /// re-request it to get other versions. Crunchyroll :)
+    #[serde(default)]
     pub versions: Vec<EpisodeVersion>,
 
     #[cfg(feature = "__test_strict")]
@@ -413,10 +483,13 @@ pub struct Episode {
     hd_flag: Option<crate::StrictValue>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct MovieListingVersion {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
     #[serde(rename = "guid")]
     pub id: String,
 
@@ -427,9 +500,22 @@ pub struct MovieListingVersion {
     pub variant: String,
 }
 
-/// Metadata for a [`Media`] movie listing.
+impl MovieListingVersion {
+    /// Return the full [`MovieListing`] struct of this version.
+    pub async fn movie_listing(&self) -> Result<MovieListing> {
+        MovieListing::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
+    }
+}
+
+/// Metadata for a movie listing.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -439,7 +525,6 @@ pub struct MovieListing {
 
     pub id: String,
     pub channel_id: String,
-    pub identifier: String,
 
     pub slug: String,
     pub title: String,
@@ -447,12 +532,14 @@ pub struct MovieListing {
     pub description: String,
     pub extended_description: String,
 
-    pub content_provider: String,
+    /// Sometimes none, sometimes not
+    pub content_provider: Option<String>,
 
     pub movie_release_year: u32,
 
-    /// Sometimes empty, sometimes not. Not recommended to rely on this.
-    pub audio_locale: Locale,
+    /// May be [`None`] if requested by some functions like [`Crunchyroll::browse`]. You might have
+    /// to re-request it to get the audio locale. Crunchyroll :)
+    pub audio_locale: Option<Locale>,
     /// Sometimes empty, sometimes not. Not recommended to rely on this.
     pub subtitle_locales: Vec<Locale>,
 
@@ -484,25 +571,51 @@ pub struct MovieListing {
     pub available_offline: bool,
     pub availability_notes: String,
 
+    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
+    /// re-request it to get other versions. Crunchyroll :)
+    #[serde(default)]
     pub versions: Vec<MovieListingVersion>,
 
     #[cfg(feature = "__test_strict")]
-    pub(crate) extended_maturity_rating: crate::StrictValue,
+    extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    pub(crate) available_date: crate::StrictValue,
+    identifier: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    pub(crate) premium_date: crate::StrictValue,
+    available_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    premium_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    duration_ms: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    external_id: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    first_movie_id: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    new: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_title: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     seo_title: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_description: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     seo_description: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     hd_flag: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    last_public: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    linked_resource_key: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    playback: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    #[serde(rename = "type")]
+    _type: Option<crate::StrictValue>,
 }
 
-/// Metadata for a [`Media`] movie.
+/// Metadata for a movie.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -604,6 +717,49 @@ impl_manual_media_deserialize! {
     Movie = "movie_metadata"
 }
 
+macro_rules! impl_media_request {
+    ($($media:ident)*) => {
+        $(
+            #[async_trait::async_trait(?Send)]
+            impl Request for $media {
+                async fn __set_executor(&mut self, executor: Arc<Executor>) {
+                    self.executor = executor;
+
+                    self.__apply_fixes().await;
+                    self.__apply_experimental_stabilizations().await;
+                }
+            }
+        )*
+    }
+}
+
+impl_media_request! {
+    Series Movie
+}
+
+macro_rules! impl_media_request_with_version {
+    ($($media:ident)*) => {
+        $(
+            #[async_trait::async_trait(?Send)]
+            impl Request for $media {
+                async fn __set_executor(&mut self, executor: Arc<Executor>) {
+                    for version in self.versions.iter_mut() {
+                        version.executor = executor.clone();
+                    }
+                    self.executor = executor;
+
+                    self.__apply_fixes().await;
+                    self.__apply_experimental_stabilizations().await;
+                }
+            }
+        )*
+    }
+}
+
+impl_media_request_with_version! {
+    Season Episode MovieListing
+}
+
 macro_rules! media_eq {
     ($($media:ident)*) => {
         $(
@@ -650,16 +806,14 @@ impl Series {
 
 impl Season {
     /// Returns the series the season belongs to.
-    pub async fn series(&self, preferred_audio: Option<Locale>) -> Result<Season> {
+    pub async fn series(&self) -> Result<Season> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/series/{}",
             self.series_id
         );
-        Ok(
-            request_media(self.executor.clone(), endpoint, preferred_audio)
-                .await?
-                .remove(0),
-        )
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
     }
 
     /// Returns all episodes of this season.
@@ -674,29 +828,25 @@ impl Season {
 
 impl Episode {
     /// Returns the series the episode belongs to.
-    pub async fn series(&self, preferred_audio: Option<Locale>) -> Result<Series> {
+    pub async fn series(&self) -> Result<Series> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/series/{}",
             self.series_id
         );
-        Ok(
-            request_media(self.executor.clone(), endpoint, preferred_audio)
-                .await?
-                .remove(0),
-        )
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
     }
 
     /// Returns the season the episode belongs to.
-    pub async fn season(&self, preferred_audio: Option<Locale>) -> Result<Season> {
+    pub async fn season(&self) -> Result<Season> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
             self.season_id
         );
-        Ok(
-            request_media(self.executor.clone(), endpoint, preferred_audio)
-                .await?
-                .remove(0),
-        )
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
     }
 }
 
@@ -713,16 +863,14 @@ impl MovieListing {
 
 impl Movie {
     /// Returns the parent movie listing of this movie.
-    pub async fn movie_listing(&self, preferred_audio: Option<Locale>) -> Result<MovieListing> {
+    pub async fn movie_listing(&self) -> Result<MovieListing> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}",
             self.movie_listing_id
         );
-        Ok(
-            request_media(self.executor.clone(), endpoint, preferred_audio)
-                .await?
-                .remove(0),
-        )
+        Ok(request_media(self.executor.clone(), endpoint, None)
+            .await?
+            .remove(0))
     }
 }
 
@@ -742,26 +890,143 @@ async fn request_media<T: Default + DeserializeOwned + Request>(
     Ok(result.data)
 }
 
-macro_rules! impl_media {
-    ($($media:ident = $endpoint:literal),*) => {
-        $(
-            #[async_trait::async_trait(?Send)]
-            impl Media for $media {
-                async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S, preferred_audio: Option<Locale>) -> Result<$media> {
-                    let endpoint = format!($endpoint, id.as_ref());
-                    Ok(request_media(crunchyroll.executor.clone(), endpoint, preferred_audio).await?.remove(0))
-                }
+#[async_trait::async_trait(?Send)]
+impl Media for Series {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/series/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
+
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {
+        if self.executor.fixes.locale_name_parsing {
+            if let Ok(seasons) = self.seasons(None).await {
+                let mut locales = seasons
+                    .into_iter()
+                    .flat_map(|s| s.audio_locales)
+                    .collect::<Vec<Locale>>();
+                locales.dedup();
+
+                self.audio_locales = locales
             }
-        )*
+        }
     }
 }
 
-impl_media! {
-    Series = "https://www.crunchyroll.com/content/v2/cms/series/{}",
-    Season = "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
-    Episode = "https://www.crunchyroll.com/content/v2/cms/episodes/{}",
-    MovieListing = "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}",
-    Movie = "https://www.crunchyroll.com/content/v2/cms/movies/{}"
+#[async_trait::async_trait(?Send)]
+impl Media for Season {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
+
+    async fn __apply_fixes(&mut self) {
+        if let Some(audio_locale) = &self.audio_locale {
+            self.audio_locales.push(audio_locale.clone());
+            self.audio_locales.dedup()
+        }
+    }
+
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {
+        if self.executor.fixes.locale_name_parsing {
+            self.audio_locales = vec![parse_locale_from_slug_title(&self.slug_title)]
+        }
+        if self.executor.fixes.season_number {
+            let mut split = self.identifier.splitn(2, '|');
+            let (_, season) = (
+                split.next().unwrap_or_default(),
+                split.next().unwrap_or_default(),
+            );
+
+            if let Ok(season_num) = season.trim_start_matches('S').parse() {
+                self.season_number = season_num
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl Media for Episode {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/episodes/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
+
+    #[cfg(feature = "experimental-stabilizations")]
+    async fn __apply_experimental_stabilizations(&mut self) {
+        if self.executor.fixes.locale_name_parsing {
+            self.audio_locale = parse_locale_from_slug_title(&self.season_slug_title)
+        }
+        if self.executor.fixes.season_number {
+            let mut split = self.identifier.splitn(3, '|');
+            let (_, season, _) = (
+                split.next().unwrap_or_default(),
+                split.next().unwrap_or_default(),
+                split.next().unwrap_or_default(),
+            );
+
+            if let Ok(season_num) = season.trim_start_matches('S').parse() {
+                self.season_number = season_num
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl Media for MovieListing {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/movie_listings/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
+}
+
+#[async_trait::async_trait(?Send)]
+impl Media for Movie {
+    async fn from_id<S: AsRef<str>>(crunchyroll: &Crunchyroll, id: S) -> Result<Self> {
+        Ok(request_media(
+            crunchyroll.executor.clone(),
+            format!(
+                "https://www.crunchyroll.com/content/v2/cms/movies/{}",
+                id.as_ref()
+            ),
+            None,
+        )
+        .await?
+        .remove(0))
+    }
 }
 
 /// Collection of all media types. Useful in situations where [`Media`] can contain more than one
@@ -826,7 +1091,7 @@ impl Default for MediaCollection {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl Request for MediaCollection {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         match self {
@@ -845,27 +1110,16 @@ impl MediaCollection {
     pub async fn from_id<S: AsRef<str>>(
         crunchyroll: &Crunchyroll,
         id: S,
-        preferred_audio: Option<Locale>,
     ) -> Result<MediaCollection> {
-        if let Ok(episode) =
-            Episode::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
-        {
+        if let Ok(episode) = Episode::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::Episode(episode))
-        } else if let Ok(movie) =
-            Movie::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
-        {
+        } else if let Ok(movie) = Movie::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::Movie(movie))
-        } else if let Ok(series) =
-            Series::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
-        {
+        } else if let Ok(series) = Series::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::Series(series))
-        } else if let Ok(season) =
-            Season::from_id(crunchyroll, id.as_ref(), preferred_audio.clone()).await
-        {
+        } else if let Ok(season) = Season::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::Season(season))
-        } else if let Ok(movie_listing) =
-            MovieListing::from_id(crunchyroll, id.as_ref(), preferred_audio).await
-        {
+        } else if let Ok(movie_listing) = MovieListing::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::MovieListing(movie_listing))
         } else {
             Err(CrunchyrollError::Input(
@@ -1111,19 +1365,11 @@ impl_media_video! {
 }
 
 impl Crunchyroll {
-    pub async fn media_from_id<M: Media, S: AsRef<str>>(
-        &self,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<M> {
-        M::from_id(self, id, preferred_audio).await
+    pub async fn media_from_id<M: Media, S: AsRef<str>>(&self, id: S) -> Result<M> {
+        M::from_id(self, id).await
     }
 
-    pub async fn media_collection_from_id<S: AsRef<str>>(
-        &self,
-        id: S,
-        preferred_audio: Option<Locale>,
-    ) -> Result<MediaCollection> {
-        MediaCollection::from_id(self, id, preferred_audio).await
+    pub async fn media_collection_from_id<S: AsRef<str>>(&self, id: S) -> Result<MediaCollection> {
+        MediaCollection::from_id(self, id).await
     }
 }

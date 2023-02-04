@@ -33,7 +33,7 @@ async fn modify_crunchylist() {
         .get()
         .await
         .unwrap()
-        .media_from_id("GY8VEQ95Y", None)
+        .media_from_id("GY8VEQ95Y")
         .await
         .unwrap();
     let crunchylist_add_result = crunchylist.add(MediaCollection::from(series)).await;
