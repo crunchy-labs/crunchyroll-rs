@@ -17,7 +17,7 @@ pub static SESSION: Store<Crunchyroll> = Store::new(|| {
                 .login_with_etp_rt(token)
                 .await
                 .unwrap(),
-            _ => panic!("invalid session '{}'", raw_session),
+            _ => panic!("invalid session '{raw_session}'"),
         };
 
         Ok(crunchy)
@@ -28,11 +28,9 @@ pub async fn set_session(crunchy: Crunchyroll) -> anyhow::Result<()> {
     match crunchy.session_token().await {
         SessionToken::RefreshToken(refresh_token) => Ok(set_store(
             "session".into(),
-            format!("refresh_token:{}", refresh_token),
+            format!("refresh_token:{refresh_token}"),
         )?),
-        SessionToken::EtpRt(etp_rt) => {
-            Ok(set_store("session".into(), format!("etp_rt:{}", etp_rt))?)
-        }
+        SessionToken::EtpRt(etp_rt) => Ok(set_store("session".into(), format!("etp_rt:{etp_rt}"))?),
         SessionToken::Anonymous => Ok(()),
     }
 }

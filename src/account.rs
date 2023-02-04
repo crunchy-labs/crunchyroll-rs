@@ -251,7 +251,6 @@ fn mature_content_flag_manga<'de, D: serde::Deserializer<'de>>(
 }
 
 mod wallpaper {
-    use crate::common::CrappyBulkResult;
     use crate::{Crunchyroll, Request, Result};
     use serde::Deserialize;
 
@@ -261,6 +260,14 @@ mod wallpaper {
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct Wallpaper {
         pub name: String,
+    }
+
+    #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+    #[request(executor(items))]
+    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
+    struct WallpaperResult {
+        items: Vec<Wallpaper>,
     }
 
     impl From<String> for Wallpaper {
@@ -276,7 +283,7 @@ mod wallpaper {
             Ok(crunchyroll
                 .executor
                 .get(endpoint)
-                .request::<CrappyBulkResult<Wallpaper>>()
+                .request::<WallpaperResult>()
                 .await?
                 .items)
         }

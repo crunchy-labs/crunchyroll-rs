@@ -1,8 +1,9 @@
-use crate::common::{BulkResult, V2BulkResult};
-use crate::media::{MediaType, SimilarOptions};
+use crate::common::{Pagination, V2BulkResult, V2TypeBulkResult};
+use crate::media::MediaType;
 use crate::search::{BrowseOptions, BrowseSortType};
-use crate::{options, Crunchyroll, Locale, MediaCollection, Request, Result, Series};
+use crate::{Crunchyroll, MediaCollection, Request, Series};
 use chrono::{DateTime, Utc};
+use futures_util::FutureExt;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 
@@ -78,8 +79,6 @@ pub struct SimilarFeed {
 
     #[serde(skip)]
     pub similar_id: String,
-    #[serde(skip)]
-    pub similar_options: SimilarOptions,
 }
 
 #[derive(Clone, Debug, Request)]
@@ -123,11 +122,11 @@ impl<'de> Deserialize<'de> for HomeFeed {
     {
         let mut as_map = serde_json::Map::deserialize(deserializer)?;
 
-        let type_error = |k: &str, t: &str| Error::custom(format!("home feed '{}' is no {}", k, t));
+        let type_error = |k: &str, t: &str| Error::custom(format!("home feed '{k}' is no {t}"));
         let mut get_value = |k: &str| {
             as_map
                 .remove(k)
-                .ok_or_else(|| Error::custom(format!("cannot get '{}' on home feed", k)))
+                .ok_or_else(|| Error::custom(format!("cannot get '{k}' on home feed")))
         };
         let map_serde_error = |e: serde_json::Error| Error::custom(e.to_string());
 
@@ -166,13 +165,6 @@ impl<'de> Deserialize<'de> for HomeFeed {
                         let mut browse_options = BrowseOptions::default();
                         for (key, value) in query {
                             match key.as_str() {
-                                "n" => {
-                                    browse_options = browse_options.limit(
-                                        value
-                                            .parse::<u32>()
-                                            .map_err(|e| Error::custom(e.to_string()))?,
-                                    )
-                                }
                                 "sort_by" => {
                                     browse_options =
                                         browse_options.sort(BrowseSortType::from(value))
@@ -193,37 +185,16 @@ impl<'de> Deserialize<'de> for HomeFeed {
                             .ok_or_else(|| type_error("source_media_id", "string"))?
                             .to_string();
 
-                        let link = get_value("link")?
-                            .as_str()
-                            .ok_or_else(|| type_error("link", "string"))?
-                            .to_string();
-                        let query: Vec<(String, String)> =
-                            serde_urlencoded::from_str(link.split('?').last().unwrap())
-                                .map_err(|e| Error::custom(e.to_string()))?;
-
-                        let mut similar_options = SimilarOptions::default();
-                        for (key, value) in query {
-                            if key.as_str() == "n" {
-                                similar_options = similar_options.limit(
-                                    value
-                                        .parse::<u32>()
-                                        .map_err(|e| Error::custom(e.to_string()))?,
-                                )
-                            }
-                        }
-
                         let mut similar_feed: SimilarFeed = serde_json::from_value(
                             serde_json::to_value(as_map).map_err(map_serde_error)?,
                         )
                         .map_err(map_serde_error)?;
                         similar_feed.similar_id = id;
-                        similar_feed.similar_options = similar_options;
 
                         Ok(Self::SimilarTo(similar_feed))
                     }
                     _ => Err(Error::custom(format!(
-                        "cannot parse home feed response type '{}'",
-                        response_type
+                        "cannot parse home feed response type '{response_type}'"
                     ))),
                 }
             }
@@ -244,37 +215,9 @@ impl<'de> Deserialize<'de> for HomeFeed {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-struct NewsFeedResultProxy {
-    #[serde(rename = "type")]
-    news_type: String,
-    total: u32,
-    items: Vec<NewsFeed>,
-}
-
-#[allow(clippy::from_over_into)]
-impl Into<NewsFeedResult> for Vec<NewsFeedResultProxy> {
-    fn into(self) -> NewsFeedResult {
-        let top_news = self.iter().find(|p| p.news_type == "top_news");
-        let latest_news = self.iter().find(|p| p.news_type == "latest_news");
-
-        NewsFeedResult {
-            top_news: BulkResult {
-                items: top_news.map_or(vec![], |p| p.items.clone()),
-                total: top_news.map_or(0, |p| p.total),
-            },
-            latest_news: BulkResult {
-                items: latest_news.map_or(vec![], |p| p.items.clone()),
-                total: latest_news.map_or(0, |p| p.total),
-            },
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct NewsFeedResult {
-    pub top_news: BulkResult<NewsFeed>,
-    pub latest_news: BulkResult<NewsFeed>,
+    pub top_news: Pagination<NewsFeed>,
+    pub latest_news: Pagination<NewsFeed>,
 }
 
 /// Crunchyroll news like new library anime, dubs, etc... .
@@ -295,79 +238,118 @@ pub struct NewsFeed {
     pub news_link: String,
 }
 
-options! {
-    HomeFeedOptions;
-    /// Limit of results to return.
-    limit(u32, "n") = Some(20),
-    /// Specifies the index from which the entries should be returned.
-    start(u32, "start") = None
-}
-
-options! {
-    NewsFeedOptions;
-    /// Limit number of top news.
-    top_limit(u32, "top_news_n") = Some(20),
-    /// Specifies the index from which top news should be returned.
-    top_start(u32, "top_news_start") = None,
-    /// Limit number of latest news.
-    latest_limit(u32, "latest_news_n") = Some(20),
-    /// Specifies the index from which latest news should be returned.
-    latest_start(u32, "latest_news_start") = None,
-    /// Preferred audio language.
-    preferred_audio_language(Locale, "preferred_audio_language") = None
-}
-
-options! {
-    RecommendationOptions;
-    /// Limit of results to return.
-    limit(u32, "n") = Some(20),
-    /// Specifies the index from which the entries should be returned.
-    start(u32, "start") = None
-}
-
 impl Crunchyroll {
     /// Returns the home feed (shown when visiting the Crunchyroll index page).
-    pub async fn home_feed(&self, options: HomeFeedOptions) -> Result<V2BulkResult<HomeFeed>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/content/v2/discover/{}/home_feed",
-            self.executor.details.account_id.clone()?
-        );
-        self.executor
-            .get(endpoint)
-            .query(&options.into_query())
-            .apply_locale_query()
-            .request::<V2BulkResult<HomeFeed>>()
-            .await
+    pub fn home_feed(&self) -> Pagination<HomeFeed> {
+        Pagination::new(
+            |options| {
+                async move {
+                    let endpoint = format!(
+                        "https://www.crunchyroll.com/content/v2/discover/{}/home_feed",
+                        options.executor.details.account_id.clone()?
+                    );
+                    let result: V2BulkResult<HomeFeed> = options
+                        .executor
+                        .get(endpoint)
+                        .query(&[("n", options.page_size), ("start", options.start)])
+                        .apply_locale_query()
+                        .request()
+                        .await?;
+                    Ok((result.data, result.total))
+                }
+                .boxed()
+            },
+            self.executor.clone(),
+            None,
+            None,
+        )
     }
 
     /// Returns Crunchyroll news.
-    pub async fn news_feed(&self, options: NewsFeedOptions) -> Result<NewsFeedResult> {
-        let endpoint = "https://www.crunchyroll.com/content/v2/discover/news_feed";
-        Ok(self
-            .executor
-            .get(endpoint)
-            .query(&options.into_query())
-            .apply_locale_query()
-            .request::<V2BulkResult<NewsFeedResultProxy>>()
-            .await?
-            .data
-            .into())
+    pub fn news_feed(&self) -> NewsFeedResult {
+        NewsFeedResult {
+            top_news: Pagination::new(
+                |options| {
+                    async move {
+                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/news_feed";
+                        let result: V2BulkResult<V2TypeBulkResult<NewsFeed>> = options
+                            .executor
+                            .get(endpoint)
+                            .query(&[("latest_news_n", "0")])
+                            .query(&[
+                                ("top_news_n", options.page_size),
+                                ("top_news_start", options.start),
+                            ])
+                            .apply_locale_query()
+                            .request()
+                            .await?;
+                        let top_news = result
+                            .data
+                            .into_iter()
+                            .find(|p| p.result_type == "top_news")
+                            .unwrap_or_default();
+                        Ok((top_news.items, top_news.total))
+                    }
+                    .boxed()
+                },
+                self.executor.clone(),
+                None,
+                None,
+            ),
+            latest_news: Pagination::new(
+                |options| {
+                    async move {
+                        let endpoint = "https://www.crunchyroll.com/content/v2/discover/news_feed";
+                        let result: V2BulkResult<V2TypeBulkResult<NewsFeed>> = options
+                            .executor
+                            .get(endpoint)
+                            .query(&[("top_news_n", "0")])
+                            .query(&[
+                                ("latest_news_n", options.page_size),
+                                ("latest_news_start", options.start),
+                            ])
+                            .apply_locale_query()
+                            .request()
+                            .await?;
+                        let top_news = result
+                            .data
+                            .into_iter()
+                            .find(|p| p.result_type == "top_news")
+                            .unwrap_or_default();
+                        Ok((top_news.items, top_news.total))
+                    }
+                    .boxed()
+                },
+                self.executor.clone(),
+                None,
+                None,
+            ),
+        }
     }
 
     /// Returns recommended series or movies to watch.
-    pub async fn recommendations(
-        &self,
-        options: RecommendationOptions,
-    ) -> Result<V2BulkResult<MediaCollection>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/content/v2/discover/{}/recommendations",
-            self.executor.details.account_id.clone()?
-        );
-        self.executor
-            .get(endpoint)
-            .query(&options.into_query())
-            .apply_locale_query()
-            .request()
-            .await
+    pub fn recommendations(&self) -> Pagination<MediaCollection> {
+        Pagination::new(
+            |options| {
+                async move {
+                    let endpoint = format!(
+                        "https://www.crunchyroll.com/content/v2/discover/{}/recommendations",
+                        options.executor.details.account_id.clone()?
+                    );
+                    let result: V2BulkResult<MediaCollection> = options
+                        .executor
+                        .get(endpoint)
+                        .query(&[("n", options.page_size), ("start", options.start)])
+                        .apply_locale_query()
+                        .request()
+                        .await?;
+                    Ok((result.data, result.total))
+                }
+                .boxed()
+            },
+            self.executor.clone(),
+            None,
+            None,
+        )
     }
 }

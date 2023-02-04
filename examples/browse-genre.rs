@@ -2,6 +2,7 @@ use anyhow::Result;
 use crunchyroll_rs::categories::Category;
 use crunchyroll_rs::search::BrowseOptions;
 use crunchyroll_rs::{Crunchyroll, MediaCollection};
+use futures_util::StreamExt;
 use std::env;
 
 #[tokio::main]
@@ -18,10 +19,9 @@ async fn main() -> Result<()> {
         .is_dubbed(true)
         // only results which have action as a category / genre
         .categories(vec![Category::Action]);
-    let result = crunchyroll.browse(options).await?;
 
-    for item in result.data {
-        match item {
+    while let Some(item) = crunchyroll.browse(options.clone()).next().await {
+        match item? {
             MediaCollection::Series(series) => println!("Browse returned series {}", series.title),
             // is never season
             MediaCollection::Season(_) => (),

@@ -1,27 +1,30 @@
 use crate::utils::{Store, SESSION};
-use crunchyroll_rs::common::BulkResult;
 use crunchyroll_rs::rating::{Comment, CommentFlag, CommentsOptions};
 use crunchyroll_rs::Episode;
+use futures_util::StreamExt;
 
 mod utils;
 
-static COMMENTS: Store<BulkResult<Comment>> = Store::new(|| {
+static COMMENT: Store<Comment> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
         let episode: Episode = crunchy.media_from_id("GRDKJZ81Y").await.unwrap();
-        Ok(episode.comments(CommentsOptions::default()).await?)
+        Ok(episode
+            .comments(CommentsOptions::default())
+            .next()
+            .await
+            .unwrap()?)
     })
 });
 
 #[tokio::test]
 async fn comments() {
-    assert_result!(COMMENTS.get().await)
+    assert_result!(COMMENT.get().await)
 }
 
 #[tokio::test]
 async fn comment_flag() {
-    let mut comments = COMMENTS.get().await.unwrap().clone();
-    let comment = comments.items.get_mut(0).unwrap();
+    let mut comment = COMMENT.get().await.unwrap().clone();
 
     assert_result!(
         comment

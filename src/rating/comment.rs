@@ -1,6 +1,7 @@
-use crate::common::{BulkResult, Image};
+use crate::common::{BulkResult, Image, Pagination};
 use crate::{enum_values, options, EmptyJsonProxy, Executor, Locale, Request, Result};
 use chrono::{DateTime, Utc};
+use futures_util::FutureExt;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
@@ -92,25 +93,35 @@ pub struct Comment {
     pub user_flags: Vec<CommentFlag>,
 }
 
-options! {
-    CommentOptions;
-    page(u32, "page") = Some(1),
-    size(u32, "page_size") = Some(10)
-}
-
 impl Comment {
     /// Return all replies to this comment.
-    pub async fn replies(&self, options: CommentOptions) -> Result<BulkResult<Comment>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/talkbox/guestbooks/{}/comments/{}/replies",
-            self.guestbook_key, self.comment_id
-        );
-        self.executor
-            .get(endpoint)
-            .query(&options.into_query())
-            .apply_locale_query()
-            .request()
-            .await
+    pub fn replies(&self) -> Pagination<Comment> {
+        Pagination::new(
+            |options| {
+                async move {
+                    let endpoint = format!(
+                        "https://www.crunchyroll.com/talkbox/guestbooks/{}/comments/{}/replies",
+                        options.extra.get("guestbook_key").unwrap(),
+                        options.extra.get("comment_id").unwrap()
+                    );
+                    let result: BulkResult<Comment> = options
+                        .executor
+                        .get(endpoint)
+                        .query(&[("page", options.page), ("page_size", options.page_size)])
+                        .apply_locale_query()
+                        .request()
+                        .await?;
+                    Ok((result.items, result.total))
+                }
+                .boxed()
+            },
+            self.executor.clone(),
+            None,
+            Some(vec![
+                ("guestbook_key", self.guestbook_key.clone()),
+                ("comment_id", self.comment_id.clone()),
+            ]),
+        )
     }
 
     /// Reply to this comment.
@@ -229,8 +240,6 @@ enum_values! {
 
 options! {
     CommentsOptions;
-    page(u32, "page") = Some(1),
-    size(u32, "page_size") = Some(50),
     sort(CommentSortType, "sort") = Some(CommentSortType::Popularity)
 }
 
@@ -238,14 +247,22 @@ macro_rules! impl_comment {
     ($($s:path)*) => {
         $(
             impl $s {
-                pub async fn comments(&self, options: CommentsOptions) -> Result<BulkResult<Comment>> {
-                    let endpoint = format!("https://www.crunchyroll.com/talkbox/guestbooks/{}/comments", self.id);
-                    self.executor
-                        .get(endpoint)
-                        .query(&options.into_query())
-                        .apply_locale_query()
-                        .request()
-                        .await
+                pub fn comments(&self, options: CommentsOptions) -> Pagination<Comment> {
+                    Pagination::new(|options| {
+                        async move {
+                            let endpoint = format!("https://www.crunchyroll.com/talkbox/guestbooks/{}/comments", options.extra.get("id").unwrap());
+                            let result: BulkResult<Comment> = options
+                                .executor
+                                .get(endpoint)
+                                .query(&options.query)
+                                .query(&[("page", options.page), ("page_size", options.page_size)])
+                                .apply_locale_query()
+                                .request()
+                                .await?;
+                            Ok((result.items, result.total))
+                        }
+                        .boxed()
+                    }, self.executor.clone(), Some(options.into_query()), Some(vec![("id", self.id.clone())]))
                 }
 
                 pub async fn comment<S: AsRef<str>>(&self, message: S, is_spoiler: bool) -> Result<Comment> {
@@ -268,10 +285,7 @@ async fn create_comment<S: AsRef<str>>(
     locale: &Locale,
     parent_id: Option<&String>,
 ) -> Result<Comment> {
-    let endpoint = format!(
-        "https://www.crunchyroll.com/talkbox/guestbooks/{}/comments",
-        video_id
-    );
+    let endpoint = format!("https://www.crunchyroll.com/talkbox/guestbooks/{video_id}/comments");
     let flags = if is_spoiler { vec!["spoiler"] } else { vec![] };
     executor
         .post(endpoint)
