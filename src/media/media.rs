@@ -743,13 +743,14 @@ macro_rules! media_version {
                 }
 
                 #[doc=$version_doc]
-                pub async fn version(&mut self, audio_locale: Locale) -> Result<Option<$media>> {
+                pub async fn version(&mut self, audio_locales: Vec<Locale>) -> Result<Vec<$media>> {
                     self.assert_versions().await?;
-                    if let Some(version) = self.versions.as_ref().unwrap().iter().find(|v| v.audio_locale == audio_locale) {
-                        Ok(Some($media::from_id(&Crunchyroll { executor: self.executor.clone() }, &version.id).await?))
-                    } else {
-                        Ok(None)
-                    }
+                    let version_ids = self.versions.as_ref().unwrap()
+                        .iter()
+                        .filter_map(|v| if audio_locales.contains(&v.audio_locale) { Some(v.id.clone()) } else { None } )
+                        .collect::<Vec<String>>();
+                    let endpoint = format!("{}/{}", $endpoint, version_ids.join(","));
+                    request_media(self.executor.clone(), endpoint).await
                 }
 
                 #[doc=$versions_doc]
@@ -766,15 +767,15 @@ macro_rules! media_version {
 
 media_version! {
     #[doc="Show in which audios this [`Season`] is also available."]
-    #[doc="Get the version of this [`Season`] with the specified audio locale. If it does not exists, [`Ok(None)`] gets returned. Use [`Season::available_versions`] to see all supported locale."]
+    #[doc="Get the versions of this [`Season`] which have the specified audio locale(s). Use [`Season::available_versions`] to see all supported locale."]
     #[doc="Get all available versions (same [`Season`] but different audio locale) for this [`Season`]."]
     Season = "https://www.crunchyroll.com/content/v2/cms/seasons"
     #[doc="Show in which audios this [`Episode`] is also available."]
-    #[doc="Get the version of this [`Episode`] with the specified audio locale. If it does not exists, [`Ok(None)`] gets returned. Use [`Episode::available_versions`] to see all supported locale."]
+    #[doc="Get the versions of this [`Episode`] which have the specified audio locale(s). Use [`Episode::available_versions`] to see all supported locale."]
     #[doc="Get all available versions (same [`Episode`] but different audio locale) for this [`Episode`]."]
     Episode = "https://www.crunchyroll.com/content/v2/cms/episodes"
     #[doc="Show in which audios this [`MovieListing`] is also available."]
-    #[doc="Get the version of this [`MovieListing`] with the specified audio locale. If it does not exists, [`Ok(None)`] gets returned. Use [`MovieListing::available_versions`] to see all supported locale."]
+    #[doc="Get the versions of this [`MovieListing`] which have the specified audio locale(s). Use [`MovieListing::available_versions`] to see all supported locale."]
     #[doc="Get all available versions (same [`MovieListing`] but different audio locale) for this [`MovieListing`]"]
     MovieListing = "https://www.crunchyroll.com/content/v2/cms/movie_listings"
 }
