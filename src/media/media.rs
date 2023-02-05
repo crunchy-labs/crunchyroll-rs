@@ -213,34 +213,19 @@ pub struct Series {
     seo_description: Option<crate::StrictValue>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct SeasonVersion {
-    #[serde(skip)]
-    executor: Arc<Executor>,
-
+struct SeasonVersion {
     #[serde(rename = "guid")]
-    pub id: String,
+    id: String,
 
-    pub audio_locale: Locale,
+    audio_locale: Locale,
 
-    pub original: bool,
+    original: bool,
 
-    pub variant: String,
-}
-
-impl SeasonVersion {
-    /// Return the full [`Season`] struct of this version.
-    pub async fn season(&self) -> Result<Season> {
-        Season::from_id(
-            &Crunchyroll {
-                executor: self.executor.clone(),
-            },
-            &self.id,
-        )
-        .await
-    }
+    variant: String,
 }
 
 /// Metadata for a season.
@@ -293,10 +278,8 @@ pub struct Season {
     /// If the season is not available this might contain some information why.
     pub availability_notes: String,
 
-    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
-    /// re-request it to get other versions. Crunchyroll :)
     #[serde(default)]
-    pub versions: Vec<SeasonVersion>,
+    versions: Option<Vec<SeasonVersion>>,
 
     #[cfg(feature = "__test_strict")]
     // currently empty (on all of my tests) but its might be filled in the future
@@ -311,39 +294,24 @@ pub struct Season {
     seo_description: Option<crate::StrictValue>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct EpisodeVersion {
-    #[serde(skip)]
-    executor: Arc<Executor>,
-
+struct EpisodeVersion {
     #[serde(rename = "guid")]
-    pub id: String,
+    id: String,
     #[serde(rename = "media_guid")]
-    pub media_id: String,
+    media_id: String,
     #[serde(rename = "season_guid")]
-    pub season_id: String,
+    season_id: String,
 
-    pub audio_locale: Locale,
+    audio_locale: Locale,
 
-    pub is_premium_only: bool,
-    pub original: bool,
+    is_premium_only: bool,
+    original: bool,
 
-    pub variant: String,
-}
-
-impl EpisodeVersion {
-    /// Return the full [`Episode`] struct of this version.
-    pub async fn episode(&self) -> Result<Episode> {
-        Episode::from_id(
-            &Crunchyroll {
-                executor: self.executor.clone(),
-            },
-            &self.id,
-        )
-        .await
-    }
+    variant: String,
 }
 
 /// Metadata for a episode.
@@ -443,10 +411,8 @@ pub struct Episode {
 
     pub eligible_region: String,
 
-    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
-    /// re-request it to get other versions. Crunchyroll :)
     #[serde(default)]
-    pub versions: Vec<EpisodeVersion>,
+    versions: Option<Vec<EpisodeVersion>>,
 
     #[cfg(feature = "__test_strict")]
     media_type: Option<crate::StrictValue>,
@@ -483,34 +449,19 @@ pub struct Episode {
     hd_flag: Option<crate::StrictValue>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct MovieListingVersion {
-    #[serde(skip)]
-    executor: Arc<Executor>,
-
+struct MovieListingVersion {
     #[serde(rename = "guid")]
-    pub id: String,
+    id: String,
 
-    pub audio_locale: Locale,
+    audio_locale: Locale,
 
-    pub original: bool,
+    original: bool,
 
-    pub variant: String,
-}
-
-impl MovieListingVersion {
-    /// Return the full [`MovieListing`] struct of this version.
-    pub async fn movie_listing(&self) -> Result<MovieListing> {
-        MovieListing::from_id(
-            &Crunchyroll {
-                executor: self.executor.clone(),
-            },
-            &self.id,
-        )
-        .await
-    }
+    variant: String,
 }
 
 /// Metadata for a movie listing.
@@ -571,10 +522,8 @@ pub struct MovieListing {
     pub available_offline: bool,
     pub availability_notes: String,
 
-    /// May be empty if requested by some functions like [`Crunchyroll::browse`]. You might have to
-    /// re-request it to get other versions. Crunchyroll :)
     #[serde(default)]
-    pub versions: Vec<MovieListingVersion>,
+    versions: Option<Vec<MovieListingVersion>>,
 
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
@@ -734,30 +683,7 @@ macro_rules! impl_media_request {
 }
 
 impl_media_request! {
-    Series Movie
-}
-
-macro_rules! impl_media_request_with_version {
-    ($($media:ident)*) => {
-        $(
-            #[async_trait::async_trait]
-            impl Request for $media {
-                async fn __set_executor(&mut self, executor: Arc<Executor>) {
-                    for version in self.versions.iter_mut() {
-                        version.executor = executor.clone();
-                    }
-                    self.executor = executor;
-
-                    self.__apply_fixes().await;
-                    self.__apply_experimental_stabilizations().await;
-                }
-            }
-        )*
-    }
-}
-
-impl_media_request_with_version! {
-    Season Episode MovieListing
+    Series Season Episode MovieListing Movie
 }
 
 macro_rules! media_eq {
@@ -791,6 +717,66 @@ macro_rules! impl_playback {
 
 impl_playback! {
     Episode Movie
+}
+
+macro_rules! media_version {
+    ($(#[doc=$available_versions_doc:literal] #[doc=$version_doc:literal] #[doc=$versions_doc:literal] $media:ident = $endpoint:literal)*) => {
+        $(
+            impl $media {
+                /// Some requests doesn't populate the `versions` field (e.g. [`Crunchyroll::browse`]).
+                /// Every function which interacts with versions calls this function first to assert
+                /// that the `versions` field contains valid data. If not, the current media is
+                /// re-requested (`from_id` calls are containing the valid `versions` field) and the
+                /// `versions` field is updated with the version of the re-requested struct.
+                async fn assert_versions(&mut self) -> Result<()> {
+                    if self.versions.is_none() {
+                        let re_requested = $media::from_id(&Crunchyroll { executor: self.executor.clone() }, &self.id).await?;
+                        self.versions = re_requested.versions
+                    }
+                    Ok(())
+                }
+
+                #[doc=$available_versions_doc]
+                pub async fn available_versions(&mut self) -> Result<Vec<Locale>> {
+                    self.assert_versions().await?;
+                    Ok(self.versions.as_ref().unwrap().iter().map(|v| v.audio_locale.clone()).collect())
+                }
+
+                #[doc=$version_doc]
+                pub async fn version(&mut self, audio_locale: Locale) -> Result<Option<$media>> {
+                    self.assert_versions().await?;
+                    if let Some(version) = self.versions.as_ref().unwrap().iter().find(|v| v.audio_locale == audio_locale) {
+                        Ok(Some($media::from_id(&Crunchyroll { executor: self.executor.clone() }, &version.id).await?))
+                    } else {
+                        Ok(None)
+                    }
+                }
+
+                #[doc=$versions_doc]
+                pub async fn versions(&mut self) -> Result<Vec<$media>> {
+                    self.assert_versions().await?;
+                    let version_ids = self.versions.as_ref().unwrap().iter().map(|v| v.id.clone()).collect::<Vec<String>>();
+                    let endpoint = format!("{}/{}", $endpoint, version_ids.join(","));
+                    request_media(self.executor.clone(), endpoint).await
+                }
+            }
+        )*
+    }
+}
+
+media_version! {
+    #[doc="Show in which audios this [`Season`] is also available."]
+    #[doc="Get the version of this [`Season`] with the specified audio locale. If it does not exists, [`Ok(None)`] gets returned. Use [`Season::available_versions`] to see all supported locale."]
+    #[doc="Get all available versions (same [`Season`] but different audio locale) for this [`Season`]."]
+    Season = "https://www.crunchyroll.com/content/v2/cms/seasons"
+    #[doc="Show in which audios this [`Episode`] is also available."]
+    #[doc="Get the version of this [`Episode`] with the specified audio locale. If it does not exists, [`Ok(None)`] gets returned. Use [`Episode::available_versions`] to see all supported locale."]
+    #[doc="Get all available versions (same [`Episode`] but different audio locale) for this [`Episode`]."]
+    Episode = "https://www.crunchyroll.com/content/v2/cms/episodes"
+    #[doc="Show in which audios this [`MovieListing`] is also available."]
+    #[doc="Get the version of this [`MovieListing`] with the specified audio locale. If it does not exists, [`Ok(None)`] gets returned. Use [`MovieListing::available_versions`] to see all supported locale."]
+    #[doc="Get all available versions (same [`MovieListing`] but different audio locale) for this [`MovieListing`]"]
+    MovieListing = "https://www.crunchyroll.com/content/v2/cms/movie_listings"
 }
 
 impl Series {
