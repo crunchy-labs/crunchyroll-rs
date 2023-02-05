@@ -1,3 +1,4 @@
+use http::StatusCode;
 use reqwest::Response;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -13,18 +14,18 @@ pub enum CrunchyrollError {
     /// Error was caused by something library internal. This only happens if something was
     /// implemented incorrectly (which hopefully should never be the case) or if Crunchyroll
     /// surprisingly changed specific parts of their api which broke a part of this crate.
-    Internal(CrunchyrollErrorContext),
+    Internal(CrunchyrollErrorContext<()>),
 
     /// Some sort of error occurred while requesting the Crunchyroll api.
-    Request(CrunchyrollErrorContext),
+    Request(CrunchyrollErrorContext<StatusCode>),
     /// While decoding the api response body something went wrong.
-    Decode(CrunchyrollErrorContext),
+    Decode(CrunchyrollErrorContext<()>),
 
     /// Something went wrong while logging in.
-    Authentication(CrunchyrollErrorContext),
+    Authentication(CrunchyrollErrorContext<()>),
 
     /// Generally malformed or invalid user input.
-    Input(CrunchyrollErrorContext),
+    Input(CrunchyrollErrorContext<()>),
 }
 
 impl Display for CrunchyrollError {
@@ -49,7 +50,8 @@ impl From<serde_json::Error> for CrunchyrollError {
 
 impl From<reqwest::Error> for CrunchyrollError {
     fn from(err: reqwest::Error) -> Self {
-        let mut context = CrunchyrollErrorContext::new(err.to_string());
+        let mut context: CrunchyrollErrorContext<()> =
+            CrunchyrollErrorContext::new(err.to_string());
         if let Some(url) = err.url() {
             context = context.with_url(url.clone());
         }
@@ -61,7 +63,11 @@ impl From<reqwest::Error> for CrunchyrollError {
             || err.is_body()
             || err.is_status()
         {
-            CrunchyrollError::Request(context)
+            let mut request_context = context.into_other_context();
+            if let Some(status) = err.status() {
+                request_context = request_context.with_extra(status)
+            }
+            CrunchyrollError::Request(request_context)
         } else if err.is_decode() {
             CrunchyrollError::Decode(context)
         } else if err.is_builder() {
@@ -74,21 +80,17 @@ impl From<reqwest::Error> for CrunchyrollError {
     }
 }
 
-impl From<std::io::Error> for CrunchyrollError {
-    fn from(err: std::io::Error) -> Self {
-        CrunchyrollError::Request(CrunchyrollErrorContext::new(err.to_string()))
-    }
-}
-
 /// Information about a [`CrunchyrollError`].
 #[derive(Clone, Debug)]
-pub struct CrunchyrollErrorContext {
+pub struct CrunchyrollErrorContext<T: Clone> {
     pub message: String,
     pub url: Option<String>,
     pub value: Option<String>,
+
+    pub extra: Option<T>,
 }
 
-impl Display for CrunchyrollErrorContext {
+impl<T: Clone> Display for CrunchyrollErrorContext<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut res = self.message.clone();
 
@@ -103,24 +105,25 @@ impl Display for CrunchyrollErrorContext {
     }
 }
 
-impl From<String> for CrunchyrollErrorContext {
+impl<T: Clone> From<String> for CrunchyrollErrorContext<T> {
     fn from(string: String) -> Self {
         CrunchyrollErrorContext::new(string)
     }
 }
 
-impl From<&str> for CrunchyrollErrorContext {
+impl<T: Clone> From<&str> for CrunchyrollErrorContext<T> {
     fn from(str: &str) -> Self {
         CrunchyrollErrorContext::new(str)
     }
 }
 
-impl CrunchyrollErrorContext {
+impl<T: Clone> CrunchyrollErrorContext<T> {
     pub(crate) fn new<S: ToString>(message: S) -> Self {
         Self {
             message: message.to_string(),
             url: None,
             value: None,
+            extra: None,
         }
     }
 
@@ -137,6 +140,21 @@ impl CrunchyrollErrorContext {
         ));
 
         self
+    }
+
+    pub(crate) fn with_extra(mut self, extra: T) -> Self {
+        self.extra = Some(extra);
+
+        self
+    }
+
+    pub(crate) fn into_other_context<T1: Clone>(self) -> CrunchyrollErrorContext<T1> {
+        CrunchyrollErrorContext {
+            message: self.message,
+            url: self.url,
+            value: self.value,
+            extra: None,
+        }
     }
 }
 
@@ -232,11 +250,13 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
                     "Try again in {secs} seconds"
                 ))
             ))
-            .with_url(resp.url()),
+            .with_url(resp.url())
+            .with_extra(resp.status()),
         ));
     }
 
     let content_length = resp.content_length().unwrap_or(0);
+    let status = resp.status();
     let _raw = resp.bytes().await.unwrap();
     let mut raw: &[u8] = _raw.as_ref();
 
@@ -254,7 +274,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
     })?;
     is_request_error(value.clone()).map_err(|e| {
         if let CrunchyrollError::Request(context) = e {
-            CrunchyrollError::Request(context.with_url(&url))
+            CrunchyrollError::Request(context.with_url(&url).with_extra(status))
         } else {
             e
         }
