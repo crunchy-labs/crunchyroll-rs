@@ -1,8 +1,7 @@
-#![cfg(feature = "parse")]
-
 use regex::Regex;
 
 /// Types of Crunchyroll urls, pointing to series, episodes or movies.
+#[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 #[derive(Clone, Debug)]
 pub enum UrlType {
     /// The parsed url points to a series. Use [`crate::Series::from_id`] with the value of this
@@ -23,6 +22,7 @@ pub enum UrlType {
 
 /// Extract information out of Crunchyroll urls which are pointing to episodes / movies /
 /// series.
+#[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
     lazy_static::lazy_static! {
         static ref SERIES_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<type>series|movie_listing)/(?P<id>.+)/.*$").unwrap();

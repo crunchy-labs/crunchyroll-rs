@@ -1,5 +1,3 @@
-#![cfg(any(feature = "hls-stream", feature = "dash-stream"))]
-
 use crate::error::CrunchyrollError;
 use crate::media::{PlaybackStream, VideoStream};
 use crate::{Executor, Locale, Request, Result};
@@ -33,6 +31,7 @@ macro_rules! impl_streaming {
                 /// still manually use the variants in [`VideoStream::variants`] /
                 /// [`PlaybackStream::variants`] and implement the streaming on your own.
                 #[cfg(feature = "hls-stream")]
+                #[cfg_attr(docsrs, doc(cfg(feature = "hls-stream")))]
                 pub async fn hls_streaming_data(&self, hardsub: Option<Locale>) -> Result<Vec<VariantData>> {
                     if let Some(locale) = hardsub {
                         if let Some(raw_streams) = self.variants.get(&locale) {
@@ -82,6 +81,7 @@ macro_rules! impl_streaming {
                 /// still manually use the variants in [`VideoStream::variants`] /
                 /// [`PlaybackStream::variants`] and implement the streaming on your own.
                 #[cfg(feature = "dash-stream")]
+                #[cfg_attr(docsrs, doc(cfg(feature = "dash-stream")))]
                 pub async fn dash_streaming_data(&self, hardsub: Option<Locale>) -> Result<(Vec<VariantData>, Vec<VariantData>)> {
                     let url = if let Some(locale) = hardsub {
                         if let Some(raw_streams) = self.variants.get(&locale) {
@@ -392,6 +392,7 @@ impl VariantData {
     /// drawbacks (if done with multithreading) and even can be faster than 3rd party tools (like
     /// ffmpeg; multithreaded native Rust is ~30 secs faster).
     #[cfg(feature = "hls-stream")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "hls-stream")))]
     pub fn hls_master_url(&self) -> Option<String> {
         match &self.url {
             VariantDataUrl::Hls { url } => Some(url.clone()),

@@ -60,3 +60,6 @@ reqwest = { version = "0.11", features = ["blocking"] }
 
 [workspace]
 members = ["internal"]
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]

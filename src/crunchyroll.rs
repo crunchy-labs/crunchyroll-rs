@@ -527,13 +527,16 @@ mod auth {
         /// [`crate::Media<crate::Series>::seasons`] is called for every series.
         /// See https://github.com/crunchy-labs/crunchyroll-rs/issues/3 for more information.
         #[cfg(feature = "experimental-stabilizations")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "experimental-stabilizations")))]
         pub fn stabilization_locales(mut self, enable: bool) -> CrunchyrollBuilder {
             self.fixes.locale_name_parsing = enable;
             self
         }
 
-        ///
+        /// Set the season number of seasons by parsing a string which is delivered via the api too
+        /// and looks to be more reliable than the actual integer season number Crunchyroll provides.
         #[cfg(feature = "experimental-stabilizations")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "experimental-stabilizations")))]
         pub fn stabilization_season_number(mut self, enable: bool) -> CrunchyrollBuilder {
             self.fixes.season_number = enable;
             self

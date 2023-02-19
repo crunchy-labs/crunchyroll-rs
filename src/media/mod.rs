@@ -1,6 +1,7 @@
 #[allow(clippy::module_inception)] // naming is difficult
 mod media;
 mod stream;
+#[cfg(any(feature = "hls-stream", feature = "dash-stream"))]
 mod streaming;
 
 pub use media::*;

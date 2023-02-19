@@ -115,6 +115,8 @@
 //! that no fields were added or removed from an api response, otherwise the associated test will
 //! fail.
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 pub mod account;
 pub mod categories;
 pub mod common;
@@ -125,6 +127,7 @@ pub mod feed;
 pub mod list;
 pub mod media;
 #[cfg(feature = "parse")]
+#[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub mod parse;
 pub mod rating;
 pub mod search;
