@@ -675,6 +675,7 @@ macro_rules! impl_media_request {
                     self.executor = executor;
 
                     self.__apply_fixes().await;
+                    #[cfg(feature = "experimental-stabilizations")]
                     self.__apply_experimental_stabilizations().await;
                 }
             }

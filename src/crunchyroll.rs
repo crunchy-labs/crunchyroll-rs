@@ -174,6 +174,7 @@ mod auth {
     /// Contains which fixes should be used to make the api more reliable as Crunchyroll does weird
     /// stuff / delivers incorrect results.
     #[derive(Clone, Debug)]
+    #[allow(unused)]
     pub(crate) struct ExecutorFixes {
         pub(crate) locale_name_parsing: bool,
         pub(crate) season_number: bool,
@@ -189,6 +190,7 @@ mod auth {
         pub(crate) config: Mutex<ExecutorConfig>,
         pub(crate) details: ExecutorDetails,
 
+        #[allow(unused)]
         pub(crate) fixes: ExecutorFixes,
     }
 
