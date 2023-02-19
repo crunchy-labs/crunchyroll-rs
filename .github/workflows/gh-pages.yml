@@ -26,9 +26,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      # The nightly toolchain is required to show the feature requirement tag in the documentation.
+      - name: Install cargo nightly
+        run: rustup toolchain install nightly
+
       - name: Generate
         run: |
-          cargo doc --no-deps --all-features
+          RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --no-deps --all-features
           echo '<meta http-equiv="refresh" content="0; url=crunchyroll_rs">' > ./target/doc/index.html
 
       - name: Setup Pages
