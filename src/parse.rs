@@ -18,6 +18,12 @@ pub enum UrlType {
     /// episodes. Makes sense I know) or use [`crate::MediaCollection::from_id`]. The value of this
     /// field is the id you have to use in all shown methods.
     EpisodeOrMovie(String),
+    /// The parsed url points to a music video. Use [`crate::MusicVideo::from_id`] with the value of
+    /// this field to get a usable struct out of it.
+    MusicVideo(String),
+    /// The parsed url points to a music video. Use [`crate::Concert::from_id`] with the value of
+    /// this field to get a usable struct out of it.
+    Concert(String),
 }
 
 /// Extract information out of Crunchyroll urls which are pointing to episodes / movies /
@@ -27,6 +33,7 @@ pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
     lazy_static::lazy_static! {
         static ref SERIES_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}/)?(?P<type>series|movie_listing)/(?P<id>.+)/.*$").unwrap();
         static ref EPISODE_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}/)?watch/(?P<id>.+)/.*$").unwrap();
+        static ref MUSIC_REGEX: Regex = Regex::new(r"^^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}/)?watch/(?P<music_type>musicvideo|concert)/(?P<id>.+)/.*$").unwrap();
     }
 
     #[allow(clippy::manual_map)]
@@ -35,12 +42,22 @@ pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
         match capture.name("type").unwrap().as_str() {
             "series" => Some(UrlType::Series(id)),
             "movie_listing" => Some(UrlType::MovieListing(id)),
-            _ => None, // should never happen
+            _ => unreachable!(),
         }
     } else if let Some(capture) = EPISODE_REGEX.captures(url.as_ref()) {
         Some(UrlType::EpisodeOrMovie(
             capture.name("id").unwrap().as_str().to_string(),
         ))
+    } else if let Some(capture) = MUSIC_REGEX.captures(url.as_ref()) {
+        match capture.name("music_type").unwrap().as_str() {
+            "musicvideo" => Some(UrlType::MusicVideo(
+                capture.name("id").unwrap().as_str().to_string(),
+            )),
+            "concert" => Some(UrlType::Concert(
+                capture.name("id").unwrap().as_str().to_string(),
+            )),
+            _ => unreachable!(),
+        }
     } else {
         None
     }

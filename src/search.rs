@@ -108,7 +108,7 @@ mod browse {
 mod query {
     use crate::common::{Pagination, V2BulkResult, V2TypeBulkResult};
     use crate::media::{Episode, MovieListing, Series};
-    use crate::{Crunchyroll, MediaCollection};
+    use crate::{Crunchyroll, MediaCollection, MusicVideo};
     use futures_util::FutureExt;
 
     /// Results when querying Crunchyroll.
@@ -117,6 +117,7 @@ mod query {
         pub series: Pagination<Series>,
         pub movie_listing: Pagination<MovieListing>,
         pub episode: Pagination<Episode>,
+        pub music: Pagination<MusicVideo>,
     }
 
     impl Crunchyroll {
@@ -162,12 +163,12 @@ mod query {
                                 .apply_locale_query()
                                 .request()
                                 .await?;
-                            let top_results = result
+                            let series_results = result
                                 .data
                                 .into_iter()
                                 .find(|r| r.result_type == "series")
                                 .unwrap_or_default();
-                            Ok((top_results.items, top_results.total))
+                            Ok((series_results.items, series_results.total))
                         }
                         .boxed()
                     },
@@ -188,12 +189,12 @@ mod query {
                                 .apply_locale_query()
                                 .request()
                                 .await?;
-                            let top_results = result
+                            let movie_listing_results = result
                                 .data
                                 .into_iter()
                                 .find(|r| r.result_type == "movie_listing")
                                 .unwrap_or_default();
-                            Ok((top_results.items, top_results.total))
+                            Ok((movie_listing_results.items, movie_listing_results.total))
                         }
                         .boxed()
                     },
@@ -214,12 +215,38 @@ mod query {
                                 .apply_locale_query()
                                 .request()
                                 .await?;
-                            let top_results = result
+                            let episode_results = result
                                 .data
                                 .into_iter()
                                 .find(|r| r.result_type == "episode")
                                 .unwrap_or_default();
-                            Ok((top_results.items, top_results.total))
+                            Ok((episode_results.items, episode_results.total))
+                        }
+                        .boxed()
+                    },
+                    self.executor.clone(),
+                    None,
+                    Some(vec![("q", query.as_ref().to_string())]),
+                ),
+                music: Pagination::new(
+                    |options| {
+                        async move {
+                            let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
+                            let result: V2BulkResult<V2TypeBulkResult<MusicVideo>> = options
+                                .executor
+                                .get(endpoint)
+                                .query(&[("q", options.extra.get("q").unwrap())])
+                                .query(&[("type", "music")])
+                                .query(&[("limit", options.page_size), ("start", options.start)])
+                                .apply_locale_query()
+                                .request()
+                                .await?;
+                            let music_results = result
+                                .data
+                                .into_iter()
+                                .find(|r| r.result_type == "episode")
+                                .unwrap_or_default();
+                            Ok((music_results.items, music_results.total))
                         }
                         .boxed()
                     },

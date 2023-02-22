@@ -113,6 +113,23 @@ where
     Ok(value.unwrap_or_default())
 }
 
+/// Some responses are empty objects but actually must be array.
+pub(crate) fn deserialize_maybe_object_to_array<'de, D, T>(
+    deserializer: D,
+) -> Result<Vec<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Default + DeserializeOwned,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+
+    if value.is_object() {
+        Ok(vec![])
+    } else {
+        serde_json::from_value(value).map_err(|e| D::Error::custom(e.to_string()))
+    }
+}
+
 /// Deserializes a empty string (`""`) to `None`.
 pub(crate) fn deserialize_empty_pre_string_to_none<'de, D, T>(
     deserializer: D,
