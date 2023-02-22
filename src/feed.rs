@@ -239,16 +239,22 @@ impl<'de> Deserialize<'de> for HomeFeed {
                             .collect();
                         Ok(Self::MusicVideoFeed(ids))
                     }
+                    #[cfg(feature = "__test_strict")]
                     _ => Err(Error::custom(format!(
                         "cannot parse home feed response type '{response_type}'"
                     ))),
+                    #[cfg(not(feature = "__test_strict"))]
+                    _ => Ok(HomeFeed::default()),
                 }
             }
+            #[cfg(feature = "__test_strict")]
             _ => Err(Error::custom(format!(
                 "cannot parse home feed resource type '{}' ({})",
                 resource_type,
                 serde_json::to_value(&as_map).unwrap()
             ))),
+            #[cfg(not(feature = "__test_strict"))]
+            _ => Ok(HomeFeed::default())
         }
     }
 }
