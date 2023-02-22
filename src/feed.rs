@@ -98,6 +98,9 @@ pub enum HomeFeed {
     /// A feed containing a title with description and multiple series (ids) matching to title and
     /// description.
     SeriesFeed(SeriesFeed),
+    /// A feed containing ids to music videos. Use [`crate::MusicVideo::from_id`] to get usable
+    /// structs from it.
+    MusicVideoFeed(Vec<String>),
     /// A feed containing ids to concerts. Use [`crate::Concert::from_id`] to get usable structs from
     /// it.
     ConcertFeed(Vec<String>),
@@ -221,11 +224,20 @@ impl<'de> Deserialize<'de> for HomeFeed {
                     "music_concert" => {
                         let ids: Vec<String> = get_value("ids")?
                             .as_array()
-                            .ok_or_else(|| type_error("source_media_id", "string list"))?
+                            .ok_or_else(|| type_error("ids", "string list"))?
                             .iter()
                             .map(|v| v.to_string())
                             .collect();
                         Ok(Self::ConcertFeed(ids))
+                    },
+                    "music_video" => {
+                        let ids: Vec<String> = get_value("ids")?
+                            .as_array()
+                            .ok_or_else(|| type_error("ids", "string list"))?
+                            .iter()
+                            .map(|v| v.to_string())
+                            .collect();
+                        Ok(Self::MusicVideoFeed(ids))
                     }
                     _ => Err(Error::custom(format!(
                         "cannot parse home feed response type '{response_type}'"
