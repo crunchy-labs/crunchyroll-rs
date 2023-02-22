@@ -1,6 +1,7 @@
 use crate::crunchyroll::Executor;
-use crate::media::util::parse_locale_from_slug_title;
-use crate::media::{request_media, Media};
+use crate::media::anime::util::parse_locale_from_slug_title;
+use crate::media::util::request_media;
+use crate::media::Media;
 use crate::{Crunchyroll, Episode, Locale, Result};
 use serde::Deserialize;
 use std::sync::Arc;

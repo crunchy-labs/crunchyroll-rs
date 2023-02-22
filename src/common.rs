@@ -206,5 +206,5 @@ pub trait Request: Send {
 impl Request for () {}
 
 impl<K: Send, V: Send> Request for HashMap<K, V> {}
-
+impl<K: Send, V: Send> Request for serde_json::Map<K, V> {}
 impl Request for serde_json::Value {}

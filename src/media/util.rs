@@ -1,32 +1,18 @@
-use crate::Locale;
+use crate::common::{Request, V2BulkResult};
+use crate::crunchyroll::Executor;
+use crate::Result;
+use serde::de::DeserializeOwned;
+use std::sync::Arc;
 
-#[cfg(feature = "experimental-stabilizations")]
-pub(crate) fn parse_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> Locale {
-    split_locale_from_slug_title(slug_title).1
-}
-
-#[cfg(feature = "experimental-stabilizations")]
-pub(crate) fn split_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> (String, Locale) {
-    let title = slug_title.as_ref().trim_end_matches("-dub").to_string();
-
-    let locales = vec![
-        ("-arabic", Locale::ar_SA),
-        ("-castilian", Locale::es_ES),
-        ("-english", Locale::en_US),
-        ("-english-in", Locale::en_IN),
-        ("-french", Locale::fr_FR),
-        ("-german", Locale::de_DE),
-        ("-hindi", Locale::hi_IN),
-        ("-italian", Locale::it_IT),
-        ("-portuguese", Locale::pt_BR),
-        ("-russian", Locale::ru_RU),
-        ("-spanish", Locale::es_419),
-        ("-japanese-audio", Locale::ja_JP),
-    ];
-    for (end, locale) in locales {
-        if title.ends_with(end) {
-            return (title.trim_end_matches(end).to_string(), locale);
-        }
-    }
-    (title, Locale::ja_JP)
+pub(crate) async fn request_media<T: Default + DeserializeOwned + Request>(
+    executor: Arc<Executor>,
+    endpoint: String,
+) -> Result<Vec<T>> {
+    let result: V2BulkResult<T> = executor
+        .get(endpoint)
+        .apply_locale_query()
+        .apply_preferred_audio_locale_query()
+        .request()
+        .await?;
+    Ok(result.data)
 }

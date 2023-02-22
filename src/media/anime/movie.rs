@@ -1,5 +1,6 @@
 use crate::crunchyroll::Executor;
-use crate::media::{request_media, Media, ThumbnailImages};
+use crate::media::util::request_media;
+use crate::media::{Media, ThumbnailImages};
 use crate::{Crunchyroll, MovieListing, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
@@ -19,8 +20,6 @@ pub struct Movie {
     #[serde(alias = "streams_link")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_streams_link")]
     pub stream_id: String,
-    #[serde(alias = "playback")]
-    pub playback_url: String,
     pub channel_id: String,
 
     pub slug: String,

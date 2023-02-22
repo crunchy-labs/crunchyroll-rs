@@ -25,13 +25,6 @@ async fn episode_from_id() {
 }
 
 #[tokio::test]
-async fn episode_playback() {
-    let episode = START_EPISODE.get().await.unwrap();
-
-    assert_result!(episode.playback().await)
-}
-
-#[tokio::test]
 async fn episode_streams() {
     let episode = START_EPISODE.get().await.unwrap();
 

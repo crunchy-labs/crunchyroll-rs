@@ -18,11 +18,6 @@ async fn movie_from_id() {
 }
 
 #[tokio::test]
-async fn movie_playback() {
-    assert_result!(MOVIE.get().await.unwrap().playback().await)
-}
-
-#[tokio::test]
 async fn movie_streams() {
     assert_result!(MOVIE.get().await.unwrap().streams().await)
 }

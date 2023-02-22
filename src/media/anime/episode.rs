@@ -1,7 +1,8 @@
 use crate::common::Image;
 use crate::crunchyroll::Executor;
-use crate::media::util::parse_locale_from_slug_title;
-use crate::media::{request_media, Media};
+use crate::media::anime::util::parse_locale_from_slug_title;
+use crate::media::util::request_media;
+use crate::media::Media;
 use crate::{Crunchyroll, Locale, Result, Season, Series};
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
@@ -42,8 +43,6 @@ pub struct Episode {
     #[serde(deserialize_with = "crate::internal::serde::deserialize_streams_link")]
     pub stream_id: String,
     pub channel_id: String,
-    #[serde(alias = "playback")]
-    pub playback_url: String,
     pub identifier: String,
 
     pub slug: String,

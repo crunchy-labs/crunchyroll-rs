@@ -1,5 +1,5 @@
 use crate::error::CrunchyrollError;
-use crate::{Crunchyroll, Executor, Locale, Request, Result};
+use crate::{Executor, Locale, Request, Result};
 use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -67,7 +67,6 @@ pub struct VideoStream {
     /// The data is stored in a map where the key represents the data's hardsub locale (-> subtitles
     /// are "burned" into the video) and the value all stream variants.
     /// If you want no hardsub at all, use the `Locale::Custom("".into())` map entry.
-    #[serde(rename = "streams")]
     #[serde(deserialize_with = "deserialize_streams")]
     #[cfg_attr(not(feature = "__test_strict"), default(HashMap::new()))]
     pub variants: HashMap<Locale, VideoVariants>,
@@ -78,44 +77,6 @@ pub struct VideoStream {
     bifs: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     versions: crate::StrictValue,
-}
-
-impl VideoStream {
-    pub async fn from_id(crunchy: &Crunchyroll, id: String) -> Result<Self> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/cms/v2/{}/videos/{}/streams",
-            crunchy.executor.details.bucket, id
-        );
-        crunchy
-            .executor
-            .get(endpoint)
-            .apply_media_query()
-            .apply_locale_query()
-            .request()
-            .await
-    }
-}
-
-/// A playback stream. Similar to [`VideoStream`] but with and without certain fields.
-#[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[request(executor(subtitles))]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct PlaybackStream {
-    #[serde(skip)]
-    pub(crate) executor: Arc<Executor>,
-
-    pub audio_locale: Locale,
-    pub subtitles: HashMap<Locale, StreamSubtitle>,
-    #[serde(rename = "streams")]
-    #[serde(deserialize_with = "deserialize_streams")]
-    #[default(HashMap::new())]
-    pub variants: HashMap<Locale, PlaybackVariants>,
-
-    #[cfg(feature = "__test_strict")]
-    #[serde(rename = "QoS")]
-    qos: crate::StrictValue,
 }
 
 /// Subtitle for streams.
@@ -153,22 +114,6 @@ pub struct VideoVariant {
     pub url: String,
 }
 
-/// A [`PlaybackStream`] variant.
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct PlaybackVariant {
-    /// Language of this variant.
-    pub hardsub_locale: Locale,
-    /// Url to the actual stream.
-    /// Usually a [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming)
-    /// or [MPEG-DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP) stream.
-    pub url: String,
-
-    /// Video codec of the variant. Usually h264
-    pub vcodec: String,
-}
-
 /// Stream variants for a [`VideoStream`].
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -196,27 +141,4 @@ pub struct VideoVariants {
 
 impl FixStream for VideoVariants {
     type Variant = VideoVariant;
-}
-
-/// Stream variants for a [`PlaybackStream`].
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct PlaybackVariants {
-    pub adaptive_dash: Option<PlaybackVariant>,
-    pub adaptive_hls: Option<PlaybackVariant>,
-    pub download_hls: Option<PlaybackVariant>,
-    pub drm_adaptive_dash: Option<PlaybackVariant>,
-    pub drm_adaptive_hls: Option<PlaybackVariant>,
-    pub drm_download_hls: Option<PlaybackVariant>,
-    pub trailer_dash: Option<PlaybackVariant>,
-    pub trailer_hls: Option<PlaybackVariant>,
-    pub vo_adaptive_dash: Option<PlaybackVariant>,
-    pub vo_adaptive_hls: Option<PlaybackVariant>,
-    pub vo_drm_adaptive_dash: Option<PlaybackVariant>,
-    pub vo_drm_adaptive_hls: Option<PlaybackVariant>,
-}
-
-impl FixStream for PlaybackVariants {
-    type Variant = PlaybackVariant;
 }

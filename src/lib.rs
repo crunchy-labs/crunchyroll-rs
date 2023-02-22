@@ -76,9 +76,8 @@
 //!
 //! The feature `hls-stream` and / or `dash-stream` must be activated to get streams. `hls-stream`
 //! is activated by default and should be used if you want to get the video + audio combined
-//! ([`media::VideoStream::hls_streaming_data`] / [`media::PlaybackStream::hls_streaming_data`]).
-//! `dash-stream` should be used if you want to get the audio and video streams separately
-//! ([`media::VideoStream::dash_streaming_data`] / [`media::PlaybackStream::dash_streaming_data`]).
+//! ([`media::VideoStream::hls_streaming_data`]). `dash-stream` should be used if you want to get
+//! the audio and video streams separately ([`media::VideoStream::dash_streaming_data`]).
 //!
 //! ```
 //! let streaming_data = streams
@@ -141,7 +140,9 @@ pub(crate) use internal::serde::EmptyJsonProxy;
 pub(crate) use macros::{enum_values, options};
 
 pub use crunchyroll::{Crunchyroll, Locale};
-pub use media::{Episode, MediaCollection, Movie, MovieListing, Season, Series};
+pub use media::{
+    Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
+};
 #[cfg(feature = "parse")]
 pub use parse::{parse_url, UrlType};
 

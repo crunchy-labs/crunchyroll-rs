@@ -1,6 +1,7 @@
 use crate::categories::Category;
 use crate::crunchyroll::Executor;
-use crate::media::{request_media, Media, PosterImages};
+use crate::media::util::request_media;
+use crate::media::{Media, PosterImages};
 use crate::{Crunchyroll, Locale, Result, Season};
 use serde::Deserialize;
 use std::sync::Arc;

@@ -1,28 +1,20 @@
-mod episode;
+mod anime;
 mod media_collection;
-mod media_impl;
-mod movie;
-mod movie_listing;
-mod season;
-mod series;
+mod music;
+mod shared;
 mod stream;
 #[cfg(any(feature = "hls-stream", feature = "dash-stream"))]
 mod streaming;
 mod util;
 
-pub use episode::*;
+pub use anime::*;
 pub use media_collection::*;
-pub use media_impl::*;
-pub use movie::*;
-pub use movie_listing::*;
-pub use season::*;
-pub use series::*;
+pub use music::*;
+pub use shared::*;
 pub use stream::*;
 #[cfg(any(feature = "hls-stream", feature = "dash-stream"))]
 pub use streaming::*;
 
-use crate::common::{Request, V2BulkResult};
-use crate::crunchyroll::Executor;
 use crate::{Crunchyroll, Result};
 
 crate::enum_values! {
@@ -46,15 +38,12 @@ pub trait Media {
     async fn __apply_experimental_stabilizations(&mut self) {}
 }
 
-pub(crate) async fn request_media<T: Default + serde::de::DeserializeOwned + Request>(
-    executor: std::sync::Arc<Executor>,
-    endpoint: String,
-) -> Result<Vec<T>> {
-    let result: V2BulkResult<T> = executor
-        .get(endpoint)
-        .apply_locale_query()
-        .apply_preferred_audio_locale_query()
-        .request()
-        .await?;
-    Ok(result.data)
+impl Crunchyroll {
+    pub async fn media_from_id<M: Media>(&self, id: impl AsRef<str> + Send) -> Result<M> {
+        M::from_id(self, id).await
+    }
+
+    pub async fn media_collection_from_id<S: AsRef<str>>(&self, id: S) -> Result<MediaCollection> {
+        MediaCollection::from_id(self, id).await
+    }
 }

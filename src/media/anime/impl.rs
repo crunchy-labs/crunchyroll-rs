@@ -1,161 +1,84 @@
+use crate::common::Request;
 use crate::media::Media;
-use crate::{Crunchyroll, Episode, MediaCollection, Movie, MovieListing, Result, Season, Series};
+use crate::{Episode, MediaCollection, Movie, MovieListing, Result, Season, Series};
+use chrono::{DateTime, Utc};
+use serde::de::{DeserializeOwned, Error};
+use serde::{Deserialize, Deserializer};
+use serde_json::Map;
 
-/// Things related to single media items (episode, movie).
-mod single_media {
-    use crate::common::{Image, Request};
-    use chrono::{DateTime, Utc};
-    use serde::de::{DeserializeOwned, Error};
-    use serde::{Deserialize, Deserializer};
-    use serde_json::{Map, Value};
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub(crate) struct VideoIntroResult {
+    pub(crate) media_id: String,
 
-    #[derive(Clone, Debug, Default, Deserialize)]
-    #[serde(try_from = "Map<String, Value>")]
-    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-    pub struct ThumbnailImages {
-        pub thumbnail: Vec<Image>,
+    #[serde(rename = "startTime")]
+    pub(crate) start_time: f64,
+    #[serde(rename = "endTime")]
+    pub(crate) end_time: f64,
+    pub(crate) duration: f64,
+
+    /// Id of the next episode.
+    #[serde(rename = "comparedWith")]
+    pub(crate) compared_with: String,
+
+    /// It seems that this represents the episode number relative to the season the episode is part
+    /// of. But in a weird way. It is, for example, '0003.00' instead of simply 3 if it's the third
+    /// episode in a season.
+    pub(crate) ordering: String,
+
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    pub(crate) last_updated: DateTime<Utc>,
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct RelatedMedia<T: Request + DeserializeOwned> {
+    pub fully_watched: bool,
+
+    pub playhead: u32,
+
+    #[serde(alias = "panel")]
+    #[serde(deserialize_with = "deserialize_panel")]
+    pub media: T,
+
+    #[cfg(feature = "__test_strict")]
+    shortcut: Option<crate::StrictValue>,
+}
+
+pub(crate) fn deserialize_panel<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: DeserializeOwned,
+{
+    let mut as_map = Map::deserialize(deserializer)?;
+
+    if let Some(mut episode_metadata) = as_map.remove("episode_metadata") {
+        as_map.append(episode_metadata.as_object_mut().unwrap())
     }
 
-    impl TryFrom<Map<String, Value>> for ThumbnailImages {
-        type Error = serde_json::Error;
-
-        fn try_from(value: Map<String, Value>) -> Result<Self, Self::Error> {
-            if let Some(thumbnail) = value.get("thumbnail") {
-                let thumbnail = serde_json::from_value::<Vec<Vec<Image>>>(thumbnail.clone())?
-                    .into_iter()
-                    .flatten()
-                    .collect::<Vec<Image>>();
-                Ok(ThumbnailImages { thumbnail })
-            } else {
-                Ok(ThumbnailImages { thumbnail: vec![] })
-            }
-        }
-    }
-
-    #[allow(dead_code)]
-    #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-    pub(crate) struct VideoIntroResult {
-        pub(crate) media_id: String,
-
-        #[serde(rename = "startTime")]
-        pub(crate) start_time: f64,
-        #[serde(rename = "endTime")]
-        pub(crate) end_time: f64,
-        pub(crate) duration: f64,
-
-        /// Id of the next episode.
-        #[serde(rename = "comparedWith")]
-        pub(crate) compared_with: String,
-
-        /// It seems that this represents the episode number relative to the season the episode is part
-        /// of. But in a weird way. It is, for example, '0003.00' instead of simply 3 if it's the third
-        /// episode in a season.
-        pub(crate) ordering: String,
-
-        #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-        pub(crate) last_updated: DateTime<Utc>,
-    }
-
-    #[allow(dead_code)]
-    #[derive(Clone, Debug, Default, Deserialize, Request)]
-    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-    pub struct RelatedMedia<T: Request + DeserializeOwned> {
-        pub fully_watched: bool,
-
-        pub playhead: u32,
-
-        #[serde(alias = "panel")]
-        #[serde(deserialize_with = "deserialize_panel")]
-        pub media: T,
-
-        #[cfg(feature = "__test_strict")]
-        shortcut: Option<crate::StrictValue>,
-    }
-
-    pub(crate) fn deserialize_panel<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-    where
-        D: Deserializer<'de>,
-        T: DeserializeOwned,
-    {
-        let mut as_map = Map::deserialize(deserializer)?;
-
-        if let Some(mut episode_metadata) = as_map.remove("episode_metadata") {
-            as_map.append(episode_metadata.as_object_mut().unwrap())
-        }
-
-        serde_json::from_value(
-            serde_json::to_value(as_map).map_err(|e| Error::custom(e.to_string()))?,
-        )
+    serde_json::from_value(serde_json::to_value(as_map).map_err(|e| Error::custom(e.to_string()))?)
         .map_err(|e| Error::custom(e.to_string()))
-    }
-
-    #[allow(dead_code)]
-    #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-    pub struct PlayheadInformation {
-        playhead: u32,
-
-        content_id: String,
-
-        fully_watched: bool,
-
-        /// Date when the last playhead update was
-        #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-        last_modified: DateTime<Utc>,
-    }
 }
-pub use single_media::*;
 
-/// Things related to media items which contains multiple single media items
-/// (season, series, movie listing).
-mod multiple_media {
-    use crate::common::Image;
-    use serde::Deserialize;
-    use serde_json::{Map, Value};
+#[allow(dead_code)]
+#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct PlayheadInformation {
+    playhead: u32,
 
-    #[derive(Clone, Debug, Default, Deserialize)]
-    #[serde(try_from = "Map<String, Value>")]
-    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-    pub struct PosterImages {
-        pub poster_tall: Vec<Image>,
-        pub poster_wide: Vec<Image>,
-    }
+    content_id: String,
 
-    impl TryFrom<Map<String, Value>> for PosterImages {
-        type Error = serde_json::Error;
+    fully_watched: bool,
 
-        fn try_from(value: Map<String, Value>) -> Result<Self, Self::Error> {
-            let tall = if let Some(tall) = value.get("poster_tall") {
-                serde_json::from_value::<Vec<Vec<Image>>>(tall.clone())?
-                    .into_iter()
-                    .flatten()
-                    .collect::<Vec<Image>>()
-            } else {
-                vec![]
-            };
-            let wide = if let Some(wide) = value.get("poster_wide") {
-                serde_json::from_value::<Vec<Vec<Image>>>(wide.clone())?
-                    .into_iter()
-                    .flatten()
-                    .collect::<Vec<Image>>()
-            } else {
-                vec![]
-            };
-
-            Ok(Self {
-                poster_tall: tall,
-                poster_wide: wide,
-            })
-        }
-    }
+    /// Date when the last playhead update was
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    last_modified: DateTime<Utc>,
 }
-pub use multiple_media::*;
 
 macro_rules! impl_manual_media_deserialize {
     ($($media:ident = $metadata:literal)*) => {
@@ -234,22 +157,6 @@ media_eq! {
     Series Season Episode MovieListing Movie
 }
 
-macro_rules! impl_playback {
-    ($($media:ident)*) => {
-        $(
-            impl $media {
-                pub async fn playback(&self) -> Result<$crate::media::PlaybackStream> {
-                    self.executor.get(&self.playback_url).request().await
-                }
-            }
-        )*
-    }
-}
-
-impl_playback! {
-    Episode Movie
-}
-
 macro_rules! media_version {
     ($(#[doc=$available_versions_doc:literal] #[doc=$version_doc:literal] #[doc=$versions_doc:literal] $media:ident = $endpoint:literal)*) => {
         $(
@@ -280,16 +187,24 @@ macro_rules! media_version {
                         .iter()
                         .filter_map(|v| if audio_locales.contains(&v.audio_locale) { Some(v.id.clone()) } else { None } )
                         .collect::<Vec<String>>();
-                    let endpoint = format!("{}/{}", $endpoint, version_ids.join(","));
-                    $crate::media::request_media(self.executor.clone(), endpoint).await
+
+                    let mut result = vec![];
+                    for id in version_ids {
+                        result.push($media::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, id).await?)
+                    }
+                    Ok(result)
                 }
 
                 #[doc=$versions_doc]
                 pub async fn versions(&mut self) -> Result<Vec<$media>> {
                     self.assert_versions().await?;
                     let version_ids = self.versions.as_ref().unwrap().iter().map(|v| v.id.clone()).collect::<Vec<String>>();
-                    let endpoint = format!("{}/{}", $endpoint, version_ids.join(","));
-                    $crate::media::request_media(self.executor.clone(), endpoint).await
+
+                    let mut result = vec![];
+                    for id in version_ids {
+                        result.push($media::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, id).await?)
+                    }
+                    Ok(result)
                 }
             }
         )*
@@ -350,14 +265,19 @@ macro_rules! impl_media_video {
                 /// Streams for this episode / movie.
                 pub async fn streams(&self) -> Result<$crate::media::VideoStream> {
                     let endpoint = format!(
-                        "https://www.crunchyroll.com/cms/v2/{}/videos/{}/streams",
-                        self.executor.details.bucket, self.stream_id
+                        "https://www.crunchyroll.com/content/v2/cms/videos/{}/streams",
+                        self.stream_id
                     );
-                    self.executor.get(endpoint)
-                        .apply_media_query()
+                    let mut data = self.executor.get(endpoint)
+                        .apply_preferred_audio_locale_query()
                         .apply_locale_query()
-                        .request()
-                        .await
+                        .request::<$crate::common::V2BulkResult<serde_json::Map<String, serde_json::Value>>>()
+                        .await?;
+
+                    let mut map = data.meta.clone();
+                    map.insert("variants".to_string(), data.data.remove(0).into());
+
+                    Ok(serde_json::from_value(serde_json::to_value(map)?)?)
                 }
 
                 /// Check if the episode / movie can be watched.
@@ -452,14 +372,4 @@ macro_rules! impl_media_video {
 
 impl_media_video! {
     Episode Movie
-}
-
-impl Crunchyroll {
-    pub async fn media_from_id<M: Media>(&self, id: impl AsRef<str> + Send) -> Result<M> {
-        M::from_id(self, id).await
-    }
-
-    pub async fn media_collection_from_id<S: AsRef<str>>(&self, id: S) -> Result<MediaCollection> {
-        MediaCollection::from_id(self, id).await
-    }
 }

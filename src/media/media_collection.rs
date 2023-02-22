@@ -2,7 +2,9 @@ use crate::common::Request;
 use crate::crunchyroll::Executor;
 use crate::error::CrunchyrollError;
 use crate::media::Media;
-use crate::{Crunchyroll, Episode, Movie, MovieListing, Result, Season, Series};
+use crate::{
+    Concert, Crunchyroll, Episode, Movie, MovieListing, MusicVideo, Result, Season, Series,
+};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -18,6 +20,8 @@ pub enum MediaCollection {
     Episode(Episode),
     MovieListing(MovieListing),
     Movie(Movie),
+    MusicVideo(MusicVideo),
+    Concert(Concert),
 }
 
 impl MediaCollection {
@@ -35,6 +39,10 @@ impl MediaCollection {
             Ok(MediaCollection::Season(season))
         } else if let Ok(movie_listing) = MovieListing::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::MovieListing(movie_listing))
+        } else if let Ok(concert) = Concert::from_id(crunchyroll, id.as_ref()).await {
+            Ok(MediaCollection::Concert(concert))
+        } else if let Ok(music_video) = MusicVideo::from_id(crunchyroll, id.as_ref()).await {
+            Ok(MediaCollection::MusicVideo(music_video))
         } else {
             Err(CrunchyrollError::Input(
                 format!("failed to find valid media with id '{}'", id.as_ref()).into(),
@@ -85,6 +93,15 @@ impl<'de> Deserialize<'de> for MediaCollection {
             Ok(MediaCollection::Movie(
                 serde_json::from_value(Value::from(as_map)).map_err(err_conv)?,
             ))
+        } else if as_map.contains_key("animeIds") {
+            Ok(MediaCollection::MusicVideo(
+                serde_json::from_value(Value::from(as_map)).map_err(err_conv)?,
+            ))
+        // music video contains this field too so music video must be checked before this condition
+        } else if as_map.contains_key("availability") {
+            Ok(MediaCollection::Concert(
+                serde_json::from_value(Value::from(as_map)).map_err(err_conv)?,
+            ))
         } else {
             Err(Error::custom(
                 "could not deserialize into media collection".to_string(),
@@ -104,6 +121,8 @@ impl Request for MediaCollection {
                 movie_listing.__set_executor(executor).await
             }
             MediaCollection::Movie(movie) => movie.__set_executor(executor).await,
+            MediaCollection::MusicVideo(music_video) => music_video.__set_executor(executor).await,
+            MediaCollection::Concert(concert) => concert.__set_executor(executor).await,
         }
     }
 }
@@ -121,5 +140,5 @@ macro_rules! impl_media_collection {
 }
 
 impl_media_collection! {
-    Series Season Episode MovieListing Movie
+    Series Season Episode MovieListing Movie MusicVideo Concert
 }
