@@ -509,10 +509,10 @@ mod auth {
 
         /// Set the audio language of media (like episodes) which should be returned when querying
         /// by any other method than the direct media id. For example, if the preferred audio locale
-        /// were set to [`Locale::en_US`], the seasons queried with [`Series::seasons`] would likely
-        /// have [`Locale::en_US`] as their audio locale. This might not always work on all endpoints
-        /// as Crunchyroll does Crunchyroll things (e.g. it seems to have no effect when changing the
-        /// locale and using [`Crunchyroll::query`]).
+        /// were set to [`Locale::en_US`], the seasons queried with [`crate::Series::seasons`] would
+        /// likely have [`Locale::en_US`] as their audio locale. This might not always work on all
+        /// endpoints as Crunchyroll does Crunchyroll things (e.g. it seems to have no effect when
+        /// changing the locale and using [`Crunchyroll::query`]).
         pub fn preferred_audio_locale(
             mut self,
             preferred_audio_locale: Locale,
@@ -524,10 +524,10 @@ mod auth {
         /// Set season and episode locales by parsing the season name and check if it contains
         /// any language name.
         /// Under special circumstances, this can slow down some methods as additional request must
-        /// be made. Currently, this applies to [`crate::Media<crate::Series>`]. Whenever a request
-        /// is made which returns [`crate::Media<crate::Series>`], internally
-        /// [`crate::Media<crate::Series>::seasons`] is called for every series.
-        /// See https://github.com/crunchy-labs/crunchyroll-rs/issues/3 for more information.
+        /// be made. Currently, this applies to [`crate::Series`]. Whenever a request
+        /// is made which returns [`crate::Series`], internally [`crate::Series::seasons`] is called
+        /// for every series.
+        /// See <https://github.com/crunchy-labs/crunchyroll-rs/issues/3> for more information.
         #[cfg(feature = "experimental-stabilizations")]
         #[cfg_attr(docsrs, doc(cfg(feature = "experimental-stabilizations")))]
         pub fn stabilization_locales(mut self, enable: bool) -> CrunchyrollBuilder {

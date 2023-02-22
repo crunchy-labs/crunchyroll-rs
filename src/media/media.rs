@@ -120,14 +120,13 @@ impl TryFrom<Map<String, Value>> for PosterImages {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SearchMetadata {
-    /// [`None`] if queried by [`crate::Crunchyroll::query`].
+    /// [`None`] if queried by [`Crunchyroll::query`].
     pub last_public: Option<DateTime<Utc>>,
-    /// [`None`] if queried by [`crate::Crunchyroll::query`].
+    /// [`None`] if queried by [`Crunchyroll::query`].
     pub rank: Option<u32>,
 
     pub score: f64,
-    /// [`None`] if not queried by [`crate::Media<Series>::similar`] or
-    /// [`crate::Media<MovieListing>::similar`].
+    /// [`None`] if not queried by [`Series::similar`] or [`MovieListing::similar`].
     pub popularity_score: Option<f64>,
 }
 

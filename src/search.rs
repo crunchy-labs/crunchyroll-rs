@@ -111,10 +111,7 @@ mod query {
     use crate::{Crunchyroll, MediaCollection};
     use futures_util::FutureExt;
 
-    /// Results when querying Crunchyroll. Results depending on the input which was given via
-    /// [`QueryOptions::result_type`]. If not specified, every field is populated, if one specific
-    /// type, for example [`QueryType::Series`], were provided, only [`QueryResults::series`] will
-    /// be populated.
+    /// Results when querying Crunchyroll.
     pub struct QueryResults {
         pub top_results: Pagination<MediaCollection>,
         pub series: Pagination<Series>,

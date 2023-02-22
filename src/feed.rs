@@ -105,7 +105,7 @@ pub enum HomeFeed {
     /// confusing results.
     Browse(BrowseOptions),
     /// Results similar to a series. Get the series struct via [`SimilarFeed::similar_id`] and call
-    /// [`Series::similar`] with [`SimilarFeed::similar_options`] to get similar series.
+    /// [`Series::similar`] to get similar series.
     SimilarTo(SimilarFeed),
 }
 
