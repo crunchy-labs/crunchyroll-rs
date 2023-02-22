@@ -103,7 +103,7 @@ impl VideoStream {
 
         let raw_mpd = self.executor.get(url).request_raw().await?;
         let period = dash_mpd::parse(
-            &String::from_utf8_lossy(raw_mpd.as_slice())
+            String::from_utf8_lossy(raw_mpd.as_slice())
                 .to_string()
                 .as_str(),
         )

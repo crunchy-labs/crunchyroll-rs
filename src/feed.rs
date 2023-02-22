@@ -229,7 +229,7 @@ impl<'de> Deserialize<'de> for HomeFeed {
                             .map(|v| v.to_string())
                             .collect();
                         Ok(Self::ConcertFeed(ids))
-                    },
+                    }
                     "music_video" => {
                         let ids: Vec<String> = get_value("ids")?
                             .as_array()
@@ -254,7 +254,7 @@ impl<'de> Deserialize<'de> for HomeFeed {
                 serde_json::to_value(&as_map).unwrap()
             ))),
             #[cfg(not(feature = "__test_strict"))]
-            _ => Ok(HomeFeed::default())
+            _ => Ok(HomeFeed::default()),
         }
     }
 }
