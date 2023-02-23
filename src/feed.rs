@@ -113,11 +113,14 @@ pub enum HomeFeed {
     /// Results similar to a series. Get the series struct via [`SimilarFeed::similar_id`] and call
     /// [`Series::similar`] to get similar series.
     SimilarTo(SimilarFeed),
+    /// Crunchyroll may update their feed / add new items. This field catches everything which is
+    /// unknown / not implemented in the library.
+    Unknown(serde_json::Map<String, serde_json::Value>),
 }
 
 impl Default for HomeFeed {
     fn default() -> Self {
-        Self::CarouselFeed(vec![])
+        Self::Unknown(serde_json::Map::default())
     }
 }
 
@@ -244,7 +247,7 @@ impl<'de> Deserialize<'de> for HomeFeed {
                         "cannot parse home feed response type '{response_type}'"
                     ))),
                     #[cfg(not(feature = "__test_strict"))]
-                    _ => Ok(HomeFeed::default()),
+                    _ => Ok(HomeFeed::Unknown(as_map)),
                 }
             }
             #[cfg(feature = "__test_strict")]
@@ -254,7 +257,7 @@ impl<'de> Deserialize<'de> for HomeFeed {
                 serde_json::to_value(&as_map).unwrap()
             ))),
             #[cfg(not(feature = "__test_strict"))]
-            _ => Ok(HomeFeed::default()),
+            _ => Ok(HomeFeed::Unknown(as_map)),
         }
     }
 }
