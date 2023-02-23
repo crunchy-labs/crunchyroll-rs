@@ -263,21 +263,8 @@ macro_rules! impl_media_video {
         $(
             impl $media_video {
                 /// Streams for this episode / movie.
-                pub async fn streams(&self) -> Result<$crate::media::VideoStream> {
-                    let endpoint = format!(
-                        "https://www.crunchyroll.com/content/v2/cms/videos/{}/streams",
-                        self.stream_id
-                    );
-                    let mut data = self.executor.get(endpoint)
-                        .apply_preferred_audio_locale_query()
-                        .apply_locale_query()
-                        .request::<$crate::common::V2BulkResult<serde_json::Map<String, serde_json::Value>>>()
-                        .await?;
-
-                    let mut map = data.meta.clone();
-                    map.insert("variants".to_string(), data.data.remove(0).into());
-
-                    Ok(serde_json::from_value(serde_json::to_value(map)?)?)
+                pub async fn streams(&self) -> Result<$crate::media::Stream> {
+                    $crate::media::Stream::from_url(self.executor.clone(), "https://www.crunchyroll.com/content/v2/cms/videos", &self.stream_id).await
                 }
 
                 /// Check if the episode / movie can be watched.

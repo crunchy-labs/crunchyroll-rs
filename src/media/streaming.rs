@@ -1,5 +1,5 @@
 use crate::error::CrunchyrollError;
-use crate::media::VideoStream;
+use crate::media::Stream;
 use crate::{Executor, Locale, Request, Result};
 use std::borrow::BorrowMut;
 use std::fmt::Formatter;
@@ -12,7 +12,7 @@ pub type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
 #[cfg(not(feature = "hls-stream"))]
 pub type Aes128CbcDec = ();
 
-impl VideoStream {
+impl Stream {
     /// Returns streaming data which can be used to get the literal stream data and
     /// process it further (e.g. write them to a file which than can be played), based
     /// of the [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) stream
@@ -140,16 +140,7 @@ impl VideoStream {
     /// Return all supported hardsub locales which can be used as argument in
     /// [`VideoStream::hls_streaming_data`] / [`VideoStream::dash_streaming_data`].
     pub fn streaming_hardsub_locales(&self) -> Vec<Locale> {
-        self.variants
-            .iter()
-            .filter_map(|(locale, variant)| {
-                if variant.adaptive_hls.is_some() {
-                    Some(locale.clone())
-                } else {
-                    None
-                }
-            })
-            .collect()
+        self.variants.keys().cloned().collect::<Vec<Locale>>()
     }
 }
 
