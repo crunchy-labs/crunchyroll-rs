@@ -117,10 +117,11 @@ impl Media for Series {
     async fn __apply_experimental_stabilizations(&mut self) {
         if self.executor.fixes.locale_name_parsing {
             if let Ok(seasons) = self.seasons().await {
-                let mut locales = seasons
-                    .into_iter()
-                    .flat_map(|s| s.audio_locales)
-                    .collect::<Vec<Locale>>();
+                let mut locales = vec![];
+                for mut season in seasons {
+                    locales.extend(season.available_versions().await.unwrap_or_default());
+                    locales.extend(season.audio_locales)
+                }
                 locales.dedup();
 
                 self.audio_locales = locales
