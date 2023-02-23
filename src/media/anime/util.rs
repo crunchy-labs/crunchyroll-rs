@@ -30,3 +30,14 @@ pub(crate) fn split_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> (Str
     }
     (title, Locale::ja_JP)
 }
+
+/// Remove all duplicates from a [`Vec`].
+pub(crate) fn real_dedup_vec<T: Clone + Eq>(input: &mut Vec<T>) {
+    let mut dedup = vec![];
+    for item in input.clone() {
+        if !dedup.contains(&item) {
+            dedup.push(item);
+        }
+    }
+    *input = dedup
+}
