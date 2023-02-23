@@ -406,7 +406,7 @@ mod auth {
 
         pub(crate) fn apply_preferred_audio_locale_query(self) -> ExecutorRequestBuilder {
             if let Some(locale) = self.executor.details.preferred_audio_locale.clone() {
-                self.query(&[("preferred_audio_locale", locale)])
+                self.query(&[("preferred_audio_language", locale)])
             } else {
                 self
             }
