@@ -176,7 +176,9 @@ enum VariantDataUrl {
         init: String,
         fragments: String,
         start: u32,
-        count: u32,
+        /// Length of each segment as milliseconds. The length if this field is also the number of
+        /// segments.
+        lengths: Vec<u32>,
     },
 }
 
@@ -262,16 +264,6 @@ impl VariantData {
                 0f64
             };
 
-            let mut segment_count = 0u32;
-            for segment in segment_template
-                .SegmentTimeline
-                .clone()
-                .expect("dash segment timeline")
-                .segments
-            {
-                segment_count += segment.r.unwrap_or(1) as u32
-            }
-
             #[cfg(not(feature = "__test_strict"))]
             stream_data.push(VariantData {
                 executor: executor.clone(),
@@ -296,7 +288,18 @@ impl VariantData {
                         .expect("dash initialization url"),
                     fragments: segment_template.media.clone().expect("dash media url"),
                     start: segment_template.startNumber.expect("dash start number") as u32,
-                    count: segment_count,
+                    lengths: segment_template
+                        .SegmentTimeline
+                        .clone()
+                        .expect("dash segment timeline")
+                        .segments
+                        .into_iter()
+                        .flat_map(|s| {
+                            std::iter::repeat(s.d as u32)
+                                .take(s.r.unwrap_or(1) as usize)
+                                .collect::<Vec<u32>>()
+                        })
+                        .collect(),
                 },
             });
 
@@ -326,7 +329,18 @@ impl VariantData {
                         .expect("dash initialization url"),
                     fragments: segment_template.media.clone().expect("dash media url"),
                     start: segment_template.startNumber.expect("dash start number") as u32,
-                    count: segment_count,
+                    lengths: segment_template
+                        .SegmentTimeline
+                        .clone()
+                        .expect("dash segment timeline")
+                        .segments
+                        .into_iter()
+                        .flat_map(|s| {
+                            std::iter::repeat(s.d as u32)
+                                .take(s.r.unwrap_or(1) as usize)
+                                .collect::<Vec<u32>>()
+                        })
+                        .collect(),
                 },
             })
         }
@@ -380,7 +394,7 @@ impl VariantData {
                 executor: self.executor.clone(),
                 key: key.clone(),
                 url: segment.uri,
-                length: Some(Duration::from_secs_f32(segment.duration)),
+                length: Duration::from_secs_f32(segment.duration),
             })
         }
 
@@ -406,7 +420,7 @@ impl VariantData {
     #[cfg(feature = "dash-stream")]
     async fn dash_segments(&self) -> Result<Vec<VariantSegment>> {
         #[allow(irrefutable_let_patterns)]
-        let VariantDataUrl::MpegDash { id, base, init, fragments, start, count } = self.url.clone() else {
+        let VariantDataUrl::MpegDash { id, base, init, fragments, start, lengths } = self.url.clone() else {
             return Err(CrunchyrollError::Internal("variant url should be dash".into()))
         };
 
@@ -414,18 +428,18 @@ impl VariantData {
             executor: self.executor.clone(),
             key: None,
             url: base.clone() + &init.replace("$RepresentationID$", &id),
-            length: None,
+            length: Duration::from_secs(0),
         }];
 
-        for i in start..count + start + 1 {
+        for (i, number) in (start..lengths.len() as u32 + start + 1).enumerate() {
             segments.push(VariantSegment {
                 executor: self.executor.clone(),
                 key: None,
                 url: base.clone()
                     + &fragments
-                        .replace("$Number$", &i.to_string())
+                        .replace("$Number$", &number.to_string())
                         .replace("$RepresentationID$", &id),
-                length: None,
+                length: Duration::from_millis(lengths.get(i).map_or(0, |l| *l) as u64),
             })
         }
 
@@ -447,9 +461,8 @@ pub struct VariantSegment {
     pub key: Option<Aes128CbcDec>,
     /// Url to the actual data.
     pub url: String,
-    /// Video length of this segment. Is [`Some`] if this segment was generated from a function
-    /// utilizing hls. Is [`None`] if generated from a dash function.
-    pub length: Option<Duration>,
+    /// Video length of this segment.
+    pub length: Duration,
 }
 
 impl VariantSegment {
