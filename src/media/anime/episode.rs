@@ -82,6 +82,8 @@ pub struct Episode {
     pub season_number: u32,
 
     pub audio_locale: Locale,
+    /// Only populated if [`Episode`] got generated via [`Season::episodes`].
+    pub recent_audio_locale: Option<Locale>,
     pub subtitle_locales: Vec<Locale>,
 
     #[serde(alias = "duration_ms")]

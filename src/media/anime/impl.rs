@@ -1,6 +1,6 @@
 use crate::common::Request;
 use crate::media::Media;
-use crate::{Episode, MediaCollection, Movie, MovieListing, Result, Season, Series};
+use crate::{Episode, Locale, MediaCollection, Movie, MovieListing, Result, Season, Series};
 use chrono::{DateTime, Utc};
 use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer};
@@ -45,8 +45,10 @@ pub struct RelatedMedia<T: Request + DeserializeOwned> {
     #[serde(deserialize_with = "deserialize_panel")]
     pub media: T,
 
-    #[cfg(feature = "__test_strict")]
-    shortcut: Option<crate::StrictValue>,
+    /// Only populated if called with [`Episode::previous`] or [`Movie::previous`].
+    pub shortcut: Option<bool>,
+    /// Only populated if called with [`Episode::previous`] or [`Movie::previous`].
+    pub recent_audio_locale: Option<Locale>,
 }
 
 pub(crate) fn deserialize_panel<'de, D, T>(deserializer: D) -> Result<T, D::Error>
