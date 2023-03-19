@@ -104,6 +104,9 @@ pub enum HomeFeed {
     /// A feed containing ids to concerts. Use [`crate::Concert::from_id`] to get usable structs from
     /// it.
     ConcertFeed(Vec<String>),
+    /// A feed containing ids to artists. Use [`crate::media::Artist::from_id`] to get usable structs
+    /// from it.
+    ArtistFeed(Vec<String>),
     /// News feed. Use [`Crunchyroll::news_feed`] to get it.
     NewsFeed,
     /// Browse content. Use [`Crunchyroll::browse`] with the value of this field as argument. Do not
@@ -241,6 +244,15 @@ impl<'de> Deserialize<'de> for HomeFeed {
                             .map(|v| v.to_string())
                             .collect();
                         Ok(Self::MusicVideoFeed(ids))
+                    }
+                    "artist" => {
+                        let ids: Vec<String> = get_value("ids")?
+                            .as_array()
+                            .ok_or_else(|| type_error("ids", "string list"))?
+                            .iter()
+                            .map(|v| v.to_string())
+                            .collect();
+                        Ok(Self::ArtistFeed(ids))
                     }
                     #[cfg(feature = "__test_strict")]
                     _ => Err(Error::custom(format!(
