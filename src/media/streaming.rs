@@ -296,7 +296,7 @@ impl VariantData {
                         .into_iter()
                         .flat_map(|s| {
                             std::iter::repeat(s.d as u32)
-                                .take(s.r.unwrap_or(1) as usize)
+                                .take(s.r.unwrap_or_default() as usize + 1)
                                 .collect::<Vec<u32>>()
                         })
                         .collect(),
@@ -337,7 +337,7 @@ impl VariantData {
                         .into_iter()
                         .flat_map(|s| {
                             std::iter::repeat(s.d as u32)
-                                .take(s.r.unwrap_or(1) as usize)
+                                .take(s.r.unwrap_or_default() as usize + 1)
                                 .collect::<Vec<u32>>()
                         })
                         .collect(),
