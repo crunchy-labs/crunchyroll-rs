@@ -1,3 +1,5 @@
+//! Crunchylists, watchlists and watch history.
+
 mod crunchylist;
 mod watch_history;
 mod watchlist;

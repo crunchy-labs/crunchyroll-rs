@@ -199,7 +199,7 @@ impl Subtitle {
     }
 }
 
-/// A [`VideoStream`] variant.
+/// A [`Stream`] variant.
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -212,7 +212,7 @@ pub struct Variant {
     pub url: String,
 }
 
-/// Stream variants for a [`VideoStream`].
+/// Stream variants for a [`Stream`].
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]

@@ -8,6 +8,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
+/// A item in your watchlist.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -57,6 +58,7 @@ impl WatchlistEntry {
     }
 }
 
+/// A simplified version of [`WatchlistEntry`].
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -89,6 +91,7 @@ impl SimpleWatchlistEntry {
 }
 
 enum_values! {
+    /// Filter how to sort watchlist entries when querying.
     pub enum WatchlistSort {
         Updated = "date_updated"
         Watched = "date_watched"
@@ -98,6 +101,7 @@ enum_values! {
 }
 
 enum_values! {
+    /// Order how to sort watchlist entries when querying.
     pub enum WatchlistOrder {
         Newest = "desc"
         Oldest = "asc"
@@ -105,6 +109,7 @@ enum_values! {
 }
 
 enum_values! {
+    /// If queried watchlist entries should be subbed or dubbed.
     pub enum WatchlistLanguage {
         Subbed = "subbed"
         Dubbed = "dubbed"
@@ -112,6 +117,7 @@ enum_values! {
 }
 
 options! {
+    /// Options how to query the watchlist.
     WatchlistOptions;
     order(WatchlistOrder, "order") = Some(WatchlistOrder::Newest),
     sort(WatchlistSort, "sort_by") = None,

@@ -1,10 +1,12 @@
+//! Media categories.
+
 use crate::common::{Image, V2BulkResult};
 use crate::Result;
 use crate::{enum_values, Crunchyroll, Locale, Request};
 use serde::Deserialize;
 
 enum_values! {
-    /// Video categories / genres
+    /// Video categories / genres.
     pub enum Category {
         Action = "action"
         Adventure = "adventure"
@@ -30,6 +32,7 @@ impl From<CategoryInformation> for Category {
     }
 }
 
+/// Images for [`CategoryInformation`].
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]

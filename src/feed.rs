@@ -1,3 +1,5 @@
+//! Feeds like home feed or news feed.
+
 use crate::common::{Pagination, V2BulkResult, V2TypeBulkResult};
 use crate::media::MediaType;
 use crate::search::{BrowseOptions, BrowseSortType};
@@ -7,6 +9,7 @@ use futures_util::FutureExt;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 
+/// Images for a [`FeedCarousel`].
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -39,6 +42,7 @@ pub struct FeedCarousel {
     third_party_impression_tracker: crate::StrictValue,
 }
 
+/// Images for a [`FeedBanner`].
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -49,6 +53,7 @@ pub struct FeedBannerImages {
     pub desktop_large: String,
 }
 
+/// A feed banner.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct FeedBanner {
     pub title: String,
@@ -61,6 +66,7 @@ pub struct FeedBanner {
     pub images: FeedBannerImages,
 }
 
+/// A feed containing multiple ids to different series.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct SeriesFeed {
     pub title: String,
@@ -71,6 +77,7 @@ pub struct SeriesFeed {
     pub ids: Vec<String>,
 }
 
+/// A feed containing a id to a series or episode, depending on what you've watched in the past.
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct SimilarFeed {
     pub title: String,
@@ -81,6 +88,7 @@ pub struct SimilarFeed {
     pub similar_id: String,
 }
 
+/// Items which can be shown on the home feed.
 #[derive(Clone, Debug, Request)]
 pub enum HomeFeed {
     /// The feed at the top of the Crunchyroll website.
@@ -274,6 +282,7 @@ impl<'de> Deserialize<'de> for HomeFeed {
     }
 }
 
+/// Top news and latest news.
 pub struct NewsFeedResult {
     pub top_news: Pagination<NewsFeed>,
     pub latest_news: Pagination<NewsFeed>,

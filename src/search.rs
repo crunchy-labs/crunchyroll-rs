@@ -1,3 +1,5 @@
+//! Browse and search related types.
+
 mod browse {
     use crate::categories::Category;
     use crate::common::{Pagination, V2BulkResult};
@@ -38,6 +40,7 @@ mod browse {
     }
 
     enum_values! {
+        /// How to sort queried browse results.
         pub enum BrowseSortType {
             Popularity = "popularity"
             NewlyAdded = "newly_added"
@@ -46,6 +49,7 @@ mod browse {
     }
 
     options! {
+        /// Options how to browse.
         BrowseOptions;
         /// Specifies the categories of the entries.
         categories(Vec<Category>, "categories") = None,

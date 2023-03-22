@@ -11,11 +11,12 @@ pub use music_video::*;
 use crate::Request;
 use serde::Deserialize;
 
+/// A music genre.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct Genre {
+pub struct MusicGenre {
     pub id: String,
 
     pub display_value: String,

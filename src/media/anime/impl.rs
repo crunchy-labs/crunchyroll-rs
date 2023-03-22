@@ -6,6 +6,7 @@ use serde::de::{DeserializeOwned, Error};
 use serde::{Deserialize, Deserializer};
 use serde_json::Map;
 
+/// Information about the intro of an [`Episode`] or [`Movie`].
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -32,6 +33,7 @@ pub(crate) struct VideoIntroResult {
     pub(crate) last_updated: DateTime<Utc>,
 }
 
+/// Media related to the media which queried this struct.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -66,6 +68,7 @@ where
         .map_err(|e| Error::custom(e.to_string()))
 }
 
+/// Information about the playhead of an [`Episode`] or [`Movie`].
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]

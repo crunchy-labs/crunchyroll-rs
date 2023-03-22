@@ -1,3 +1,5 @@
+//! Account specific actions.
+
 use crate::{options, Crunchyroll, EmptyJsonProxy, Executor, Locale, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
@@ -60,6 +62,7 @@ pub struct Account {
 }
 
 options! {
+    /// Preferences which account details should be updates.
     UpdatePreferences;
     /// Updates the language in which emails are sent to your account.
     email_language(Locale, "preferred_communication_language") = None,

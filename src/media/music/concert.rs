@@ -1,13 +1,14 @@
 use crate::crunchyroll::Executor;
 use crate::media::music::util::availability_object_to_keys;
 use crate::media::util::request_media;
-use crate::media::{ArtistPreview, Genre, Media, ThumbnailImages};
+use crate::media::{ArtistPreview, Media, MusicGenre, ThumbnailImages};
 use crate::{Crunchyroll, Request, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::de::{Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
 use std::sync::Arc;
 
+/// Metadata for a concert.
 #[derive(Clone, Debug, Deserialize, Request, smart_default::SmartDefault)]
 #[request(executor(artist))]
 #[serde(rename_all = "camelCase")]
@@ -34,7 +35,7 @@ pub struct Concert {
     pub copyright: String,
 
     pub images: ThumbnailImages,
-    pub genres: Vec<Genre>,
+    pub genres: Vec<MusicGenre>,
 
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub created_at: DateTime<Utc>,

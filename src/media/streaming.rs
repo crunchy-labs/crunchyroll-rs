@@ -7,9 +7,13 @@ use std::io::Write;
 use std::sync::Arc;
 use std::time::Duration;
 
+/// Segment decryption key.
 #[cfg(feature = "hls-stream")]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "hls-stream", feature = "dash-stream"))))]
 pub type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
+/// Segment decryption key.
 #[cfg(not(feature = "hls-stream"))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "hls-stream", feature = "dash-stream"))))]
 pub type Aes128CbcDec = ();
 
 impl Stream {
@@ -19,11 +23,11 @@ impl Stream {
     /// Crunchyroll provides.
     /// The locale argument specifies which hardsub (subtitles which are "burned" into
     /// the video) the returned data should have. You can get a list of supported locales
-    /// by calling [`VideoStream::streaming_hardsub_locales`].
+    /// by calling [`Stream::streaming_hardsub_locales`].
     /// The result contains video + audio data (combined). If you want to get video and
-    /// audio separately, check out [`VideoStream::dash_streaming_data`].
+    /// audio separately, check out [`Stream::dash_streaming_data`].
     /// Note that this is only the implementation of this crate to stream data. You can
-    /// still manually use the variants in [`VideoStream::variants`] and implement the streaming on
+    /// still manually use the variants in [`Stream::variants`] and implement the streaming on
     /// your own.
     #[cfg(feature = "hls-stream")]
     #[cfg_attr(docsrs, doc(cfg(feature = "hls-stream")))]
@@ -66,13 +70,13 @@ impl Stream {
     /// stream Crunchyroll provides.
     /// The locale argument specifies which hardsub (subtitles which are "burned" into
     /// the video) the returned data should have. You can get a list of supported locales
-    /// by calling [`VideoStream::streaming_hardsub_locales`].
+    /// by calling [`Stream::streaming_hardsub_locales`].
     /// The result is a tuple; the first [`Vec<VariantData>`] contains only video data,
     /// without any audio; the second [`Vec<VariantData>`] contains only audio data,
     /// without any video. If you want video + audio combined, check out
-    /// [`VideoStream::dash_streaming_data`].
+    /// [`Stream::dash_streaming_data`].
     /// Note that this is only the implementation of this crate to stream data. You can
-    /// still manually use the variants in [`VideoStream::variants`] and implement the streaming on
+    /// still manually use the variants in [`Stream::variants`] and implement the streaming on
     /// your own.
     #[cfg(feature = "dash-stream")]
     #[cfg_attr(docsrs, doc(cfg(feature = "dash-stream")))]
@@ -138,12 +142,13 @@ impl Stream {
     }
 
     /// Return all supported hardsub locales which can be used as argument in
-    /// [`VideoStream::hls_streaming_data`] / [`VideoStream::dash_streaming_data`].
+    /// [`Stream::hls_streaming_data`].
     pub fn streaming_hardsub_locales(&self) -> Vec<Locale> {
         self.variants.keys().cloned().collect::<Vec<Locale>>()
     }
 }
 
+/// Video resolution.
 #[derive(Clone, Debug)]
 pub struct Resolution {
     pub width: u64,
@@ -403,7 +408,7 @@ impl VariantData {
 
     /// Get the m3u8 master url if you want to use it in an external download service (like ffmpeg)
     /// to handle the download process. Only works if this [`VariantData`] was returned by
-    /// [`VideoStream::hls_streaming_data`].
+    /// [`Stream::hls_streaming_data`].
     /// Implementing the download in native Rust has generally no drawbacks (if done with
     /// multithreading) and even can be faster than 3rd party tools (like ffmpeg; multithreaded
     /// native Rust is ~30 secs faster).

@@ -2,6 +2,7 @@ use crate::common::Image;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
+/// Images for a [`crate::Movie`] or [`crate::Concert`].
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(try_from = "Map<String, Value>")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -30,6 +31,7 @@ impl TryFrom<Map<String, Value>> for ThumbnailImages {
     }
 }
 
+/// Images for [`Series`], [`MovieListing`] or [`crate::media::Artist`].
 #[derive(Clone, Debug, Default, Deserialize)]
 #[serde(try_from = "Map<String, Value>")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]

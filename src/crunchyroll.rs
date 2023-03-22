@@ -1,3 +1,5 @@
+//! Builder and access to the [`Crunchyroll`] struct which is required to make any action.
+
 use crate::enum_values;
 use reqwest::Client;
 use std::sync::Arc;
@@ -72,6 +74,7 @@ impl Locale {
 }
 
 enum_values! {
+    /// Maturity rating.
     pub enum MaturityRating {
         NotMature = "M2"
         Mature = "M3"

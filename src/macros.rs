@@ -119,7 +119,10 @@ macro_rules! enum_values {
 /// }
 /// ```
 macro_rules! options {
-    ($name:ident; $($(#[$attribute:meta])* $field:ident($t:ty, $query_name:literal) = $default:expr),*) => {
+    ($(#[$struct_attribute:meta])* $name:ident; $($(#[$attribute:meta])* $field:ident($t:ty, $query_name:literal) = $default:expr),*) => {
+        $(
+            #[$struct_attribute]
+        )*
         #[derive(Clone, Debug)]
         pub struct $name {
             $(

@@ -1,3 +1,5 @@
+//! Commonly used types.
+
 use crate::{Executor, Result};
 use futures_util::{Stream, StreamExt};
 use serde::de::DeserializeOwned;
@@ -54,6 +56,7 @@ pub(crate) struct PaginationOptions {
     pub(crate) extra: BTreeMap<&'static str, String>,
 }
 
+/// Pagination for results which can be continuously be fetched.
 #[allow(clippy::type_complexity)]
 pub struct Pagination<T: Default + DeserializeOwned + Request> {
     data: Vec<T>,

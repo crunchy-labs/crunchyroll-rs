@@ -1,6 +1,8 @@
+//! Url parsing.
+
 use regex::Regex;
 
-/// Types of Crunchyroll urls, pointing to series, episodes or movies.
+/// Types of Crunchyroll urls, pointing to media.
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 #[derive(Clone, Debug)]
 pub enum UrlType {
@@ -26,8 +28,7 @@ pub enum UrlType {
     Concert(String),
 }
 
-/// Extract information out of Crunchyroll urls which are pointing to episodes / movies /
-/// series.
+/// Extract information out of Crunchyroll urls which are pointing to media.
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
     lazy_static::lazy_static! {

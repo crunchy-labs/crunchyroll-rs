@@ -7,6 +7,7 @@ use serde::{Deserialize, Deserializer};
 use serde_json::json;
 use std::sync::Arc;
 
+/// Avatar of a [`CommentUser`].
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -15,6 +16,7 @@ pub struct CommentUserAttributesAvatar {
     pub unlocked: Vec<Image>,
 }
 
+/// Attributes of a [`CommentUser`].
 #[derive(Clone, Debug, Default, Deserialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -48,6 +50,7 @@ pub struct CommentVotes {
 }
 
 enum_values! {
+    /// Flags you've flagged a comment with.
     pub enum CommentFlag {
         Like = "like"
         Spoiler = "spoiler"
@@ -232,6 +235,7 @@ impl Comment {
 }
 
 enum_values! {
+    /// How to sort queried comments.
     pub enum CommentSortType {
         Popularity = "popular"
         Newest = "date"
@@ -239,6 +243,7 @@ enum_values! {
 }
 
 options! {
+    /// Options how to query comments.
     CommentsOptions;
     sort(CommentSortType, "sort") = Some(CommentSortType::Popularity)
 }

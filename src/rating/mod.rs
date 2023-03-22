@@ -1,3 +1,5 @@
+//! Comments and reviews.
+
 mod comment;
 mod review;
 

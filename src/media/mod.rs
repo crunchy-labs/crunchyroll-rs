@@ -1,3 +1,5 @@
+//! All media items like series, episodes or movies.
+
 mod anime;
 mod media_collection;
 mod music;
@@ -18,12 +20,15 @@ pub use streaming::*;
 use crate::{Crunchyroll, Result};
 
 crate::enum_values! {
+    /// Type of media.
     pub enum MediaType {
         Series = "series"
         Movie = "movie_listing"
     }
 }
 
+/// Trait every media struct ([`Series`], [`Season`], [`Episode`], [`MovieListing`], [`Movie`],
+/// [`MusicVideo`], [`Concert`]) implements.
 #[async_trait::async_trait]
 pub trait Media {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self>

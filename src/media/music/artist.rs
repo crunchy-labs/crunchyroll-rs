@@ -2,12 +2,13 @@ use crate::common::V2BulkResult;
 use crate::crunchyroll::Executor;
 use crate::media::music::concert::Concert;
 use crate::media::util::request_media;
-use crate::media::{Genre, MusicVideo, PosterImages};
+use crate::media::{MusicGenre, MusicVideo, PosterImages};
 use crate::{Crunchyroll, Request, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
 
+/// A preview / summary of an artist. Returned when requesting a [`MusicVideo`] or [`Concert`].
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -33,6 +34,7 @@ impl ArtistPreview {
     }
 }
 
+/// Metadata for a music artist.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Request, smart_default::SmartDefault)]
 #[serde(rename_all = "camelCase")]
@@ -69,7 +71,7 @@ pub struct Artist {
     pub total_video_duration: Duration,
 
     pub images: PosterImages,
-    pub genres: Vec<Genre>,
+    pub genres: Vec<MusicGenre>,
 
     pub is_public: bool,
     pub ready_to_publish: bool,

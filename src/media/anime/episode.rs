@@ -28,7 +28,7 @@ pub(crate) struct EpisodeVersion {
     pub(crate) variant: String,
 }
 
-/// Metadata for a episode.
+/// Metadata for an episode.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]

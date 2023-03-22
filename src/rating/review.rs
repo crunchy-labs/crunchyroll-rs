@@ -229,6 +229,7 @@ where
 }
 
 enum_values! {
+    /// How to sort queried reviews.
     pub enum ReviewSortType {
         Newest = "newest"
         Oldest = "oldest"
@@ -237,6 +238,7 @@ enum_values! {
 }
 
 options! {
+    /// Options how to query reviews.
     ReviewOptions;
     sort(ReviewSortType, "sort") = Some(ReviewSortType::Helpful),
     filter(RatingStar, "filter") = None
