@@ -173,6 +173,10 @@ macro_rules! media_version {
                         let re_requested = $media::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, &self.id).await?;
                         self.versions = re_requested.versions
                     }
+                    // remove version id which references to the caller struct
+                    if let Some(pos) = self.versions.as_ref().unwrap().iter().position(|v| v.id == self.id) {
+                        self.versions.as_mut().unwrap().remove(pos);
+                    }
                     Ok(())
                 }
 
@@ -216,15 +220,15 @@ macro_rules! media_version {
 media_version! {
     #[doc="Show in which audios this [`Season`] is also available."]
     #[doc="Get the versions of this [`Season`] which have the specified audio locale(s). Use [`Season::available_versions`] to see all supported locale."]
-    #[doc="Get all available versions (same [`Season`] but different audio locale) for this [`Season`]."]
+    #[doc="Get all available other versions (same [`Season`] but different audio locale) for this [`Season`]."]
     Season = "https://www.crunchyroll.com/content/v2/cms/seasons"
     #[doc="Show in which audios this [`Episode`] is also available."]
     #[doc="Get the versions of this [`Episode`] which have the specified audio locale(s). Use [`Episode::available_versions`] to see all supported locale."]
-    #[doc="Get all available versions (same [`Episode`] but different audio locale) for this [`Episode`]."]
+    #[doc="Get all available other versions (same [`Episode`] but different audio locale) for this [`Episode`]."]
     Episode = "https://www.crunchyroll.com/content/v2/cms/episodes"
     #[doc="Show in which audios this [`MovieListing`] is also available."]
     #[doc="Get the versions of this [`MovieListing`] which have the specified audio locale(s). Use [`MovieListing::available_versions`] to see all supported locale."]
-    #[doc="Get all available versions (same [`MovieListing`] but different audio locale) for this [`MovieListing`]"]
+    #[doc="Get all available other versions (same [`MovieListing`] but different audio locale) for this [`MovieListing`]"]
     MovieListing = "https://www.crunchyroll.com/content/v2/cms/movie_listings"
 }
 
