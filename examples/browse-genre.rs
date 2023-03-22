@@ -32,6 +32,12 @@ async fn main() -> Result<()> {
                 println!("Browse returned movie listing {}", movie_listing.title)
             }
             MediaCollection::Movie(movie) => println!("Browse returned movie {}", movie.title),
+            MediaCollection::MusicVideo(music_video) => {
+                println!("Browse returned music video {}", music_video.title)
+            }
+            MediaCollection::Concert(concert) => {
+                println!("Browse returned concert {}", concert.title)
+            }
         }
     }
 

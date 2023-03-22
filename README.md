@@ -40,8 +40,8 @@ The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).
 You need this crate and [tokio](https://github.com/tokio-rs/tokio) as dependency in your Cargo.toml in order to start working:
 ```toml
 [dependencies]
-crunchyroll-rs = "0.2"
-tokio = { version = "1.23", features = ["full"] }
+crunchyroll-rs = "0.3"
+tokio = { version = "1.26", features = ["full"] }
 ```
 
 The following code prints the data of the episode behind the given url:
@@ -59,17 +59,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let url = crunchyroll_rs::parse_url("https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome").expect("url is not valid");
     if let UrlType::EpisodeOrMovie(media_id) = url {
-        match crunchyroll.media_collection_from_id(media_id, None).await? {
-            MediaCollection::Episode(episode) => {
-                println!(
-                    "Url is episode {} ({}) of season {} from {}",
-                    episode.metadata.episode_number,
-                    episode.title, 
-                    episode.metadata.season_number,
-                    episode.metadata.series_title
-                )
-            }
-            _ => ()
+        if let MediaCollection::Episode(episode) = crunchyroll.media_collection_from_id(media_id).await? {
+            println!(
+                "Url is episode {} ({}) of {} season {}",
+                episode.episode_number,
+                episode.title,
+                episode.series_title,
+                episode.season_number
+            )
         }
     } else {
         panic!("Url is not a episode")

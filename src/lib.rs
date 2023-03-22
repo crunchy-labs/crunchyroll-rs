@@ -35,15 +35,11 @@
 //! the [`Crunchyroll`] struct. Use `Crunchyroll::*_from_id` to get them while `*` is the media type.
 //!
 //! ```
-//! let series: Series = crunchy
-//!     // get the series with the id 'GY8VEQ95Y'
-//!     .media_from_id("GY8VEQ95Y")
-//!     .await?;
+//! // get the series with the id 'GY8VEQ95Y'
+//! let series = Series::from_id(crunchy, "GY8VEQ95Y").await?;
 //!
-//! let episode: Episode = crunchy
-//!     // get the episode with the id 'GRDKJZ81Y'
-//!     .media_from_id("GRDKJZ81Y")
-//!     .await?;
+//! // get the episode with the id 'GRDKJZ81Y'
+//! let episode = Episode::from_id(crunchy, "GRDKJZ81Y").await?;
 //!
 //! ```
 //!
@@ -61,7 +57,7 @@
 //!
 //! This crate allows you to get the actual video streams behind episodes and movies. With
 //! [`Episode::streams`] and [`Movie::streams`] you get access to the streams. The returning struct
-//! [`media::VideoStream`] has all required information to access the streams.
+//! [`media::Stream`] has all required information to access the streams.
 //!
 //! ```
 //! let streams = episode
@@ -76,8 +72,8 @@
 //!
 //! The feature `hls-stream` and / or `dash-stream` must be activated to get streams. `hls-stream`
 //! is activated by default and should be used if you want to get the video + audio combined
-//! ([`media::VideoStream::hls_streaming_data`]). `dash-stream` should be used if you want to get
-//! the audio and video streams separately ([`media::VideoStream::dash_streaming_data`]).
+//! ([`media::Stream::hls_streaming_data`]). `dash-stream` should be used if you want to get
+//! the audio and video streams separately ([`media::Stream::dash_streaming_data`]).
 //!
 //! ```
 //! let streaming_data = streams
