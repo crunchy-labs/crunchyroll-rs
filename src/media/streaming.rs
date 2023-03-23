@@ -260,13 +260,17 @@ impl VariantData {
 
         for representation in representations {
             let string_fps = representation.frameRate.unwrap_or_default();
-            let mut fps_split = string_fps.split('/');
-            let left = fps_split.next().unwrap_or("0").parse().unwrap_or(0f64);
-            let right = fps_split.next().unwrap_or("0").parse().unwrap_or(0f64);
-            let fps = if left != 0f64 && right != 0f64 {
-                left / right
+
+            let fps = if let Some((l, r)) = string_fps.split_once('/') {
+                let left = l.parse().unwrap_or(0f64);
+                let right = r.parse().unwrap_or(0f64);
+                if left != 0f64 && right != 0f64 {
+                    left / right
+                } else {
+                    0f64
+                }
             } else {
-                0f64
+                string_fps.parse().unwrap_or(0f64)
             };
 
             #[cfg(not(feature = "__test_strict"))]
