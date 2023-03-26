@@ -36,6 +36,7 @@ pub(crate) struct VideoIntroResult {
 /// Media related to the media which queried this struct.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct RelatedMedia<T: Request + DeserializeOwned> {
@@ -71,18 +72,19 @@ where
 /// Information about the playhead of an [`Episode`] or [`Movie`].
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct PlayheadInformation {
-    playhead: u32,
+    pub playhead: u32,
 
-    content_id: String,
+    pub content_id: String,
 
-    fully_watched: bool,
+    pub fully_watched: bool,
 
     /// Date when the last playhead update was
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    last_modified: DateTime<Utc>,
+    pub last_modified: DateTime<Utc>,
 }
 
 macro_rules! impl_manual_media_deserialize {
@@ -123,6 +125,26 @@ impl_manual_media_deserialize! {
     Episode = "episode_metadata"
     MovieListing = "movie_listing_metadata"
     Movie = "movie_metadata"
+}
+
+macro_rules! impl_manual_media_serialize {
+    ($($media:ident)*) => {
+        $(
+            #[cfg(feature = "serialize")]
+            impl serde::Serialize for $media {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: serde::Serializer,
+                {
+                    $media::serialize(self, serializer)
+                }
+            }
+        )*
+    }
+}
+
+impl_manual_media_serialize! {
+    Series Season Episode MovieListing Movie
 }
 
 macro_rules! impl_media_request {

@@ -10,6 +10,7 @@ mod browse {
 
     /// Human readable implementation of [`SimulcastSeason`].
     #[derive(Clone, Debug, Default, Deserialize)]
+    #[cfg_attr(feature = "serialize", derive(serde::Serialize))]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct SimulcastSeasonLocalization {
@@ -19,6 +20,7 @@ mod browse {
 
     /// A simulcast season.
     #[derive(Clone, Debug, Default, Deserialize, Request)]
+    #[cfg_attr(feature = "serialize", derive(serde::Serialize))]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct SimulcastSeason {

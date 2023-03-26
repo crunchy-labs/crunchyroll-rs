@@ -1,6 +1,26 @@
 use crate::media::Artist;
 use crate::{Concert, MusicVideo, Result};
 
+macro_rules! impl_manual_media_serialize {
+    ($($media:ident)*) => {
+        $(
+            #[cfg(feature = "serialize")]
+            impl serde::Serialize for $media {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: serde::Serializer,
+                {
+                    $media::serialize(self, serializer)
+                }
+            }
+        )*
+    }
+}
+
+impl_manual_media_serialize! {
+    Concert MusicVideo
+}
+
 macro_rules! impl_media_music {
     ($($media_music:ident)*) => {
         $(

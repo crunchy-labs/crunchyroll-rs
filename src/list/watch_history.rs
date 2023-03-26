@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 /// Entry of your watchlist.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 #[request(executor(panel))]

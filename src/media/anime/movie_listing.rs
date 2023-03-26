@@ -25,6 +25,7 @@ pub(crate) struct MovieListingVersion {
 /// Metadata for a movie listing.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -81,6 +82,7 @@ pub struct MovieListing {
     pub availability_notes: String,
 
     #[serde(default)]
+    #[serde(skip_serializing)]
     pub(crate) versions: Option<Vec<MovieListingVersion>>,
 
     #[cfg(feature = "__test_strict")]

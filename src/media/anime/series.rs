@@ -10,6 +10,7 @@ use std::sync::Arc;
 /// Metadata for a series.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]

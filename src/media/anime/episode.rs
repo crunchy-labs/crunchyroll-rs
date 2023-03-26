@@ -31,6 +31,7 @@ pub(crate) struct EpisodeVersion {
 /// Metadata for an episode.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -88,6 +89,7 @@ pub struct Episode {
 
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
     #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
@@ -126,6 +128,7 @@ pub struct Episode {
     pub eligible_region: String,
 
     #[serde(default)]
+    #[serde(skip_serializing)]
     pub(crate) versions: Option<Vec<EpisodeVersion>>,
 
     #[cfg(feature = "__test_strict")]

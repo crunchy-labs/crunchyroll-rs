@@ -22,6 +22,9 @@ enum_values! {
 
 /// Details about a star rating of [`Rating`].
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct RatingStarDetails {
     /// The amount of user ratings.
     pub displayed: String,
@@ -37,6 +40,7 @@ pub struct RatingStarDetails {
 
 /// Overview about rating statistics for a series or movie listing.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Rating {
@@ -61,6 +65,7 @@ pub struct Rating {
 
 /// Ratings for a review a user has made about a series or movie listing.
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ReviewRatings {
@@ -75,6 +80,7 @@ pub struct ReviewRatings {
 
 /// Content of a review a user has made about a series or movie listing.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ReviewContent {
@@ -96,6 +102,7 @@ pub struct ReviewContent {
 
 /// Author of a review.
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ReviewAuthor {
@@ -108,6 +115,7 @@ pub struct ReviewAuthor {
 
 /// A review a user has made about a series or movie listing.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Review {
@@ -164,6 +172,7 @@ impl Review {
 
 /// Review which were made by your account.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SelfReview {

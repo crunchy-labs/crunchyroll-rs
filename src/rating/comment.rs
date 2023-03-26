@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 /// Avatar of a [`CommentUser`].
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentUserAttributesAvatar {
@@ -18,6 +19,7 @@ pub struct CommentUserAttributesAvatar {
 
 /// Attributes of a [`CommentUser`].
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentUserAttributes {
@@ -27,6 +29,7 @@ pub struct CommentUserAttributes {
 
 /// Information about a user which wrote a [`Comment`].
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentUser {
@@ -38,6 +41,7 @@ pub struct CommentUser {
 
 /// Number of votes users gave a [`Comment`].
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CommentVotes {
@@ -60,6 +64,7 @@ enum_values! {
 
 /// Comment about a episode or movie.
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Comment {

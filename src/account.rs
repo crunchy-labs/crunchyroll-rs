@@ -10,6 +10,7 @@ use std::sync::Arc;
 /// Account data of the currently logged in user.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Account {
@@ -259,6 +260,7 @@ mod wallpaper {
 
     /// Wallpaper which are shown at the top of your Crunchyroll profile.
     #[derive(Clone, Debug, Default, Deserialize, Request)]
+    #[cfg_attr(feature = "serialize", derive(serde::Serialize))]
     #[serde(from = "String")]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct Wallpaper {
@@ -266,6 +268,7 @@ mod wallpaper {
     }
 
     #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+    #[cfg_attr(feature = "serialize", derive(serde::Serialize))]
     #[request(executor(items))]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]

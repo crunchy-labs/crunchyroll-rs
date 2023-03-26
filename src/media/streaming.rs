@@ -150,6 +150,7 @@ impl Stream {
 
 /// Video resolution.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serialize", derive(serde::Deserialize, serde::Serialize))]
 pub struct Resolution {
     pub width: u64,
     pub height: u64,
@@ -190,8 +191,10 @@ enum VariantDataUrl {
 /// Streaming data for a variant.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[request(executor(segments))]
 pub struct VariantData {
+    #[cfg_attr(feature = "serialize", serde(skip))]
     executor: Arc<Executor>,
 
     pub resolution: Resolution,
@@ -199,6 +202,7 @@ pub struct VariantData {
     pub fps: f64,
     pub codecs: String,
 
+    #[cfg_attr(feature = "serialize", serde(skip))]
     url: VariantDataUrl,
 }
 

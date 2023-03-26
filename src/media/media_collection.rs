@@ -14,6 +14,7 @@ use std::sync::Arc;
 /// specific media.
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 pub enum MediaCollection {
     Series(Series),
     Season(Season),

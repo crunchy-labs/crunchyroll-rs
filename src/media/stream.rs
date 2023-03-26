@@ -62,6 +62,7 @@ pub(crate) struct StreamVersion {
 /// A video stream.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[request(executor(subtitles))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -89,6 +90,7 @@ pub struct Stream {
     pub variants: HashMap<Locale, Variants>,
 
     /// Might be null, for music videos and concerts mostly.
+    #[serde(skip_serializing)]
     versions: Option<Vec<StreamVersion>>,
     /// When requesting versions from [`Stream::versions`] this url is required as multiple paths
     /// exists which can lead to the [`Stream`] struct.
@@ -179,6 +181,7 @@ impl Stream {
 
 /// Subtitle for streams.
 #[derive(Clone, Debug, Default, Deserialize, Request)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Subtitle {
@@ -201,6 +204,7 @@ impl Subtitle {
 
 /// A [`Stream`] variant.
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Variant {
@@ -215,6 +219,7 @@ pub struct Variant {
 /// Stream variants for a [`Stream`].
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Variants {

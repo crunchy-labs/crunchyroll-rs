@@ -19,6 +19,8 @@ hls-stream = ["aes", "cbc", "m3u8-rs"]
 dash-stream = ["dash-mpd"]
 # Add functionality to parse Crunchyroll urls.
 parse = ["lazy_static", "regex"]
+# Add functionality to serialize most structs.
+serialize = []
 # Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
 experimental-stabilizations = []
 

@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 /// Metadata for a music video.
 #[derive(Clone, Debug, Deserialize, Request, smart_default::SmartDefault)]
+#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[request(executor(artist))]
 #[serde(rename_all = "camelCase")]
 #[serde(remote = "Self")]
@@ -50,6 +51,7 @@ pub struct MusicVideo {
 
     #[serde(alias = "durationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
     #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
