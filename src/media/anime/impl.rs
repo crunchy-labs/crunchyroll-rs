@@ -174,7 +174,8 @@ macro_rules! media_version {
                 async fn assert_versions(&mut self) -> Result<()> {
                     if self.versions.is_none() {
                         let re_requested = $media::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, &self.id).await?;
-                        self.versions = re_requested.versions
+                        // if the versions are still `None`, no other versions exist
+                        self.versions = re_requested.versions.map_or(Some(vec![]), |v| Some(v))
                     }
                     // remove version id which references to the caller struct
                     if let Some(pos) = self.versions.as_ref().unwrap().iter().position(|v| v.id == self.id) {
