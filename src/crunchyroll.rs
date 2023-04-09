@@ -114,7 +114,7 @@ mod auth {
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
     use http::header;
-    use reqwest::{Client, IntoUrl, RequestBuilder};
+    use reqwest::{Client, ClientBuilder, IntoUrl, RequestBuilder};
     use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
     use std::ops::Add;
@@ -442,6 +442,28 @@ mod auth {
 
     impl Default for CrunchyrollBuilder {
         fn default() -> Self {
+            Self {
+                client: CrunchyrollBuilder::predefined_client_builder()
+                    .build()
+                    .unwrap(),
+                locale: Locale::en_US,
+                preferred_audio_locale: None,
+                fixes: ExecutorFixes {
+                    locale_name_parsing: false,
+                    season_number: false,
+                },
+            }
+        }
+    }
+
+    impl CrunchyrollBuilder {
+        /// Return a [`ClientBuilder`] which has all required configurations, necessary to send
+        /// successful requests to Crunchyroll, applied (most of the time; sometimes Crunchyroll has
+        /// fluctuations that requests doesn't work for a specific amount of time and after that
+        /// amount everything goes back to normal and works as it should). You can use this builder
+        /// to configure the behavior of the download client. Use [`CrunchyrollBuilder::client`] to
+        /// set your built client.
+        pub fn predefined_client_builder() -> ClientBuilder {
             let mut root_store = rustls::RootCertStore::empty();
             root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
                 |ta| {
@@ -462,27 +484,13 @@ mod auth {
 
             // the client needs some extra work to be created. the tls must be custom build in order
             // to bypass the cloudflare bot check crunchyroll has applied to the website
-            let client = Client::builder()
+            Client::builder()
                 .https_only(true)
                 .cookie_store(true)
                 .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46a")
                 .use_preconfigured_tls(config)
-                .build()
-                .unwrap();
-
-            Self {
-                client,
-                locale: Locale::en_US,
-                preferred_audio_locale: None,
-                fixes: ExecutorFixes {
-                    locale_name_parsing: false,
-                    season_number: false,
-                },
-            }
         }
-    }
 
-    impl CrunchyrollBuilder {
         /// Set a custom client over which all request to the api are made.
         /// Is it not recommended to overwrite the default client since its need some special
         /// configurations to bypass cloudflare.
