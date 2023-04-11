@@ -41,7 +41,7 @@ You need this crate and [tokio](https://github.com/tokio-rs/tokio) as dependency
 ```toml
 [dependencies]
 crunchyroll-rs = "0.3"
-tokio = { version = "1.26", features = ["full"] }
+tokio = { version = "1.27", features = ["full"] }
 ```
 
 The following code prints the data of the episode behind the given url:
