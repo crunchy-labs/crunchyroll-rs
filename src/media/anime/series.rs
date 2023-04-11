@@ -3,7 +3,7 @@ use crate::crunchyroll::Executor;
 use crate::media::anime::util::real_dedup_vec;
 use crate::media::util::request_media;
 use crate::media::{Media, PosterImages};
-use crate::{Crunchyroll, Locale, Result, Season};
+use crate::{Crunchyroll, Locale, MusicVideo, Result, Season};
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -94,6 +94,15 @@ impl Series {
     pub async fn seasons(&self) -> Result<Vec<Season>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/series/{}/seasons",
+            self.id
+        );
+        request_media(self.executor.clone(), endpoint).await
+    }
+
+    /// Get music videos which are related to this series.
+    pub async fn featured_music(&self) -> Result<Vec<MusicVideo>> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/music/featured/{}",
             self.id
         );
         request_media(self.executor.clone(), endpoint).await
