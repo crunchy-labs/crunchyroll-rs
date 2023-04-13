@@ -59,6 +59,40 @@ static STREAM_DASH_SEGMENTS: Store<Vec<VariantSegment>> = Store::new(|| {
     })
 });
 
+static LEGACY_STREAM: Store<Stream> = Store::new(|| {
+    Box::pin(async {
+        let crunchy = SESSION.get().await?;
+        let stream = Episode::from_id(crunchy, "GRDKJZ81Y")
+            .await?
+            .legacy_streams()
+            .await?;
+        Ok(stream)
+    })
+});
+
+#[cfg(feature = "hls-stream")]
+static LEGACY_STREAM_HLS_DATA: Store<VariantData> = Store::new(|| {
+    Box::pin(async {
+        let stream = LEGACY_STREAM.get().await?;
+        let mut hls_streams = stream.hls_streaming_data(None).await?;
+
+        hls_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
+
+        Ok(hls_streams[0].clone())
+    })
+});
+#[cfg(feature = "dash-stream")]
+static LEGACY_STREAM_DASH_DATA: Store<VariantData> = Store::new(|| {
+    Box::pin(async {
+        let stream = LEGACY_STREAM.get().await?;
+        let mut dash_streams = stream.dash_streaming_data(None).await?.0;
+
+        dash_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
+
+        Ok(dash_streams[0].clone())
+    })
+});
+
 #[tokio::test]
 async fn stream_from_id() {
     assert_result!(STREAM.get().await)
@@ -135,4 +169,26 @@ async fn process_dash_segments() {
 #[tokio::test]
 async fn stream_versions() {
     assert_result!(STREAM.get().await.unwrap().versions().await)
+}
+
+#[tokio::test]
+async fn legacy_stream_from_id() {
+    assert_result!(LEGACY_STREAM.get().await)
+}
+
+#[cfg(feature = "hls-stream")]
+#[tokio::test]
+async fn legacy_stream_hls_data() {
+    assert_result!(LEGACY_STREAM_HLS_DATA.get().await)
+}
+
+#[cfg(feature = "dash-stream")]
+#[tokio::test]
+async fn legacy_stream_dash_data() {
+    assert_result!(LEGACY_STREAM_DASH_DATA.get().await)
+}
+
+#[tokio::test]
+async fn legacy_stream_versions() {
+    assert_result!(LEGACY_STREAM.get().await.unwrap().versions().await)
 }

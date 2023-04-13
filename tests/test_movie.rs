@@ -21,3 +21,8 @@ async fn movie_from_id() {
 async fn movie_streams() {
     assert_result!(MOVIE.get().await.unwrap().streams().await)
 }
+
+#[tokio::test]
+async fn movie_legacy_streams() {
+    assert_result!(MOVIE.get().await.unwrap().legacy_streams().await)
+}

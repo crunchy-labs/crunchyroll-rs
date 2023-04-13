@@ -32,6 +32,13 @@ async fn episode_streams() {
 }
 
 #[tokio::test]
+async fn episode_legacy_streams() {
+    let episode = START_EPISODE.get().await.unwrap();
+
+    assert_result!(episode.legacy_streams().await)
+}
+
+#[tokio::test]
 async fn episode_get_playhead() {
     let episode = START_EPISODE.get().await.unwrap();
 

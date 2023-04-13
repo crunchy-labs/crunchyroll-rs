@@ -93,7 +93,7 @@ pub struct Stream {
     /// When requesting versions from [`Stream::versions`] this url is required as multiple paths
     /// exists which can lead to the [`Stream`] struct.
     #[serde(skip)]
-    pub(crate) version_request_url: String,
+    pub(crate) version_request_url: Option<String>,
 
     #[cfg(feature = "__test_strict")]
     captions: crate::StrictValue,
@@ -120,7 +120,42 @@ impl Stream {
 
         let mut stream: Stream = serde_json::from_value(serde_json::to_value(map)?)?;
         stream.executor = executor;
-        stream.version_request_url = base.as_ref().to_string();
+        stream.version_request_url = Some(base.as_ref().to_string());
+
+        Ok(stream)
+    }
+
+    pub(crate) async fn from_legacy_url<S: AsRef<str>>(
+        executor: Arc<Executor>,
+        id: S,
+    ) -> Result<Stream> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/cms/v2/{}/videos/{}/streams",
+            executor.details.bucket,
+            id.as_ref()
+        );
+        let mut data = executor
+            .get(endpoint)
+            .query(&[
+                ("Signature".to_string(), executor.details.signature.clone()),
+                ("Policy".to_string(), executor.details.policy.clone()),
+                (
+                    "Key-Pair-Id".to_string(),
+                    executor.details.key_pair_id.clone(),
+                ),
+            ])
+            .apply_preferred_audio_locale_query()
+            .apply_locale_query()
+            .request::<serde_json::Map<String, Value>>()
+            .await?;
+
+        let variants = data
+            .remove("streams")
+            .map_or(serde_json::Map::new().into(), |s| s);
+        data.insert("variants".to_string(), variants);
+
+        let mut stream: Stream = serde_json::from_value(serde_json::to_value(data)?)?;
+        stream.executor = executor;
 
         Ok(stream)
     }
@@ -151,9 +186,11 @@ impl Stream {
 
         let mut result = vec![];
         for id in version_ids {
-            result.push(
-                Stream::from_url(self.executor.clone(), &self.version_request_url, &id).await?,
-            );
+            result.push(if let Some(request_url) = &self.version_request_url {
+                Stream::from_url(self.executor.clone(), request_url, &id).await?
+            } else {
+                Stream::from_legacy_url(self.executor.clone(), &id).await?
+            });
         }
         Ok(result)
     }
@@ -169,9 +206,11 @@ impl Stream {
 
         let mut result = vec![];
         for id in version_ids {
-            result.push(
-                Stream::from_url(self.executor.clone(), &self.version_request_url, &id).await?,
-            )
+            result.push(if let Some(request_url) = &self.version_request_url {
+                Stream::from_url(self.executor.clone(), request_url, &id).await?
+            } else {
+                Stream::from_legacy_url(self.executor.clone(), &id).await?
+            })
         }
         Ok(result)
     }
