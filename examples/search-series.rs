@@ -1,6 +1,6 @@
 use anyhow::Result;
+use crunchyroll_rs::common::StreamExt;
 use crunchyroll_rs::Crunchyroll;
-use futures_util::StreamExt;
 use std::env;
 
 #[tokio::main]

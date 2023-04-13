@@ -1,8 +1,8 @@
 use anyhow::Result;
 use crunchyroll_rs::categories::Category;
+use crunchyroll_rs::common::StreamExt;
 use crunchyroll_rs::search::BrowseOptions;
 use crunchyroll_rs::{Crunchyroll, MediaCollection};
-use futures_util::StreamExt;
 use std::env;
 
 #[tokio::main]

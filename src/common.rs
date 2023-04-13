@@ -1,7 +1,6 @@
 //! Commonly used types.
 
 use crate::{Executor, Result};
-use futures_util::{Stream, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
@@ -11,6 +10,9 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 pub(crate) use crunchyroll_rs_internal::Request;
+
+// export this crate traits as public as they're needed for pagination
+pub use futures_util::{Stream, StreamExt};
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
