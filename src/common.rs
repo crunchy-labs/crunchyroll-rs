@@ -12,7 +12,7 @@ use std::task::{Context, Poll};
 pub(crate) use crunchyroll_rs_internal::Request;
 
 // export this crate traits as public as they're needed for pagination
-pub use futures_util::{Stream, StreamExt};
+pub use futures_util::{Stream, StreamExt, TryStream, TryStreamExt};
 
 /// Contains a variable amount of items and the maximum / total of item which are available.
 /// Mostly used when fetching pagination results.
