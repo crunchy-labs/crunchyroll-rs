@@ -20,7 +20,8 @@ async fn main() -> Result<()> {
         // only results which have action as a category / genre
         .categories(vec![Category::Action]);
 
-    while let Some(item) = crunchyroll.browse(options.clone()).next().await {
+    let mut browse_result = crunchyroll.browse(options.clone());
+    while let Some(item) = browse_result.next().await {
         match item? {
             MediaCollection::Series(series) => println!("Browse returned series {}", series.title),
             // is never season
