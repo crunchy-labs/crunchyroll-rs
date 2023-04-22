@@ -14,6 +14,9 @@ pub struct WatchHistoryEntry {
     pub id: String,
     pub parent_id: String,
 
+    /// `series` or `movie_listing`.
+    pub parent_type: String,
+
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub date_played: DateTime<Utc>,
     pub playhead: u32,
