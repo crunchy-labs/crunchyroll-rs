@@ -23,6 +23,6 @@ async fn movie_streams() {
 }
 
 #[tokio::test]
-async fn movie_legacy_streams() {
-    assert_result!(MOVIE.get().await.unwrap().legacy_streams().await)
+async fn movie_alternative_streams() {
+    assert_result!(MOVIE.get().await.unwrap().alternative_streams().await)
 }

@@ -272,21 +272,31 @@ macro_rules! impl_media_video {
     ($($media_video:ident)*) => {
         $(
             impl $media_video {
+                /// Streams for this episode / movie. Crunchyroll has a newer endpoint to request
+                /// streams (available via [`Episode::streams`] / [`Movie::streams`]) but it has
+                /// some kind of rate limiting. Because of this, this function utilizes the older
+                /// endpoint which doesn't have a rate limit. But because this is an older endpoint
+                /// it could happen that it stops working at any time.
+                pub async fn streams(&self) -> Result<$crate::media::Stream> {
+                    $crate::media::Stream::from_url(self.executor.clone(), "https://www.crunchyroll.com/content/v2/cms/videos", &self.stream_id).await
+                }
+
                 /// Streams for this episode / movie. This endpoint triggers a rate limiting if
                 /// requested too much over a short time period (the rate limiting may occur as an
                 /// error, Crunchyroll doesn't give a hint that a ratelimit is hit). If you need to
-                /// query many streams in a short time, consider using [`Episode::legacy_streams`] /
-                /// [`Movie::legacy_streams`].
-                pub async fn streams(&self) -> Result<$crate::media::Stream> {
+                /// query many streams in a short time, consider using [`Episode::streams`] /
+                /// [`Movie::streams`].
+                pub async fn alternative_streams(&self) -> Result<$crate::media::Stream> {
                     $crate::media::Stream::from_url(self.executor.clone(), "https://www.crunchyroll.com/content/v2/cms/videos", &self.stream_id).await
                 }
 
                 /// Get streams for this episode / movie by using an older endpoint. This endpoints
                 /// doesn't have rate limiting but can stop working at anytime as it is outdated
-                /// (Crunchyroll uses the endpoint in [`Episode::streams`] / [`Movie::streams`] in
-                /// most of their products now).
+                /// (Crunchyroll uses the endpoint in [`Episode::alternative_streams`] /
+                /// [`Movie::alternative_streams`] in most of their products now).
+                #[deprecated(since = "0.3.5", note = "Ported to normal [`Episode::streams`] / [`Movie::streams`]. Use this methods instead.")]
                 pub async fn legacy_streams(&self) -> Result<$crate::media::Stream> {
-                    $crate::media::Stream::from_legacy_url(self.executor.clone(), &self.stream_id).await
+                    self.streams().await
                 }
 
                 /// Check if the episode / movie can be watched.

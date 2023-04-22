@@ -59,21 +59,21 @@ static STREAM_DASH_SEGMENTS: Store<Vec<VariantSegment>> = Store::new(|| {
     })
 });
 
-static LEGACY_STREAM: Store<Stream> = Store::new(|| {
+static ALTERNATIVE_STREAM: Store<Stream> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
         let stream = Episode::from_id(crunchy, "GRDKJZ81Y")
             .await?
-            .legacy_streams()
+            .alternative_streams()
             .await?;
         Ok(stream)
     })
 });
 
 #[cfg(feature = "hls-stream")]
-static LEGACY_STREAM_HLS_DATA: Store<VariantData> = Store::new(|| {
+static ALTERNATIVE_STREAM_HLS_DATA: Store<VariantData> = Store::new(|| {
     Box::pin(async {
-        let stream = LEGACY_STREAM.get().await?;
+        let stream = ALTERNATIVE_STREAM.get().await?;
         let mut hls_streams = stream.hls_streaming_data(None).await?;
 
         hls_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
@@ -82,9 +82,9 @@ static LEGACY_STREAM_HLS_DATA: Store<VariantData> = Store::new(|| {
     })
 });
 #[cfg(feature = "dash-stream")]
-static LEGACY_STREAM_DASH_DATA: Store<VariantData> = Store::new(|| {
+static ALTERNATIVE_STREAM_DASH_DATA: Store<VariantData> = Store::new(|| {
     Box::pin(async {
-        let stream = LEGACY_STREAM.get().await?;
+        let stream = ALTERNATIVE_STREAM.get().await?;
         let mut dash_streams = stream.dash_streaming_data(None).await?.0;
 
         dash_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
@@ -172,23 +172,23 @@ async fn stream_versions() {
 }
 
 #[tokio::test]
-async fn legacy_stream_from_id() {
-    assert_result!(LEGACY_STREAM.get().await)
+async fn alternative_stream_from_id() {
+    assert_result!(ALTERNATIVE_STREAM.get().await)
 }
 
 #[cfg(feature = "hls-stream")]
 #[tokio::test]
-async fn legacy_stream_hls_data() {
-    assert_result!(LEGACY_STREAM_HLS_DATA.get().await)
+async fn alternative_stream_hls_data() {
+    assert_result!(ALTERNATIVE_STREAM_HLS_DATA.get().await)
 }
 
 #[cfg(feature = "dash-stream")]
 #[tokio::test]
-async fn legacy_stream_dash_data() {
-    assert_result!(LEGACY_STREAM_DASH_DATA.get().await)
+async fn alternative_stream_dash_data() {
+    assert_result!(ALTERNATIVE_STREAM_DASH_DATA.get().await)
 }
 
 #[tokio::test]
-async fn legacy_stream_versions() {
-    assert_result!(LEGACY_STREAM.get().await.unwrap().versions().await)
+async fn alternative_stream_versions() {
+    assert_result!(ALTERNATIVE_STREAM.get().await.unwrap().versions().await)
 }

@@ -32,10 +32,10 @@ async fn episode_streams() {
 }
 
 #[tokio::test]
-async fn episode_legacy_streams() {
+async fn episode_alternative_streams() {
     let episode = START_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.legacy_streams().await)
+    assert_result!(episode.alternative_streams().await)
 }
 
 #[tokio::test]
