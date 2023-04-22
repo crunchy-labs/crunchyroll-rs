@@ -1,4 +1,4 @@
-use crate::common::{Pagination, V2BulkResult};
+use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult};
 use crate::{Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use futures_util::FutureExt;
@@ -33,14 +33,14 @@ impl Crunchyroll {
                         "https://www.crunchyroll.com/content/v2/{}/watch-history",
                         options.executor.details.account_id.clone()?
                     );
-                    let result = options
+                    let result: V2BulkResult<WatchHistoryEntry, PaginationBulkResultMeta> = options
                         .executor
                         .get(endpoint)
                         .query(&[("page", options.page), ("page_size", options.page_size)])
                         .apply_locale_query()
-                        .request::<V2BulkResult<WatchHistoryEntry>>()
+                        .request()
                         .await?;
-                    Ok((result.data, result.total))
+                    Ok(result.into())
                 }
                 .boxed()
             },

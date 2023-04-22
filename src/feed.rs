@@ -1,6 +1,6 @@
 //! Feeds like home feed or news feed.
 
-use crate::common::{Pagination, V2BulkResult, V2TypeBulkResult};
+use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult, V2TypeBulkResult};
 use crate::media::MediaType;
 use crate::search::{BrowseOptions, BrowseSortType};
 use crate::{Crunchyroll, MediaCollection, Request, Series};
@@ -316,15 +316,15 @@ impl Crunchyroll {
                         "https://www.crunchyroll.com/content/v2/discover/{}/home_feed",
                         options.executor.details.account_id.clone()?
                     );
-                    let result: V2BulkResult<HomeFeed> = options
+                    let result = options
                         .executor
                         .get(endpoint)
                         .query(&[("n", options.page_size), ("start", options.start)])
                         .apply_locale_query()
                         .apply_preferred_audio_locale_query()
-                        .request()
+                        .request::<V2BulkResult<HomeFeed, PaginationBulkResultMeta>>()
                         .await?;
-                    Ok((result.data, result.total))
+                    Ok(result.into())
                 }
                 .boxed()
             },
@@ -358,7 +358,7 @@ impl Crunchyroll {
                             .into_iter()
                             .find(|p| p.result_type == "top_news")
                             .unwrap_or_default();
-                        Ok((top_news.items, top_news.total))
+                        Ok(top_news.into())
                     }
                     .boxed()
                 },
@@ -387,7 +387,7 @@ impl Crunchyroll {
                             .into_iter()
                             .find(|p| p.result_type == "top_news")
                             .unwrap_or_default();
-                        Ok((top_news.items, top_news.total))
+                        Ok(top_news.into())
                     }
                     .boxed()
                 },
@@ -407,7 +407,7 @@ impl Crunchyroll {
                         "https://www.crunchyroll.com/content/v2/discover/{}/recommendations",
                         options.executor.details.account_id.clone()?
                     );
-                    let result: V2BulkResult<MediaCollection> = options
+                    let result: V2BulkResult<MediaCollection, PaginationBulkResultMeta> = options
                         .executor
                         .get(endpoint)
                         .query(&[("n", options.page_size), ("start", options.start)])
@@ -415,7 +415,7 @@ impl Crunchyroll {
                         .apply_preferred_audio_locale_query()
                         .request()
                         .await?;
-                    Ok((result.data, result.total))
+                    Ok(result.into())
                 }
                 .boxed()
             },

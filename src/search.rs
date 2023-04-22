@@ -2,7 +2,7 @@
 
 mod browse {
     use crate::categories::Category;
-    use crate::common::{Pagination, V2BulkResult};
+    use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult};
     use crate::media::MediaType;
     use crate::{enum_values, options, Crunchyroll, Locale, MediaCollection, Request, Result};
     use futures_util::FutureExt;
@@ -74,17 +74,18 @@ mod browse {
                 |options| {
                     async move {
                         let endpoint = "https://www.crunchyroll.com/content/v2/discover/browse";
-                        let result = options
-                            .executor
-                            .clone()
-                            .get(endpoint)
-                            .query(&options.query)
-                            .query(&[("n", options.page_size), ("start", options.start)])
-                            .apply_locale_query()
-                            .apply_preferred_audio_locale_query()
-                            .request::<V2BulkResult<MediaCollection>>()
-                            .await?;
-                        Ok((result.data, result.total))
+                        let result: V2BulkResult<MediaCollection, PaginationBulkResultMeta> =
+                            options
+                                .executor
+                                .clone()
+                                .get(endpoint)
+                                .query(&options.query)
+                                .query(&[("n", options.page_size), ("start", options.start)])
+                                .apply_locale_query()
+                                .apply_preferred_audio_locale_query()
+                                .request()
+                                .await?;
+                        Ok(result.into())
                     }
                     .boxed()
                 },
@@ -146,7 +147,7 @@ mod query {
                                 .into_iter()
                                 .find(|r| r.result_type == "top_results")
                                 .unwrap_or_default();
-                            Ok((top_results.items, top_results.total))
+                            Ok(top_results.into())
                         }
                         .boxed()
                     },
@@ -172,7 +173,7 @@ mod query {
                                 .into_iter()
                                 .find(|r| r.result_type == "series")
                                 .unwrap_or_default();
-                            Ok((series_results.items, series_results.total))
+                            Ok(series_results.into())
                         }
                         .boxed()
                     },
@@ -198,7 +199,7 @@ mod query {
                                 .into_iter()
                                 .find(|r| r.result_type == "movie_listing")
                                 .unwrap_or_default();
-                            Ok((movie_listing_results.items, movie_listing_results.total))
+                            Ok(movie_listing_results.into())
                         }
                         .boxed()
                     },
@@ -224,7 +225,7 @@ mod query {
                                 .into_iter()
                                 .find(|r| r.result_type == "episode")
                                 .unwrap_or_default();
-                            Ok((episode_results.items, episode_results.total))
+                            Ok(episode_results.into())
                         }
                         .boxed()
                     },
@@ -250,7 +251,7 @@ mod query {
                                 .into_iter()
                                 .find(|r| r.result_type == "episode")
                                 .unwrap_or_default();
-                            Ok((music_results.items, music_results.total))
+                            Ok(music_results.into())
                         }
                         .boxed()
                     },

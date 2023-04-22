@@ -1,5 +1,7 @@
 use crate::common::{BulkResult, Image, Pagination};
-use crate::{enum_values, options, EmptyJsonProxy, Executor, Locale, Request, Result};
+use crate::{
+    enum_values, options, EmptyJsonProxy, Episode, Executor, Locale, Movie, Request, Result,
+};
 use chrono::{DateTime, Utc};
 use futures_util::FutureExt;
 use serde::de::Error;
@@ -114,7 +116,7 @@ impl Comment {
                         .apply_locale_query()
                         .request()
                         .await?;
-                    Ok((result.items, result.total))
+                    Ok(result.into())
                 }
                 .boxed()
             },
@@ -264,7 +266,7 @@ macro_rules! impl_comment {
                                 .apply_locale_query()
                                 .request()
                                 .await?;
-                            Ok((result.items, result.total))
+                            Ok(result.into())
                         }
                         .boxed()
                     }, self.executor.clone(), Some(options.into_query()), Some(vec![("id", self.id.clone())]))
@@ -279,7 +281,7 @@ macro_rules! impl_comment {
 }
 
 impl_comment! {
-    crate::media::Episode crate::media::Movie
+    Episode Movie
 }
 
 async fn create_comment<S: AsRef<str>>(

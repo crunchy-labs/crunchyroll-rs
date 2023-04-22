@@ -1,4 +1,4 @@
-use crate::common::Request;
+use crate::common::{PaginationBulkResultMeta, Request};
 use crate::media::Media;
 use crate::{Episode, Locale, MediaCollection, Movie, MovieListing, Result, Season, Series};
 use chrono::{DateTime, Utc};
@@ -247,14 +247,14 @@ macro_rules! impl_media_video_collection {
                     $crate::common::Pagination::new(|options| {
                         async move {
                             let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", options.executor.details.account_id.clone()?, options.extra.get("id").unwrap());
-                            let result: $crate::common::V2BulkResult<MediaCollection> = options
+                            let result: $crate::common::V2BulkResult<MediaCollection, PaginationBulkResultMeta> = options
                                 .executor
                                 .get(endpoint)
                                 .query(&[("n", options.page_size), ("start", options.start)])
                                 .apply_locale_query()
                                 .request()
                                 .await?;
-                            Ok((result.data, result.total))
+                            Ok(result.into())
                         }
                         .boxed()
                     }, self.executor.clone(), None, Some(vec![("id", self.id.clone())]))

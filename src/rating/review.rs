@@ -270,7 +270,7 @@ macro_rules! impl_rating {
                                 .query(&options.query)
                                 .request()
                                 .await?;
-                            Ok((result.items, result.total))
+                            Ok(result.into())
                         }
                         .boxed()
                     }, self.executor.clone(), Some(options.into_query()), Some(vec![("locale", self.executor.details.locale.to_string()), ("account_id", self.executor.details.account_id.clone()?), ("id", self.id.clone())])))

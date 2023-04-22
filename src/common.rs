@@ -58,23 +58,77 @@ pub(crate) struct PaginationOptions {
     pub(crate) extra: BTreeMap<&'static str, String>,
 }
 
+/// Crunchyroll doesn't always deliver the correct number of total elements on pagination endpoints.
+/// Sometimes it also delivers a link which refers to the next page which can be used to indicate if
+/// more pages are existing. This enum stores if more pages existing by looking up if the link is
+/// present or if the link is not present, by the returned total amount of elements.
+pub(crate) enum PaginationNextType {
+    NextPage(bool),
+    Total(u32),
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[serde(default)]
+pub(crate) struct PaginationBulkResultMeta {
+    prev_page: Option<String>,
+    next_page: Option<String>,
+}
+
+pub(crate) struct PaginationData<T> {
+    pub(crate) data: Vec<T>,
+    pub(crate) next_type: PaginationNextType,
+}
+
+impl<T: Default + DeserializeOwned + Request> From<V2BulkResult<T, PaginationBulkResultMeta>>
+    for PaginationData<T>
+{
+    fn from(value: V2BulkResult<T, PaginationBulkResultMeta>) -> Self {
+        Self {
+            data: value.data,
+            next_type: if let Some(next_page) = value.meta.next_page {
+                PaginationNextType::NextPage(!next_page.is_empty())
+            } else {
+                PaginationNextType::Total(value.total)
+            },
+        }
+    }
+}
+
+impl<T: Default + DeserializeOwned + Request> From<V2TypeBulkResult<T>> for PaginationData<T> {
+    fn from(value: V2TypeBulkResult<T>) -> Self {
+        Self {
+            data: value.items,
+            next_type: PaginationNextType::Total(value.total),
+        }
+    }
+}
+
+impl<T: Default + DeserializeOwned + Request> From<BulkResult<T>> for PaginationData<T> {
+    fn from(value: BulkResult<T>) -> Self {
+        Self {
+            data: value.items,
+            next_type: PaginationNextType::Total(value.total),
+        }
+    }
+}
+
 /// Pagination for results which can be continuously be fetched.
 #[allow(clippy::type_complexity)]
 pub struct Pagination<T: Default + DeserializeOwned + Request> {
     data: Vec<T>,
 
-    init: bool,
     next_fn: Box<
         dyn FnMut(
             PaginationOptions,
-        ) -> Pin<Box<dyn Future<Output = Result<(Vec<T>, u32)>> + Send + 'static>>,
+        )
+            -> Pin<Box<dyn Future<Output = Result<PaginationData<T>>> + Send + 'static>>,
     >,
-    next_state: Option<Pin<Box<dyn Future<Output = Result<(Vec<T>, u32)>> + Send + 'static>>>,
+    next_state: Option<Pin<Box<dyn Future<Output = Result<PaginationData<T>>> + Send + 'static>>>,
 
     paginator_options: PaginationOptions,
 
     count: u32,
-    total: u32,
+    next_type: Option<PaginationNextType>,
 }
 
 impl<T: Default + DeserializeOwned + Request> Stream for Pagination<T> {
@@ -83,7 +137,7 @@ impl<T: Default + DeserializeOwned + Request> Stream for Pagination<T> {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
 
-        if this.count < this.total || !this.init {
+        if this.has_next_page() {
             if !this.data.is_empty() {
                 this.count += 1;
                 return Poll::Ready(Some(Ok(this.data.remove(0))));
@@ -102,13 +156,9 @@ impl<T: Default + DeserializeOwned + Request> Stream for Pagination<T> {
                 Poll::Ready(result) => {
                     this.next_state = None;
                     match result {
-                        Ok((t, total)) => {
-                            this.data = t;
-                            this.total = total;
-
-                            if !this.init {
-                                this.init = true;
-                            }
+                        Ok(data) => {
+                            this.data = data.data;
+                            this.next_type = Some(data.next_type);
 
                             Pin::new(this).poll_next(cx)
                         }
@@ -136,13 +186,12 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
         F: FnMut(
                 PaginationOptions,
             )
-                -> Pin<Box<dyn Future<Output = Result<(Vec<T>, u32)>> + Send + 'static>>
+                -> Pin<Box<dyn Future<Output = Result<PaginationData<T>>> + Send + 'static>>
             + Send
             + 'static,
     {
         Self {
             data: vec![],
-            init: false,
             next_fn: Box::new(pagination_fn),
             next_state: None,
             paginator_options: PaginationOptions {
@@ -154,7 +203,19 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
                 extra: extra.map_or(BTreeMap::new(), BTreeMap::from_iter),
             },
             count: 0,
-            total: 0,
+            next_type: None,
+        }
+    }
+
+    /// Check if more pages are available.
+    fn has_next_page(&self) -> bool {
+        if let Some(next_type) = &self.next_type {
+            match *next_type {
+                PaginationNextType::NextPage(next) => next,
+                PaginationNextType::Total(total) => self.count < total,
+            }
+        } else {
+            true
         }
     }
 
@@ -164,12 +225,17 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
         self.paginator_options.page_size = size
     }
 
-    /// Return the total amount of items which can be fetched.
+    /// Return the total amount of items which can be fetched. May return 0 on some endpoints b/c
+    /// Crunchyroll doesn't return the correct number of total items.
     pub async fn total(&mut self) -> u32 {
-        if !self.init {
+        if self.next_type.is_none() {
             StreamExt::next(self).await;
         }
-        self.total
+        if let PaginationNextType::Total(total) = self.next_type.as_ref().unwrap() {
+            *total
+        } else {
+            0
+        }
     }
 }
 
