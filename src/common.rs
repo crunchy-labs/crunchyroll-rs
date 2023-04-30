@@ -2,7 +2,7 @@
 
 use crate::{Executor, Result};
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::pin::Pin;
@@ -252,7 +252,7 @@ pub(crate) struct BulkResult<T: Default + DeserializeOwned + Request> {
 }
 
 /// The standard representation of images how the api returns them.
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Image {

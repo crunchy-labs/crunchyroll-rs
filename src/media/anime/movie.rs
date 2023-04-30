@@ -3,12 +3,12 @@ use crate::media::util::request_media;
 use crate::media::{Media, ThumbnailImages};
 use crate::{Crunchyroll, MovieListing, Result};
 use chrono::{DateTime, Duration, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Metadata for a movie.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -34,15 +34,16 @@ pub struct Movie {
 
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
     #[default(Duration::milliseconds(0))]
     pub duration: Duration,
 
     pub images: ThumbnailImages,
 
     #[default(DateTime::< Utc >::from(std::time::SystemTime::UNIX_EPOCH))]
-    free_available_date: DateTime<Utc>,
+    pub free_available_date: DateTime<Utc>,
     #[default(DateTime::< Utc >::from(std::time::SystemTime::UNIX_EPOCH))]
-    premium_available_date: DateTime<Utc>,
+    pub premium_available_date: DateTime<Utc>,
 
     pub is_subbed: bool,
     pub is_dubbed: bool,

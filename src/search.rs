@@ -6,10 +6,10 @@ mod browse {
     use crate::media::MediaType;
     use crate::{enum_values, options, Crunchyroll, Locale, MediaCollection, Request, Result};
     use futures_util::FutureExt;
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
     /// Human readable implementation of [`SimulcastSeason`].
-    #[derive(Clone, Debug, Default, Deserialize)]
+    #[derive(Clone, Debug, Default, Deserialize, Serialize)]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct SimulcastSeasonLocalization {
@@ -18,7 +18,7 @@ mod browse {
     }
 
     /// A simulcast season.
-    #[derive(Clone, Debug, Default, Deserialize, Request)]
+    #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct SimulcastSeason {

@@ -3,7 +3,7 @@ use crate::media::anime::util::{parse_locale_from_slug_title, real_dedup_vec};
 use crate::media::util::request_media;
 use crate::media::Media;
 use crate::{Crunchyroll, Episode, Locale, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[allow(dead_code)]
@@ -23,7 +23,7 @@ pub(crate) struct SeasonVersion {
 
 /// Metadata for a season.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -56,6 +56,7 @@ pub struct Season {
     pub is_subbed: bool,
     pub is_dubbed: bool,
     pub is_simulcast: bool,
+    #[serde(skip_serializing)]
     audio_locale: Option<Locale>,
     /// Most of the time, like 99%, this contains only one locale. But sometimes Crunchyroll does
     /// weird stuff and marks a season which clearly has only one locale with two locales. See
@@ -72,6 +73,7 @@ pub struct Season {
     pub availability_notes: String,
 
     #[serde(default)]
+    #[serde(skip_serializing)]
     pub(crate) versions: Option<Vec<SeasonVersion>>,
 
     #[cfg(feature = "__test_strict")]

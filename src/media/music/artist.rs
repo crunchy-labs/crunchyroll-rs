@@ -5,11 +5,11 @@ use crate::media::util::request_media;
 use crate::media::{MusicGenre, MusicVideo, PosterImages};
 use crate::{Crunchyroll, Request, Result};
 use chrono::{DateTime, Duration, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// A preview / summary of an artist. Returned when requesting a [`MusicVideo`] or [`Concert`].
-#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ArtistPreview {
@@ -36,7 +36,7 @@ impl ArtistPreview {
 
 /// Metadata for a music artist.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, Request, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, Serialize, Request, smart_default::SmartDefault)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -63,10 +63,12 @@ pub struct Artist {
 
     #[serde(alias = "totalConcertDurationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
     #[default(Duration::milliseconds(0))]
     pub total_concert_duration: Duration,
     #[serde(alias = "totalVideoDurationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
     #[default(Duration::milliseconds(0))]
     pub total_video_duration: Duration,
 

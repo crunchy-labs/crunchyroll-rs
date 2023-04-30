@@ -4,12 +4,12 @@ use crate::{
     enum_values, options, Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result,
 };
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 
 /// A item in your watchlist.
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -59,7 +59,7 @@ impl WatchlistEntry {
 }
 
 /// A simplified version of [`WatchlistEntry`].
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SimpleWatchlistEntry {

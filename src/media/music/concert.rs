@@ -5,11 +5,11 @@ use crate::media::{ArtistPreview, Media, MusicGenre, ThumbnailImages};
 use crate::{Crunchyroll, Request, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::de::{Error, IntoDeserializer};
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
 
 /// Metadata for a concert.
-#[derive(Clone, Debug, Deserialize, Request, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, Serialize, Request, smart_default::SmartDefault)]
 #[request(executor(artist))]
 #[serde(rename_all = "camelCase")]
 #[serde(remote = "Self")]
@@ -46,6 +46,7 @@ pub struct Concert {
 
     #[serde(alias = "durationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
+    #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
     #[default(Duration::milliseconds(0))]
     pub duration: Duration,
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]

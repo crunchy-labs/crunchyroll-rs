@@ -2,12 +2,12 @@ use crate::common::V2BulkResult;
 use crate::error::CrunchyrollError;
 use crate::{Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 
 /// A [`Crunchylist`] entry.
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -44,7 +44,7 @@ impl CrunchylistEntry {
 }
 
 /// Representation of Crunchylists / custom lists you can create to store series or movies in.
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Crunchylists {
@@ -100,7 +100,7 @@ impl Crunchylists {
 }
 
 /// A Crunchylist.
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[request(executor(items))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -185,7 +185,7 @@ impl Crunchylist {
 
 /// Abstraction of [`Crunchylist`]. Use [`CrunchylistPreview::crunchylist`] to get the "real"
 /// [`Crunchylist`].
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CrunchylistPreview {

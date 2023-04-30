@@ -90,6 +90,16 @@ where
     Ok(Duration::milliseconds(i64::deserialize(deserializer)?))
 }
 
+pub(crate) fn serialize_duration_to_millis<S>(
+    duration: &Duration,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_i64(duration.num_milliseconds())
+}
+
 pub(crate) fn deserialize_try_from_string<'de, D, T: FromStr>(
     deserializer: D,
 ) -> Result<T, D::Error>

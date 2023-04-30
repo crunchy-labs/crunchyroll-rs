@@ -1,6 +1,7 @@
 use crate::error::CrunchyrollError;
 use crate::media::Stream;
 use crate::{Executor, Locale, Request, Result};
+use serde::{Deserialize, Serialize};
 use std::borrow::BorrowMut;
 use std::fmt::Formatter;
 use std::io::Write;
@@ -149,7 +150,7 @@ impl Stream {
 }
 
 /// Video resolution.
-#[derive(Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct Resolution {
     pub width: u64,
     pub height: u64,
@@ -189,9 +190,10 @@ enum VariantDataUrl {
 
 /// Streaming data for a variant.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Request)]
+#[derive(Serialize, Clone, Debug, Request)]
 #[request(executor(segments))]
 pub struct VariantData {
+    #[serde(skip)]
     executor: Arc<Executor>,
 
     pub resolution: Resolution,
@@ -199,6 +201,7 @@ pub struct VariantData {
     pub fps: f64,
     pub codecs: String,
 
+    #[serde(skip)]
     url: VariantDataUrl,
 }
 

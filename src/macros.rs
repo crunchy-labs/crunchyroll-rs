@@ -123,7 +123,7 @@ macro_rules! options {
         $(
             #[$struct_attribute]
         )*
-        #[derive(Clone, Debug)]
+        #[derive(Deserialize, Serialize, Clone, Debug)]
         pub struct $name {
             $(
                 $(
