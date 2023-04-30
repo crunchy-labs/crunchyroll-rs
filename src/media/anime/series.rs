@@ -4,13 +4,12 @@ use crate::media::anime::util::real_dedup_vec;
 use crate::media::util::request_media;
 use crate::media::{Media, PosterImages};
 use crate::{Crunchyroll, Locale, Result, Season};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Metadata for a series.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]

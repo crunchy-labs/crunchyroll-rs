@@ -3,7 +3,7 @@
 use crate::common::{Image, V2BulkResult};
 use crate::Result;
 use crate::{enum_values, Crunchyroll, Locale, Request};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 enum_values! {
     /// Video categories / genres.
@@ -33,8 +33,7 @@ impl From<CategoryInformation> for Category {
 }
 
 /// Images for [`CategoryInformation`].
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CategoryInformationImages {
@@ -43,8 +42,7 @@ pub struct CategoryInformationImages {
 }
 
 /// Human readable text about a category.
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CategoryInformationLocalization {
@@ -54,8 +52,7 @@ pub struct CategoryInformationLocalization {
 }
 
 /// A anime category / genre.
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct CategoryInformation {

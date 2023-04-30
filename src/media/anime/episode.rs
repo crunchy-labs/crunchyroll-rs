@@ -5,7 +5,7 @@ use crate::media::util::request_media;
 use crate::media::Media;
 use crate::{Crunchyroll, Locale, Result, Season, Series};
 use chrono::{DateTime, Duration, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[allow(dead_code)]
@@ -30,8 +30,7 @@ pub(crate) struct EpisodeVersion {
 
 /// Metadata for an episode.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]

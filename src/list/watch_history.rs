@@ -2,11 +2,10 @@ use crate::common::{Pagination, V2BulkResult};
 use crate::{Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use futures_util::FutureExt;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Entry of your watchlist.
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 #[request(executor(panel))]

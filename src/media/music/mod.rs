@@ -9,11 +9,10 @@ pub use concert::*;
 pub use music_video::*;
 
 use crate::Request;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// A music genre.
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]

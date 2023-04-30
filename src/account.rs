@@ -2,15 +2,14 @@
 
 use crate::{options, Crunchyroll, EmptyJsonProxy, Executor, Locale, Request, Result};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Account data of the currently logged in user.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Account {
@@ -256,19 +255,17 @@ fn mature_content_flag_manga<'de, D: serde::Deserializer<'de>>(
 
 mod wallpaper {
     use crate::{Crunchyroll, Request, Result};
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
     /// Wallpaper which are shown at the top of your Crunchyroll profile.
-    #[derive(Clone, Debug, Default, Deserialize, Request)]
-    #[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+    #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
     #[serde(from = "String")]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     pub struct Wallpaper {
         pub name: String,
     }
 
-    #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-    #[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+    #[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
     #[request(executor(items))]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]

@@ -5,12 +5,11 @@ use crate::media::{ArtistPreview, Media, MusicGenre, ThumbnailImages};
 use crate::{Crunchyroll, MediaCollection, Request, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::de::{Error, IntoDeserializer};
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
 
 /// Metadata for a music video.
-#[derive(Clone, Debug, Deserialize, Request, smart_default::SmartDefault)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Deserialize, Serialize, Request, smart_default::SmartDefault)]
 #[request(executor(artist))]
 #[serde(rename_all = "camelCase")]
 #[serde(remote = "Self")]

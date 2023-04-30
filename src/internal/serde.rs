@@ -90,7 +90,6 @@ where
     Ok(Duration::milliseconds(i64::deserialize(deserializer)?))
 }
 
-#[cfg(feature = "serialize")]
 pub(crate) fn serialize_duration_to_millis<S>(
     duration: &Duration,
     serializer: S,

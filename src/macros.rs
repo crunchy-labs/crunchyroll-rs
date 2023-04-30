@@ -123,8 +123,7 @@ macro_rules! options {
         $(
             #[$struct_attribute]
         )*
-        #[derive(Clone, Debug)]
-        #[cfg_attr(feature = "serialize", derive(serde::Deserialize, serde::Serialize))]
+        #[derive(Deserialize, Serialize, Clone, Debug)]
         pub struct $name {
             $(
                 $(

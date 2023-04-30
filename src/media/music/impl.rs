@@ -4,7 +4,6 @@ use crate::{Concert, MusicVideo, Result};
 macro_rules! impl_manual_media_serialize {
     ($($media:ident)*) => {
         $(
-            #[cfg(feature = "serialize")]
             impl serde::Serialize for $media {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where

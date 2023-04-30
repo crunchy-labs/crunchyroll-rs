@@ -7,11 +7,10 @@ use crate::{Crunchyroll, MediaCollection, Request, Series};
 use chrono::{DateTime, Utc};
 use futures_util::FutureExt;
 use serde::de::Error;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Images for a [`FeedCarousel`].
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct FeedCarouselImages {
@@ -22,8 +21,7 @@ pub struct FeedCarouselImages {
 
 /// The carousel / sliding images showed at first when visiting crunchyroll.com
 #[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct FeedCarousel {
@@ -45,8 +43,7 @@ pub struct FeedCarousel {
 }
 
 /// Images for a [`FeedBanner`].
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct FeedBannerImages {
@@ -57,8 +54,7 @@ pub struct FeedBannerImages {
 }
 
 /// A feed banner.
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct FeedBanner {
     pub title: String,
 
@@ -71,8 +67,7 @@ pub struct FeedBanner {
 }
 
 /// A feed containing multiple ids to different series.
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct SeriesFeed {
     pub title: String,
 
@@ -83,8 +78,7 @@ pub struct SeriesFeed {
 }
 
 /// A feed containing a id to a series or episode, depending on what you've watched in the past.
-#[derive(Clone, Debug, Default, Deserialize)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct SimilarFeed {
     pub title: String,
 
@@ -95,8 +89,7 @@ pub struct SimilarFeed {
 }
 
 /// Items which can be shown on the home feed.
-#[derive(Clone, Debug, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Serialize, Request)]
 pub enum HomeFeed {
     /// The feed at the top of the Crunchyroll website.
     CarouselFeed(Vec<FeedCarousel>),
@@ -296,8 +289,7 @@ pub struct NewsFeedResult {
 }
 
 /// Crunchyroll news like new library anime, dubs, etc... .
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct NewsFeed {

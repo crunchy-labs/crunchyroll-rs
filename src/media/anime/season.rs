@@ -3,7 +3,7 @@ use crate::media::anime::util::{parse_locale_from_slug_title, real_dedup_vec};
 use crate::media::util::request_media;
 use crate::media::Media;
 use crate::{Crunchyroll, Episode, Locale, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[allow(dead_code)]
@@ -23,9 +23,8 @@ pub(crate) struct SeasonVersion {
 
 /// Metadata for a season.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Season {

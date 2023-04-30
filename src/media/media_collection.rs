@@ -6,15 +6,14 @@ use crate::{
     Concert, Crunchyroll, Episode, Movie, MovieListing, MusicVideo, Result, Season, Series,
 };
 use serde::de::Error;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
 
 /// Collection of all media types. Useful in situations where [`Media`] can contain more than one
 /// specific media.
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Serialize, Clone, Debug, PartialEq)]
 pub enum MediaCollection {
     Series(Series),
     Season(Season),

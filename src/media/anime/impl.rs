@@ -3,7 +3,7 @@ use crate::media::Media;
 use crate::{Episode, Locale, MediaCollection, Movie, MovieListing, Result, Season, Series};
 use chrono::{DateTime, Utc};
 use serde::de::{DeserializeOwned, Error};
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Map;
 
 /// Information about the intro of an [`Episode`] or [`Movie`].
@@ -35,8 +35,7 @@ pub(crate) struct VideoIntroResult {
 
 /// Media related to the media which queried this struct.
 #[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct RelatedMedia<T: Request + DeserializeOwned> {
@@ -71,8 +70,7 @@ where
 
 /// Information about the playhead of an [`Episode`] or [`Movie`].
 #[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[cfg_attr(feature = "serialize", derive(serde::Serialize))]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct PlayheadInformation {
@@ -130,7 +128,6 @@ impl_manual_media_deserialize! {
 macro_rules! impl_manual_media_serialize {
     ($($media:ident)*) => {
         $(
-            #[cfg(feature = "serialize")]
             impl serde::Serialize for $media {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
                 where
