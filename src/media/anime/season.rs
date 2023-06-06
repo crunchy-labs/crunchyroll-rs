@@ -2,7 +2,7 @@ use crate::crunchyroll::Executor;
 use crate::media::anime::util::{parse_locale_from_slug_title, real_dedup_vec};
 use crate::media::util::request_media;
 use crate::media::Media;
-use crate::{Crunchyroll, Episode, Locale, Result};
+use crate::{Crunchyroll, Episode, Locale, Result, Series};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -91,7 +91,7 @@ pub struct Season {
 
 impl Season {
     /// Returns the series the season belongs to.
-    pub async fn series(&self) -> Result<Season> {
+    pub async fn series(&self) -> Result<Series> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/cms/series/{}",
             self.series_id
