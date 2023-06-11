@@ -30,8 +30,10 @@ async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 http = "0.2"
 futures-util = { version = "0.3", features = ["std"], default-features = false }
-reqwest = { version = "0.11", features = ["cookies", "json", "rustls-tls"], default-features = false }
-rustls = { version = "0.21", features = ["dangerous_configuration"] }
+# patch version number is necessary for 'reqwest' and 'rustls' dependency to prevent incompatability errors
+# (https://github.com/seanmonstar/reqwest/issues/1837)
+reqwest = { version = "0.11.18", features = ["cookies", "json", "rustls-tls"], default-features = false }
+rustls = { version = "0.21.0", features = ["dangerous_configuration"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
