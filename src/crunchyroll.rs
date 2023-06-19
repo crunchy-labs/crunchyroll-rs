@@ -614,6 +614,10 @@ mod auth {
         /// `session_id` cookie from your browser.
         /// This login method made some trouble in the past (login failed even though the session id was
         /// valid and the user logged in) and is therefore not very reliable.
+        #[deprecated(
+            since = "0.3.7",
+            note = "Not reliable anymore. Use login_with_etp_rt instead (with 'etp_rt' cookie instead of 'session_id')"
+        )]
         pub async fn login_with_session_id<S: AsRef<str>>(
             self,
             session_id: S,
