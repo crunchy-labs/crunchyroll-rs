@@ -119,9 +119,10 @@ pub struct Pagination<T: Default + DeserializeOwned + Request> {
 
     next_fn: Box<
         dyn FnMut(
-            PaginationOptions,
-        )
-            -> Pin<Box<dyn Future<Output = Result<PaginationData<T>>> + Send + 'static>>,
+                PaginationOptions,
+            )
+                -> Pin<Box<dyn Future<Output = Result<PaginationData<T>>> + Send + 'static>>
+            + Send,
     >,
     next_state: Option<Pin<Box<dyn Future<Output = Result<PaginationData<T>>> + Send + 'static>>>,
 
