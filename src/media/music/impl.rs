@@ -29,8 +29,13 @@ macro_rules! impl_media_music {
                 /// error, Crunchyroll doesn't give a hint that a ratelimit is hit). Unlike
                 /// [`Episode`] and [`Movie`] there is no older stream endpoint available to get the
                 /// streams from.
-                pub async fn streams(&self) -> Result<$crate::media::Stream> {
+                pub async fn stream(&self) -> Result<$crate::media::Stream> {
                     $crate::media::Stream::from_url(self.executor.clone(), "https://www.crunchyroll.com/content/v2/music", &self.stream_id).await
+                }
+
+                #[deprecated(since = "0.3.7", note = "Renamed to [`Concert::stream`] / [`MusicVideo::stream`].")]
+                pub async fn streams(&self) -> Result<$crate::media::Stream> {
+                    self.stream().await
                 }
 
                 /// Check if the music video / concert can be watched.

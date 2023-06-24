@@ -25,17 +25,17 @@ async fn episode_from_id() {
 }
 
 #[tokio::test]
-async fn episode_streams() {
+async fn episode_stream() {
     let episode = START_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.streams().await)
+    assert_result!(episode.stream().await)
 }
 
 #[tokio::test]
-async fn episode_alternative_streams() {
+async fn episode_alternative_stream() {
     let episode = START_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.alternative_streams().await)
+    assert_result!(episode.alternative_stream().await)
 }
 
 #[tokio::test]

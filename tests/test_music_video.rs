@@ -17,8 +17,8 @@ async fn music_video_from_id() {
 }
 
 #[tokio::test]
-async fn music_video_streams() {
-    assert_result!(MUSIC_VIDEO.get().await.unwrap().streams().await)
+async fn music_video_stream() {
+    assert_result!(MUSIC_VIDEO.get().await.unwrap().stream().await)
 }
 
 #[tokio::test]

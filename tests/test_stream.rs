@@ -11,7 +11,7 @@ static STREAM: Store<Stream> = Store::new(|| {
         let crunchy = SESSION.get().await?;
         let stream = Episode::from_id(crunchy, "GRDKJZ81Y")
             .await?
-            .streams()
+            .stream()
             .await?;
         Ok(stream)
     })
@@ -64,7 +64,7 @@ static ALTERNATIVE_STREAM: Store<Stream> = Store::new(|| {
         let crunchy = SESSION.get().await?;
         let stream = Episode::from_id(crunchy, "GRDKJZ81Y")
             .await?
-            .alternative_streams()
+            .alternative_stream()
             .await?;
         Ok(stream)
     })
