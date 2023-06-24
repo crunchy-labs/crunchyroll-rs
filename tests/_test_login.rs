@@ -50,21 +50,6 @@ async fn login_with_etp_rt() {
 }
 
 #[tokio::test]
-async fn login_with_session_id() {
-    let session_id = env::var("SESSION_ID").expect("'SESSION_ID' environment variable not found");
-
-    let crunchy = Crunchyroll::builder()
-        .login_with_session_id(session_id)
-        .await;
-
-    assert_result!(crunchy);
-
-    if !utils::session::has_session() {
-        utils::session::set_session(crunchy.unwrap()).await.unwrap()
-    }
-}
-
-#[tokio::test]
 async fn login_anonymously() {
     let crunchy = Crunchyroll::builder().login_anonymously().await;
 
