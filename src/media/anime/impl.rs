@@ -297,7 +297,7 @@ macro_rules! impl_media_video {
                 /// endpoint which doesn't have a rate limit. But because this is an older endpoint
                 /// it could happen that it stops working at any time.
                 pub async fn streams(&self) -> Result<$crate::media::Stream> {
-                    $crate::media::Stream::from_url(self.executor.clone(), "https://www.crunchyroll.com/content/v2/cms/videos", &self.stream_id).await
+                    $crate::media::Stream::from_legacy_url(self.executor.clone(), &self.stream_id).await
                 }
 
                 /// Streams for this episode / movie. This endpoint triggers a rate limiting if
