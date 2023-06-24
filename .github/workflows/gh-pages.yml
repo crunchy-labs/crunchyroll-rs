@@ -34,6 +34,7 @@ jobs:
         run: |
           RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --no-deps --all-features
           echo '<meta http-equiv="refresh" content="0; url=crunchyroll_rs">' > ./target/doc/index.html
+          chmod -R +rX ./target/doc
 
       - name: Setup Pages
         uses: actions/configure-pages@v2
