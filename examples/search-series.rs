@@ -12,7 +12,8 @@ async fn main() -> Result<()> {
         .login_with_credentials(user, password)
         .await?;
 
-    while let Some(s) = crunchyroll.query("darling").series.next().await {
+    let mut query_result = crunchyroll.query("darling");
+    while let Some(s) = query_result.series.next().await {
         let series = s?;
 
         println!(
