@@ -735,7 +735,7 @@ mod auth {
             ))?;
             serde_json::from_value(value.clone()).map_err(|e| {
                 CrunchyrollError::Decode(
-                    CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
+                    crate::error::CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
                         .with_url(url)
                         .with_value(value.to_string().as_bytes()),
                 )
