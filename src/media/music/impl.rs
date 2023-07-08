@@ -33,11 +33,6 @@ macro_rules! impl_media_music {
                     $crate::media::Stream::from_url(self.executor.clone(), "https://www.crunchyroll.com/content/v2/music", &self.stream_id).await
                 }
 
-                #[deprecated(since = "0.3.7", note = "Renamed to [`Concert::stream`] / [`MusicVideo::stream`].")]
-                pub async fn streams(&self) -> Result<$crate::media::Stream> {
-                    self.stream().await
-                }
-
                 /// Check if the music video / concert can be watched.
                 pub async fn available(&self) -> bool {
                     self.executor.details.premium || !self.is_premium_only
