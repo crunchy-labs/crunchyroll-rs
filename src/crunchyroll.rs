@@ -432,7 +432,7 @@ mod auth {
 
     enum CrunchyrollBuilderClient {
         Normal(Client),
-        Bypass,
+        Bypass(Box<dyn Fn() -> ClientBuilder + 'static>),
     }
 
     /// A builder to construct a new [`Crunchyroll`] instance. To create it, call
@@ -448,7 +448,9 @@ mod auth {
     impl Default for CrunchyrollBuilder {
         fn default() -> Self {
             Self {
-                client: CrunchyrollBuilderClient::Bypass,
+                client: CrunchyrollBuilderClient::Bypass(Box::new(
+                    CrunchyrollBuilder::predefined_client_builder,
+                )),
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
                 fixes: ExecutorFixes {
@@ -478,7 +480,9 @@ mod auth {
         /// Enabled by default.
         pub fn try_bypass(mut self, enable: bool) -> CrunchyrollBuilder {
             if enable {
-                self.client = CrunchyrollBuilderClient::Bypass
+                self.client = CrunchyrollBuilderClient::Bypass(Box::new(
+                    CrunchyrollBuilder::predefined_client_builder,
+                ))
             } else {
                 self.client = CrunchyrollBuilderClient::Normal(
                     CrunchyrollBuilder::predefined_client_builder()
@@ -489,14 +493,35 @@ mod auth {
             self
         }
 
-        /// Set a custom client over which all request to the api are made.
+        /// Set a custom client that will be used in all api requests.
         /// It is recommended to use the client builder from
-        /// [`CrunchyrollBuilder::predefined_client_builder`] as it has some configurations which
-        /// may be needed to make successful requests to Crunchyroll.
+        /// [`CrunchyrollBuilder::predefined_client_builder`] as base as it has some configurations
+        /// which may be needed to make successful requests to Crunchyroll.
         /// Using this methods overwrites the configurations made in
         /// [`CrunchyrollBuilder::try_bypass`].
         pub fn client(mut self, client: Client) -> CrunchyrollBuilder {
             self.client = CrunchyrollBuilderClient::Normal(client);
+            self
+        }
+
+        /// Set a custom client builder that will be used in all api requests.
+        /// It is recommended to use the client builder from
+        /// [`CrunchyrollBuilder::predefined_client_builder`] as base as it has some configurations
+        /// which may be needed to make successful requests to Crunchyroll.
+        /// This method has the advantage over [`CrunchyrollBuilder::client`] that the settings made
+        /// in [`CrunchyrollBuilder::try_bypass`] will be applied.
+        pub fn client_builder<F: Fn() -> ClientBuilder + 'static>(
+            mut self,
+            client_builder_fn: F,
+        ) -> CrunchyrollBuilder {
+            self.client = match &self.client {
+                CrunchyrollBuilderClient::Normal(_) => {
+                    CrunchyrollBuilderClient::Normal(client_builder_fn().build().unwrap())
+                }
+                CrunchyrollBuilderClient::Bypass(_) => {
+                    CrunchyrollBuilderClient::Bypass(Box::new(client_builder_fn))
+                }
+            };
             self
         }
 
@@ -702,14 +727,12 @@ mod auth {
         async fn get_client(&self) -> Result<Client> {
             return match &self.client {
                 CrunchyrollBuilderClient::Normal(client) => Ok(client.clone()),
-                CrunchyrollBuilderClient::Bypass => {
+                CrunchyrollBuilderClient::Bypass(client_builder_fn) => {
                     // using this url instead of 'https://www.crunchyroll.com' as the bot protection
                     // seems to be less strict on the root page
                     let check_url = "https://www.crunchyroll.com/auth/v1/token";
 
-                    let mut client = CrunchyrollBuilder::predefined_client_builder()
-                        .build()
-                        .unwrap();
+                    let mut client = client_builder_fn().build().unwrap();
                     if client.get(check_url).send().await?.status() != StatusCode::FORBIDDEN {
                         return Ok(client);
                     }
@@ -732,7 +755,7 @@ mod auth {
                         .with_root_certificates(root_store)
                         .with_no_client_auth();
 
-                    client = CrunchyrollBuilder::predefined_client_builder()
+                    client = client_builder_fn()
                         .use_preconfigured_tls(tls_config)
                         .build()
                         .unwrap();
@@ -741,7 +764,7 @@ mod auth {
                     }
 
                     Err(CrunchyrollError::Request(
-                        CrunchyrollErrorContext::new("Could not bypass cloudflare bot protection")
+                        CrunchyrollErrorContext::new("could not bypass cloudflare bot protection")
                             .with_extra(StatusCode::FORBIDDEN),
                     ))
                 }
@@ -772,14 +795,9 @@ mod auth {
             ))?;
             serde_json::from_value(value.clone()).map_err(|e| {
                 CrunchyrollError::Decode(
-                    crate::error::CrunchyrollErrorContext::new(format!(
-                        "{} at {}:{}",
-                        e,
-                        e.line(),
-                        e.column()
-                    ))
-                    .with_url(url)
-                    .with_value(value.to_string().as_bytes()),
+                    CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
+                        .with_url(url)
+                        .with_value(value.to_string().as_bytes()),
                 )
             })
         }

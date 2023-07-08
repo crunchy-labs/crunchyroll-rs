@@ -99,7 +99,17 @@
 //! # Bugs
 //! Crunchyroll is awful in keep their api clean. Thus, some things are broken, will break for no
 //! reason or aren't well implemented (if at all). The methods added with the
-//! `experimental-stabilizations` feature (`CrunchyrollBuilder::stabilization_*`)
+//! `experimental-stabilizations` feature (`CrunchyrollBuilder::stabilization_*`).
+//!
+//! ### Cloudflare
+//! Crunchyroll uses the cloudflare bot protection to detect if requests are made by a human.
+//! Obviously this crate makes automated requests and thus, cloudflare sometimes blocks requests.
+//! You'll notice this either when the library errors with `could not bypass cloudflare bot
+//! protection` or a big html message. There are internal ways which are trying to bypass the
+//! protection, but they don't always work. The [`CrunchyrollBuilder::client`] and
+//! [`CrunchyrollBuilder::client_builder`] methods can be used to pass a custom
+//! [reqwest](https://docs.rs/reqwest/latest/reqwest/) http client which might have configurations
+//! to bypass cloudflare, implemented by you.
 //!
 //! # Implementation
 //! To ensure at least all existing parts of the library are working as expected, a special feature

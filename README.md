@@ -83,6 +83,13 @@ Crunchyroll regularly updates their api but does not provide any documentation f
 Because we do not monitor the api constantly, so we cannot immediately say when a new endpoint is added or something has changed on already existing and implemented endpoints (which is semi-covered by the `__test-strict` feature, at least).
 If you find an endpoint which is not implemented or has changes feel free to open a new [issue](https://github.com/crunchy-labs/crunchyroll-rs/issues) and tell us, or fork the library and implement it yourself.
 
+#### Cloudflare
+Crunchyroll uses the cloudflare bot protection to detect if requests are made by a human.
+Obviously this library makes automated requests and thus, cloudflare sometimes blocks requests.
+You'll notice this either when the library errors with `could not bypass cloudflare bot protection` or a big html message.
+There are internal ways which are trying to bypass the protection, but they don't always work.
+The `CrunchyrollBuilder::client` and `CrunchyrollBuilder::client_builder` methods can be used to pass a custom [reqwest](https://docs.rs/reqwest/latest/reqwest/) http client which might have configurations to bypass cloudflare, implemented by you.
+
 ## License
 
 This project is licensed under either of the following licenses, at your option:
