@@ -138,7 +138,7 @@ impl<T: Default + DeserializeOwned + Request> Stream for Pagination<T> {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
 
-        if this.has_next_page() {
+        if !this.data.is_empty() || this.has_next_page() {
             if !this.data.is_empty() {
                 this.count += 1;
                 return Poll::Ready(Some(Ok(this.data.remove(0))));
