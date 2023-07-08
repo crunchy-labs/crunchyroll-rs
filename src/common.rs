@@ -226,16 +226,17 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
         self.paginator_options.page_size = size
     }
 
-    /// Return the total amount of items which can be fetched. May return 0 on some endpoints b/c
-    /// Crunchyroll doesn't return the correct number of total items.
-    pub async fn total(&mut self) -> u32 {
+    /// Return the total amount of items which can be fetched. Is [`Some`] if the total amount is
+    /// known, else [`None`] (Crunchyroll has two different pagination implementations, one doesn't
+    /// report the total amount).
+    pub async fn total(&mut self) -> Option<u32> {
         if self.next_type.is_none() {
             StreamExt::next(self).await;
         }
         if let PaginationNextType::Total(total) = self.next_type.as_ref().unwrap() {
-            *total
+            Some(*total)
         } else {
-            0
+            None
         }
     }
 }
