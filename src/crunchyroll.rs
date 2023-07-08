@@ -443,7 +443,7 @@ mod auth {
     impl Default for CrunchyrollBuilder {
         fn default() -> Self {
             Self {
-                client: CrunchyrollBuilder::predefined_client_builder()
+                client: CrunchyrollBuilder::predefined_client_builder(false)
                     .build()
                     .unwrap(),
                 locale: Locale::en_US,
@@ -457,45 +457,62 @@ mod auth {
     }
 
     impl CrunchyrollBuilder {
-        /// Return a [`ClientBuilder`] which has all required configurations, necessary to send
+        /// Return a [`ClientBuilder`] which has all required configurations necessary to send
         /// successful requests to Crunchyroll, applied (most of the time; sometimes Crunchyroll has
         /// fluctuations that requests doesn't work for a specific amount of time and after that
         /// amount everything goes back to normal and works as it should). You can use this builder
         /// to configure the behavior of the download client. Use [`CrunchyrollBuilder::client`] to
         /// set your built client.
-        pub fn predefined_client_builder() -> ClientBuilder {
-            let mut root_store = rustls::RootCertStore::empty();
-            root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
-                |ta| {
-                    rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
-                        ta.subject,
-                        ta.spki,
-                        ta.name_constraints,
-                    )
-                },
-            ));
-            let config = rustls::ClientConfig::builder()
-                .with_cipher_suites(rustls::DEFAULT_CIPHER_SUITES)
-                .with_kx_groups(&[&rustls::kx_group::X25519])
-                .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
-                .unwrap()
-                .with_root_certificates(root_store)
-                .with_no_client_auth();
-
-            // the client needs some extra work to be created. the tls must be custom build in order
-            // to bypass the cloudflare bot check crunchyroll has applied to the website
-            Client::builder()
+        /// The `custom_tls` argument states if a custom tls backend should be used to make requests.
+        /// In the past this was necessary to bypass the cloudflare bot check Crunchyroll has
+        /// applied to the website. Currently, this is not needed but this might change again at any
+        /// time.
+        pub fn predefined_client_builder(custom_tls: bool) -> ClientBuilder {
+            let mut builder = Client::builder()
                 .https_only(true)
                 .cookie_store(true)
-                .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46a")
-                .use_preconfigured_tls(config)
+                .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46a");
+
+            if custom_tls {
+                let mut root_store = rustls::RootCertStore::empty();
+                root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
+                    |ta| {
+                        rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+                            ta.subject,
+                            ta.spki,
+                            ta.name_constraints,
+                        )
+                    },
+                ));
+                let tls_config = rustls::ClientConfig::builder()
+                    .with_cipher_suites(rustls::DEFAULT_CIPHER_SUITES)
+                    .with_kx_groups(&[&rustls::kx_group::X25519])
+                    .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
+                    .unwrap()
+                    .with_root_certificates(root_store)
+                    .with_no_client_auth();
+
+                builder = builder.use_preconfigured_tls(tls_config)
+            }
+
+            builder
+        }
+
+        /// Use custom tls settings. In the past this was necessary to bypass the cloudflare bot
+        /// check Crunchyroll has applied to the website. Currently, this is not needed but this
+        /// might change again at any time.
+        /// This method overwrites any custom client passed to [`CrunchyrollBuilder::client`].
+        pub fn use_custom_tls(mut self, enable: bool) -> CrunchyrollBuilder {
+            self.client = CrunchyrollBuilder::predefined_client_builder(enable)
+                .build()
+                .unwrap();
+            self
         }
 
         /// Set a custom client over which all request to the api are made.
-        /// Is it not recommended to overwrite the default client since its need some special
-        /// configurations to bypass cloudflare.
-        /// See [`CrunchyrollBuilder::default`] which minimal changes must be done to create a
-        /// working custom client.
+        /// It is recommended to use the client builder from
+        /// [`CrunchyrollBuilder::predefined_client_builder`] as it has some configurations which
+        /// may be needed to make successful requests to Crunchyroll.
         pub fn client(mut self, client: Client) -> CrunchyrollBuilder {
             self.client = client;
             self
