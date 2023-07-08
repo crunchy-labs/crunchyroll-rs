@@ -207,10 +207,7 @@ pub struct VariantData {
 
 impl VariantData {
     #[cfg(feature = "hls-stream")]
-    pub(crate) async fn from_hls_master(
-        executor: Arc<Executor>,
-        url: String,
-    ) -> Result<Vec<VariantData>> {
+    async fn from_hls_master(executor: Arc<Executor>, url: String) -> Result<Vec<VariantData>> {
         let raw_master_playlist = executor.get(url).request_raw().await?;
 
         let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_slice())
@@ -254,7 +251,7 @@ impl VariantData {
     }
 
     #[cfg(feature = "dash-stream")]
-    pub(crate) async fn from_mpeg_mpd_representations(
+    async fn from_mpeg_mpd_representations(
         executor: Arc<Executor>,
         segment_template: dash_mpd::SegmentTemplate,
         representations: Vec<dash_mpd::Representation>,

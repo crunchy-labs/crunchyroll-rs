@@ -17,9 +17,9 @@ pub(crate) struct MovieListingVersion {
 
     pub(crate) audio_locale: Locale,
 
-    pub(crate) original: bool,
+    original: bool,
 
-    pub(crate) variant: String,
+    variant: String,
 }
 
 /// Metadata for a movie listing.

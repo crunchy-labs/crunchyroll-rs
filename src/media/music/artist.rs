@@ -14,7 +14,7 @@ use std::sync::Arc;
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ArtistPreview {
     #[serde(skip)]
-    pub(crate) executor: Arc<Executor>,
+    executor: Arc<Executor>,
 
     pub id: String,
 
@@ -42,7 +42,7 @@ impl ArtistPreview {
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Artist {
     #[serde(skip)]
-    pub(crate) executor: Arc<Executor>,
+    executor: Arc<Executor>,
 
     pub id: String,
     #[serde(rename = "concerts")]

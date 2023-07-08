@@ -63,7 +63,7 @@ pub struct Series {
     pub availability_notes: String,
 
     #[cfg(feature = "__test_strict")]
-    pub(crate) extended_maturity_rating: crate::StrictValue,
+    extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     external_id: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]

@@ -110,7 +110,7 @@ impl Crunchyroll {
 }
 
 mod auth {
-    use crate::error::{check_request, CrunchyrollError, CrunchyrollErrorContext};
+    use crate::error::{check_request, CrunchyrollError};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
     use http::header;
@@ -433,11 +433,11 @@ mod auth {
     /// A builder to construct a new [`Crunchyroll`] instance. To create it, call
     /// [`Crunchyroll::builder`].
     pub struct CrunchyrollBuilder {
-        pub(crate) client: Client,
-        pub(crate) locale: Locale,
-        pub(crate) preferred_audio_locale: Option<Locale>,
+        client: Client,
+        locale: Locale,
+        preferred_audio_locale: Option<Locale>,
 
-        pub(crate) fixes: ExecutorFixes,
+        fixes: ExecutorFixes,
     }
 
     impl Default for CrunchyrollBuilder {
@@ -513,6 +513,8 @@ mod auth {
         /// It is recommended to use the client builder from
         /// [`CrunchyrollBuilder::predefined_client_builder`] as it has some configurations which
         /// may be needed to make successful requests to Crunchyroll.
+        /// Using this methods overwrites the configurations made in
+        /// [`CrunchyrollBuilder::use_custom_tls`].
         pub fn client(mut self, client: Client) -> CrunchyrollBuilder {
             self.client = client;
             self

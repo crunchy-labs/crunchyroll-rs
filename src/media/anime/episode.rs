@@ -16,16 +16,16 @@ pub(crate) struct EpisodeVersion {
     #[serde(rename = "guid")]
     pub(crate) id: String,
     #[serde(rename = "media_guid")]
-    pub(crate) media_id: String,
+    media_id: String,
     #[serde(rename = "season_guid")]
-    pub(crate) season_id: String,
+    season_id: String,
 
     pub(crate) audio_locale: Locale,
 
-    pub(crate) is_premium_only: bool,
-    pub(crate) original: bool,
+    is_premium_only: bool,
+    original: bool,
 
-    pub(crate) variant: String,
+    variant: String,
 }
 
 /// Metadata for an episode.

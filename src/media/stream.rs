@@ -43,20 +43,20 @@ fn deserialize_streams<'de, D: Deserializer<'de>>(
 #[derive(Clone, Debug, Default, Deserialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub(crate) struct StreamVersion {
+struct StreamVersion {
     #[serde(rename = "guid")]
-    pub(crate) id: String,
+    id: String,
     #[serde(rename = "media_guid")]
-    pub(crate) media_id: String,
+    media_id: String,
     #[serde(rename = "season_guid")]
-    pub(crate) season_id: String,
+    season_id: String,
 
-    pub(crate) audio_locale: Locale,
+    audio_locale: Locale,
 
-    pub(crate) is_premium_only: bool,
-    pub(crate) original: bool,
+    is_premium_only: bool,
+    original: bool,
 
-    pub(crate) variant: String,
+    variant: String,
 }
 
 /// A video stream.
@@ -94,7 +94,7 @@ pub struct Stream {
     /// When requesting versions from [`Stream::versions`] this url is required as multiple paths
     /// exists which can lead to the [`Stream`] struct.
     #[serde(skip)]
-    pub(crate) version_request_url: Option<String>,
+    version_request_url: Option<String>,
 
     #[cfg(feature = "__test_strict")]
     captions: crate::StrictValue,

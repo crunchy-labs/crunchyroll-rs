@@ -11,26 +11,26 @@ use serde_json::Map;
 #[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub(crate) struct VideoIntroResult {
-    pub(crate) media_id: String,
+struct VideoIntroResult {
+    media_id: String,
 
     #[serde(rename = "startTime")]
-    pub(crate) start_time: f64,
+    start_time: f64,
     #[serde(rename = "endTime")]
-    pub(crate) end_time: f64,
-    pub(crate) duration: f64,
+    end_time: f64,
+    duration: f64,
 
     /// Id of the next episode.
     #[serde(rename = "comparedWith")]
-    pub(crate) compared_with: String,
+    compared_with: String,
 
     /// It seems that this represents the episode number relative to the season the episode is part
     /// of. But in a weird way. It is, for example, '0003.00' instead of simply 3 if it's the third
     /// episode in a season.
-    pub(crate) ordering: String,
+    ordering: String,
 
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub(crate) last_updated: DateTime<Utc>,
+    last_updated: DateTime<Utc>,
 }
 
 /// Media related to the media which queried this struct.
@@ -53,7 +53,7 @@ pub struct RelatedMedia<T: Request + DeserializeOwned> {
     pub recent_audio_locale: Option<Locale>,
 }
 
-pub(crate) fn deserialize_panel<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+fn deserialize_panel<'de, D, T>(deserializer: D) -> Result<T, D::Error>
 where
     D: Deserializer<'de>,
     T: DeserializeOwned,
