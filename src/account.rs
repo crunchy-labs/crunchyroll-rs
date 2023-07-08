@@ -59,6 +59,8 @@ pub struct Account {
 
     #[cfg(feature = "__test_strict")]
     crleg_email_verified: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    extended_maturity_rating: crate::StrictValue,
 }
 
 options! {
