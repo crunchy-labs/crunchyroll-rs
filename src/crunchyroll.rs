@@ -471,7 +471,7 @@ mod auth {
             let mut builder = Client::builder()
                 .https_only(true)
                 .cookie_store(true)
-                .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46a");
+                .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.");
 
             if custom_tls {
                 let mut root_store = rustls::RootCertStore::empty();
