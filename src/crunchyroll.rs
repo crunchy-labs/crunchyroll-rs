@@ -113,7 +113,7 @@ mod auth {
     use crate::error::{check_request, CrunchyrollError, CrunchyrollErrorContext};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
-    use http::{header, StatusCode};
+    use http::header;
     use reqwest::{Client, ClientBuilder, IntoUrl, RequestBuilder};
     use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
@@ -430,15 +430,10 @@ mod auth {
         }
     }
 
-    enum CrunchyrollBuilderClient {
-        Normal(Client),
-        Bypass(Box<dyn Fn() -> ClientBuilder + 'static>),
-    }
-
     /// A builder to construct a new [`Crunchyroll`] instance. To create it, call
     /// [`Crunchyroll::builder`].
     pub struct CrunchyrollBuilder {
-        client: CrunchyrollBuilderClient,
+        client: Client,
         locale: Locale,
         preferred_audio_locale: Option<Locale>,
 
@@ -448,9 +443,9 @@ mod auth {
     impl Default for CrunchyrollBuilder {
         fn default() -> Self {
             Self {
-                client: CrunchyrollBuilderClient::Bypass(Box::new(
-                    CrunchyrollBuilder::predefined_client_builder,
-                )),
+                client: CrunchyrollBuilder::predefined_client_builder()
+                    .build()
+                    .unwrap(),
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
                 fixes: ExecutorFixes {
@@ -466,62 +461,40 @@ mod auth {
         /// successful requests to Crunchyroll, applied (most of the time; sometimes Crunchyroll has
         /// fluctuations that requests doesn't work for a specific amount of time and after that
         /// amount everything goes back to normal and works as it should). You can use this builder
-        /// to configure the behavior of the download client. Use [`CrunchyrollBuilder::client`] to
-        /// set your built client.
+        /// to configure the behavior of the download client. Use [`CrunchyrollBuilder::client`] or
+        /// [`CrunchyrollBuilder::try_bypass`] to set your built client.
         pub fn predefined_client_builder() -> ClientBuilder {
+            let mut root_store = rustls::RootCertStore::empty();
+            root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
+                |ta| {
+                    rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+                        ta.subject,
+                        ta.spki,
+                        ta.name_constraints,
+                    )
+                },
+            ));
+            let tls_config = rustls::ClientConfig::builder()
+                .with_cipher_suites(rustls::DEFAULT_CIPHER_SUITES)
+                .with_kx_groups(&[&rustls::kx_group::X25519])
+                .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
+                .unwrap()
+                .with_root_certificates(root_store)
+                .with_no_client_auth();
+
             Client::builder()
                 .https_only(true)
                 .cookie_store(true)
                 .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.1462.46a")
-        }
-
-        /// Try bypassing the cloudflare bot check Crunchyroll has installed. This tries multiple
-        /// ways to not trigger cloudflare when requesting Crunchyroll.
-        /// Enabled by default.
-        pub fn try_bypass(mut self, enable: bool) -> CrunchyrollBuilder {
-            if enable {
-                self.client = CrunchyrollBuilderClient::Bypass(Box::new(
-                    CrunchyrollBuilder::predefined_client_builder,
-                ))
-            } else {
-                self.client = CrunchyrollBuilderClient::Normal(
-                    CrunchyrollBuilder::predefined_client_builder()
-                        .build()
-                        .unwrap(),
-                )
-            }
-            self
+                .use_preconfigured_tls(tls_config)
         }
 
         /// Set a custom client that will be used in all api requests.
         /// It is recommended to use the client builder from
         /// [`CrunchyrollBuilder::predefined_client_builder`] as base as it has some configurations
         /// which may be needed to make successful requests to Crunchyroll.
-        /// Using this methods overwrites the configurations made in
-        /// [`CrunchyrollBuilder::try_bypass`].
         pub fn client(mut self, client: Client) -> CrunchyrollBuilder {
-            self.client = CrunchyrollBuilderClient::Normal(client);
-            self
-        }
-
-        /// Set a custom client builder that will be used in all api requests.
-        /// It is recommended to use the client builder from
-        /// [`CrunchyrollBuilder::predefined_client_builder`] as base as it has some configurations
-        /// which may be needed to make successful requests to Crunchyroll.
-        /// This method has the advantage over [`CrunchyrollBuilder::client`] that the settings made
-        /// in [`CrunchyrollBuilder::try_bypass`] will be applied.
-        pub fn client_builder<F: Fn() -> ClientBuilder + 'static>(
-            mut self,
-            client_builder_fn: F,
-        ) -> CrunchyrollBuilder {
-            self.client = match &self.client {
-                CrunchyrollBuilderClient::Normal(_) => {
-                    CrunchyrollBuilderClient::Normal(client_builder_fn().build().unwrap())
-                }
-                CrunchyrollBuilderClient::Bypass(_) => {
-                    CrunchyrollBuilderClient::Bypass(Box::new(client_builder_fn))
-                }
-            };
+            self.client = client;
             self
         }
 
@@ -572,7 +545,7 @@ mod auth {
         /// Login without an account. This is just like if you would visit crunchyroll.com without
         /// an account. Some functions won't work if logged in with this method.
         pub async fn login_anonymously(self) -> Result<Crunchyroll> {
-            let client = self.get_client().await?;
+            let client = self.client.clone();
 
             let login_response = Executor::auth_anonymously(client.clone()).await?;
             let session_token = SessionToken::Anonymous;
@@ -587,7 +560,7 @@ mod auth {
             user: S,
             password: S,
         ) -> Result<Crunchyroll> {
-            let client = self.get_client().await?;
+            let client = self.client.clone();
 
             let login_response = Executor::auth_with_credentials(
                 client.clone(),
@@ -611,7 +584,7 @@ mod auth {
             self,
             refresh_token: S,
         ) -> Result<Crunchyroll> {
-            let client = self.get_client().await?;
+            let client = self.client.clone();
 
             let login_response = Executor::auth_with_refresh_token(
                 client.clone(),
@@ -631,7 +604,7 @@ mod auth {
         /// internal they're different. I had issues when I tried to log in with the `etp_rt`
         /// cookie on [`CrunchyrollBuilder::login_with_refresh_token`] and vice versa.
         pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
-            let client = self.get_client().await?;
+            let client = self.client.clone();
 
             let login_response =
                 Executor::auth_with_etp_rt(client.clone(), etp_rt.as_ref().to_string()).await?;
@@ -722,53 +695,6 @@ mod auth {
             };
 
             Ok(crunchy)
-        }
-
-        async fn get_client(&self) -> Result<Client> {
-            return match &self.client {
-                CrunchyrollBuilderClient::Normal(client) => Ok(client.clone()),
-                CrunchyrollBuilderClient::Bypass(client_builder_fn) => {
-                    // using this url instead of 'https://www.crunchyroll.com' as the bot protection
-                    // seems to be less strict on the root page
-                    let check_url = "https://www.crunchyroll.com/auth/v1/token";
-
-                    let mut client = client_builder_fn().build().unwrap();
-                    if client.get(check_url).send().await?.status() != StatusCode::FORBIDDEN {
-                        return Ok(client);
-                    }
-
-                    let mut root_store = rustls::RootCertStore::empty();
-                    root_store.add_server_trust_anchors(
-                        webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
-                            rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
-                                ta.subject,
-                                ta.spki,
-                                ta.name_constraints,
-                            )
-                        }),
-                    );
-                    let tls_config = rustls::ClientConfig::builder()
-                        .with_cipher_suites(rustls::DEFAULT_CIPHER_SUITES)
-                        .with_kx_groups(&[&rustls::kx_group::X25519])
-                        .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
-                        .unwrap()
-                        .with_root_certificates(root_store)
-                        .with_no_client_auth();
-
-                    client = client_builder_fn()
-                        .use_preconfigured_tls(tls_config)
-                        .build()
-                        .unwrap();
-                    if client.get(check_url).send().await?.status() != StatusCode::FORBIDDEN {
-                        return Ok(client);
-                    }
-
-                    Err(CrunchyrollError::Request(
-                        CrunchyrollErrorContext::new("could not bypass cloudflare bot protection")
-                            .with_extra(StatusCode::FORBIDDEN),
-                    ))
-                }
-            };
         }
     }
 

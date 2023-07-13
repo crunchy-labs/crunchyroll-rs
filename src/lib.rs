@@ -103,13 +103,14 @@
 //!
 //! ### Cloudflare
 //! Crunchyroll uses the cloudflare bot protection to detect if requests are made by a human.
-//! Obviously this crate makes automated requests and thus, cloudflare sometimes blocks requests.
-//! You'll notice this either when the library errors with `could not bypass cloudflare bot
-//! protection` or a big html message. There are internal ways which are trying to bypass the
-//! protection, but they don't always work. The [`CrunchyrollBuilder::client`] and
-//! [`CrunchyrollBuilder::client_builder`] methods can be used to pass a custom
-//! [reqwest](https://docs.rs/reqwest/latest/reqwest/) http client which might have configurations
-//! to bypass cloudflare, implemented by you.
+//! Obviously this crate makes automated requests and thus, Cloudflare sometimes blocks requests.
+//! You'll notice this either when the library errors a big html message. Depending on factors like
+//! your location the block occurs or not. If such a block occurs you can try to create a custom
+//! [`reqwest::Client`] which has the needed configuration to bypass this check. You can either
+//! build it yourself or use the built-in utility method ([`utils::get_bypass_client`]) which tries
+//! to create a client that can bypass the bot check (it is not guaranteed that the method can
+//! bypass the check as all the settings needed to bypass the check aren't known and it's just doing
+//! trial and error requests).
 //!
 //! # Implementation
 //! To ensure at least all existing parts of the library are working as expected, a special feature
@@ -133,6 +134,7 @@ pub mod media;
 pub mod parse;
 pub mod rating;
 pub mod search;
+pub mod utils;
 
 // internal
 mod internal;
