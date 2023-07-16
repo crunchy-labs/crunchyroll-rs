@@ -542,6 +542,8 @@ mod auth {
         /// Login without an account. This is just like if you would visit crunchyroll.com without
         /// an account. Some functions won't work if logged in with this method.
         pub async fn login_anonymously(self) -> Result<Crunchyroll> {
+            self.pre_login().await?;
+
             let login_response = Executor::auth_anonymously(&self.client).await?;
             let session_token = SessionToken::Anonymous;
 
@@ -555,6 +557,8 @@ mod auth {
             user: S,
             password: S,
         ) -> Result<Crunchyroll> {
+            self.pre_login().await?;
+
             let login_response = Executor::auth_with_credentials(
                 &self.client,
                 user.as_ref().to_string(),
@@ -577,6 +581,8 @@ mod auth {
             self,
             refresh_token: S,
         ) -> Result<Crunchyroll> {
+            self.pre_login().await?;
+
             let login_response =
                 Executor::auth_with_refresh_token(&self.client, refresh_token.as_ref().to_string())
                     .await?;
@@ -593,11 +599,23 @@ mod auth {
         /// internal they're different. I had issues when I tried to log in with the `etp_rt`
         /// cookie on [`CrunchyrollBuilder::login_with_refresh_token`] and vice versa.
         pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
+            self.pre_login().await?;
+
             let login_response =
                 Executor::auth_with_etp_rt(&self.client, etp_rt.as_ref().to_string()).await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone().unwrap());
 
             self.post_login(login_response, session_token).await
+        }
+
+        async fn pre_login(&self) -> Result<()> {
+            // Request the index page to set cookies which are required to bypass the cloudflare bot
+            // check
+            self.client
+                .get("https://www.crunchyroll.com")
+                .send()
+                .await?;
+            Ok(())
         }
 
         async fn post_login(
