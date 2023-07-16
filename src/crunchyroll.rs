@@ -226,15 +226,12 @@ mod auth {
             if config.session_expire <= Utc::now() {
                 let login_response = match config.session_token.clone() {
                     SessionToken::RefreshToken(refresh_token) => {
-                        Executor::auth_with_refresh_token(self.client.clone(), refresh_token)
-                            .await?
+                        Executor::auth_with_refresh_token(&self.client, refresh_token).await?
                     }
                     SessionToken::EtpRt(etp_rt) => {
-                        Executor::auth_with_etp_rt(self.client.clone(), etp_rt).await?
+                        Executor::auth_with_etp_rt(&self.client, etp_rt).await?
                     }
-                    SessionToken::Anonymous => {
-                        Executor::auth_anonymously(self.client.clone()).await?
-                    }
+                    SessionToken::Anonymous => Executor::auth_anonymously(&self.client).await?,
                 };
 
                 let mut new_config = config.clone();
@@ -261,7 +258,7 @@ mod auth {
             );
             req = req.header(header::CONTENT_TYPE, "application/json");
 
-            let mut resp: T = request(self.client.clone(), req).await?;
+            let mut resp: T = request(&self.client, req).await?;
 
             // drop config here explicitly as `__set_executor` can call this function recursively
             // which would lead to a deadlock
@@ -272,7 +269,7 @@ mod auth {
             Ok(resp)
         }
 
-        async fn auth_anonymously(client: Client) -> Result<AuthResponse> {
+        async fn auth_anonymously(client: &Client) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
             let resp = client
                 .post(endpoint)
@@ -292,7 +289,7 @@ mod auth {
         }
 
         async fn auth_with_credentials(
-            client: Client,
+            client: &Client,
             user: String,
             password: String,
         ) -> Result<AuthResponse> {
@@ -316,7 +313,7 @@ mod auth {
         }
 
         async fn auth_with_refresh_token(
-            client: Client,
+            client: &Client,
             refresh_token: String,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
@@ -337,7 +334,7 @@ mod auth {
             check_request(endpoint.to_string(), resp).await
         }
 
-        async fn auth_with_etp_rt(client: Client, etp_rt: String) -> Result<AuthResponse> {
+        async fn auth_with_etp_rt(client: &Client, etp_rt: String) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
             let resp = client
                 .post(endpoint)
@@ -545,12 +542,10 @@ mod auth {
         /// Login without an account. This is just like if you would visit crunchyroll.com without
         /// an account. Some functions won't work if logged in with this method.
         pub async fn login_anonymously(self) -> Result<Crunchyroll> {
-            let client = self.client.clone();
-
-            let login_response = Executor::auth_anonymously(client.clone()).await?;
+            let login_response = Executor::auth_anonymously(&self.client).await?;
             let session_token = SessionToken::Anonymous;
 
-            self.post_login(client, login_response, session_token).await
+            self.post_login(login_response, session_token).await
         }
 
         /// Logs in with credentials (username or email and password) and returns a new `Crunchyroll`
@@ -560,10 +555,8 @@ mod auth {
             user: S,
             password: S,
         ) -> Result<Crunchyroll> {
-            let client = self.client.clone();
-
             let login_response = Executor::auth_with_credentials(
-                client.clone(),
+                &self.client,
                 user.as_ref().to_string(),
                 password.as_ref().to_string(),
             )
@@ -571,7 +564,7 @@ mod auth {
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(client, login_response, session_token).await
+            self.post_login(login_response, session_token).await
         }
 
         /// Logs in with a refresh token. This token is obtained when logging in with
@@ -584,17 +577,13 @@ mod auth {
             self,
             refresh_token: S,
         ) -> Result<Crunchyroll> {
-            let client = self.client.clone();
-
-            let login_response = Executor::auth_with_refresh_token(
-                client.clone(),
-                refresh_token.as_ref().to_string(),
-            )
-            .await?;
+            let login_response =
+                Executor::auth_with_refresh_token(&self.client, refresh_token.as_ref().to_string())
+                    .await?;
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(client, login_response, session_token).await
+            self.post_login(login_response, session_token).await
         }
 
         /// Logs in with a etp rt cookie and returns a new `Crunchyroll` instance.
@@ -604,18 +593,15 @@ mod auth {
         /// internal they're different. I had issues when I tried to log in with the `etp_rt`
         /// cookie on [`CrunchyrollBuilder::login_with_refresh_token`] and vice versa.
         pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
-            let client = self.client.clone();
-
             let login_response =
-                Executor::auth_with_etp_rt(client.clone(), etp_rt.as_ref().to_string()).await?;
+                Executor::auth_with_etp_rt(&self.client, etp_rt.as_ref().to_string()).await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(client, login_response, session_token).await
+            self.post_login(login_response, session_token).await
         }
 
         async fn post_login(
             self,
-            client: Client,
             login_response: AuthResponse,
             session_token: SessionToken,
         ) -> Result<Crunchyroll> {
@@ -647,18 +633,18 @@ mod auth {
                 cms_beta: crate::StrictValue,
             }
 
-            let index_req = client.get(index_endpoint).header(
+            let index_req = self.client.get(index_endpoint).header(
                 header::AUTHORIZATION,
                 format!(
                     "{} {}",
                     login_response.token_type, login_response.access_token
                 ),
             );
-            let index: IndexResp = request(client.clone(), index_req).await?;
+            let index: IndexResp = request(&self.client, index_req).await?;
 
             let crunchy = Crunchyroll {
                 executor: Arc::new(Executor {
-                    client,
+                    client: self.client,
 
                     config: Mutex::new(ExecutorConfig {
                         token_type: login_response.token_type,
@@ -700,7 +686,7 @@ mod auth {
 
     /// Make a request from the provided builder.
     async fn request<T: Request + DeserializeOwned>(
-        client: Client,
+        client: &Client,
         req: RequestBuilder,
     ) -> Result<T> {
         let built_req = req.build()?;
