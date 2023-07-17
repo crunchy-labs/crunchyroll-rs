@@ -110,7 +110,7 @@ impl Crunchyroll {
 }
 
 mod auth {
-    use crate::error::{check_request, CrunchyrollError, CrunchyrollErrorContext};
+    use crate::error::{check_request, CrunchyrollError};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
     use http::header;
@@ -725,9 +725,14 @@ mod auth {
             ))?;
             serde_json::from_value(value.clone()).map_err(|e| {
                 CrunchyrollError::Decode(
-                    CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
-                        .with_url(url)
-                        .with_value(value.to_string().as_bytes()),
+                    crate::error::CrunchyrollErrorContext::new(format!(
+                        "{} at {}:{}",
+                        e,
+                        e.line(),
+                        e.column()
+                    ))
+                    .with_url(url)
+                    .with_value(value.to_string().as_bytes()),
                 )
             })
         }
