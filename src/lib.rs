@@ -106,11 +106,12 @@
 //! Obviously this crate makes automated requests and thus, Cloudflare sometimes blocks requests.
 //! You'll notice this either when the library errors a big html message. Depending on factors like
 //! your location the block occurs or not. If such a block occurs you can try to create a custom
-//! [`reqwest::Client`] which has the needed configuration to bypass this check. You can either
-//! build it yourself or use the built-in utility method ([`utils::get_bypass_client`]) which tries
-//! to create a client that can bypass the bot check (it is not guaranteed that the method can
-//! bypass the check as all the settings needed to bypass the check aren't known and it's just doing
-//! trial and error requests).
+//! [`reqwest::Client`] which has the needed configuration to bypass this check, like other user
+//! agents or tls backends (note that [`reqwest`] currently only supports
+//! [`native-tls`](https://docs.rs/native-tls/latest/native_tls/) besides [`rustls`] as tls backend,
+//! which is confirmed to work with openssl on Linux only, on Windows the blocks are even more
+//! aggressive). The configurations may vary on the factors addressed so there is no 100% right way
+//! to do it.
 //!
 //! # Implementation
 //! To ensure at least all existing parts of the library are working as expected, a special feature
@@ -134,7 +135,6 @@ pub mod media;
 pub mod parse;
 pub mod rating;
 pub mod search;
-pub mod utils;
 
 // internal
 mod internal;

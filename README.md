@@ -84,11 +84,14 @@ Because we do not monitor the api constantly, so we cannot immediately say when 
 If you find an endpoint which is not implemented or has changes feel free to open a new [issue](https://github.com/crunchy-labs/crunchyroll-rs/issues) and tell us, or fork the library and implement it yourself.
 
 #### Cloudflare
-Crunchyroll uses the cloudflare bot protection to detect if requests are made by a human.
-Obviously this library makes automated requests and thus, cloudflare sometimes blocks requests.
-You'll notice this either when the library errors with `could not bypass cloudflare bot protection` or a big html message.
-There are internal ways which are trying to bypass the protection, but they don't always work.
-The `CrunchyrollBuilder::client` and `CrunchyrollBuilder::client_builder` methods can be used to pass a custom [reqwest](https://docs.rs/reqwest/latest/reqwest/) http client which might have configurations to bypass cloudflare, implemented by you.
+Crunchyroll uses the cloudflare bot protection to detect if requests are made by a human. Obviously this crate makes
+automated requests and thus, Cloudflare sometimes blocks requests. You'll notice this either when the library errors a
+big html message. Depending on factors like your location the block occurs or not. If such a block occurs you can try to
+create a custom `reqwest::Client` which has the needed configuration to bypass this check, like other user agents or
+tls backends (note that [reqwest](https://github.com/seanmonstar/reqwest) currently only supports
+[native-tls](https://github.com/sfackler/rust-native-tls) besides [rustls](https://github.com/rustls/rustls) as tls
+backend, which is confirmed to work with openssl on Linux only, on Windows the blocks are even more aggressive). The
+configurations may vary on the factors addressed so there is no 100% right way to do it.
 
 ## License
 
