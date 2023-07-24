@@ -16,6 +16,11 @@ fn deserialize_streams<'de, D: Deserializer<'de>>(
 
     let mut raw: HashMap<Locale, HashMap<String, Value>> = HashMap::new();
     for (key, value) in as_map {
+        // always empty
+        if key == "urls" {
+            continue
+        }
+
         for (mut locale, data) in value {
             if locale == Locale::Custom(":".to_string()) {
                 locale = Locale::Custom("".to_string());
