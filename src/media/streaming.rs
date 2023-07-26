@@ -95,8 +95,6 @@ impl Stream {
             }
         } else if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
             raw_streams.adaptive_dash.as_ref().unwrap().url.clone()
-        } else if let Some(raw_streams) = self.variants.get(&Locale::Custom(":".into())) {
-            raw_streams.adaptive_dash.as_ref().unwrap().url.clone()
         } else {
             return Err(CrunchyrollError::Internal(
                 "could not find supported stream".into(),
