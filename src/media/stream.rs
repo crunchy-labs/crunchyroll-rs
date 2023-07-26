@@ -18,7 +18,7 @@ fn deserialize_streams<'de, D: Deserializer<'de>>(
     for (key, value) in as_map {
         // always empty
         if key == "urls" {
-            continue
+            continue;
         }
 
         for (mut locale, data) in value {
