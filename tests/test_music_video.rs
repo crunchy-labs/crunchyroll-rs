@@ -28,5 +28,9 @@ async fn music_video_related_anime() {
 
 #[tokio::test]
 async fn music_video_artist() {
-    assert_result!(MUSIC_VIDEO.get().await.unwrap().artist.artist().await)
+    assert_result!(
+        MUSIC_VIDEO.get().await.unwrap().artists.main_artist[0]
+            .artist()
+            .await
+    )
 }

@@ -41,11 +41,8 @@ pub struct Account {
     #[serde(rename = "preferred_content_subtitle_language")]
     pub preferred_subtitle_language: Locale,
 
-    pub opt_out_android_in_app_marketing: bool,
     pub opt_out_free_trials: bool,
-    pub opt_out_new_media_queue_updates: bool,
     pub opt_out_pm_updates: bool,
-    pub opt_out_queue_updates: bool,
     #[serde(rename = "opt_out_store_deals")]
     pub email_store_details: bool,
     #[serde(rename = "opt_out_newsletters")]
@@ -232,6 +229,15 @@ impl Crunchyroll {
         result.extend(
             self.executor
                 .get(profile_endpoint)
+                .request::<HashMap<String, Value>>()
+                .await?,
+        );
+
+        let notification_endpoint =
+            "https://www.crunchyroll.com/accounts/v1/me/notification_settings";
+        result.extend(
+            self.executor
+                .get(notification_endpoint)
                 .request::<HashMap<String, Value>>()
                 .await?,
         );

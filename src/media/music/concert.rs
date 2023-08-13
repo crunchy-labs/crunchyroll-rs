@@ -1,7 +1,7 @@
 use crate::crunchyroll::Executor;
 use crate::media::music::util::availability_object_to_keys;
 use crate::media::util::request_media;
-use crate::media::{ArtistPreview, Media, MusicGenre, ThumbnailImages};
+use crate::media::{ArtistPreview, ArtistsPreviewList, Media, MusicGenre, ThumbnailImages};
 use crate::{Crunchyroll, Request, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::de::{Error, IntoDeserializer};
@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 /// Metadata for a concert.
 #[derive(Clone, Debug, Deserialize, Serialize, Request, smart_default::SmartDefault)]
-#[request(executor(artist))]
+#[request(executor(artist, artists))]
 #[serde(rename_all = "camelCase")]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -31,6 +31,10 @@ pub struct Concert {
     pub sequence_number: f32,
 
     pub artist: ArtistPreview,
+    pub artists: ArtistsPreviewList,
+    pub display_artist_name: String,
+    pub display_artist_name_required: bool,
+
     pub licensor: String,
     pub copyright: String,
 

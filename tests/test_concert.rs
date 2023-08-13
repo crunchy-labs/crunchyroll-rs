@@ -6,8 +6,8 @@ mod utils;
 static CONCERT: Store<Concert> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let movie_listing = crunchy.media_from_id("MC27E95748").await?;
-        Ok(movie_listing)
+        let concert = crunchy.media_from_id("MC27E95748").await?;
+        Ok(concert)
     })
 });
 

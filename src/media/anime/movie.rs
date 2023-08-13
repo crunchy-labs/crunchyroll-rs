@@ -29,8 +29,9 @@ pub struct Movie {
 
     #[serde(alias = "listing_id")]
     pub movie_listing_id: String,
-
     pub movie_listing_title: String,
+    #[serde(default)]
+    pub movie_listing_slug_title: String,
 
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
@@ -59,16 +60,29 @@ pub struct Movie {
     pub availability_notes: String,
 
     #[cfg(feature = "__test_strict")]
-    media_type: Option<crate::StrictValue>,
+    #[serde(rename = "type")]
+    #[serde(alias = "media_type")]
+    type_: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    audio_locale: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    external_id: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    linked_resource_key: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_title: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    promo_description: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     available_date: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    premium_date: crate::StrictValue,
+    availability_starts: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    #[serde(default)]
-    movie_listing_slug_title: crate::StrictValue,
+    availability_ends: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    premium_date: crate::StrictValue,
 }
 
 impl Movie {
@@ -90,7 +104,7 @@ impl Media for Movie {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
-                "https://www.crunchyroll.com/content/v2/cms/movies/{}",
+                "https://www.crunchyroll.com/content/v2/cms/objects/{}",
                 id.as_ref()
             ),
         )

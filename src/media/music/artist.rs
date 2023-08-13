@@ -8,8 +8,18 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+#[request(executor(main_artist))]
+#[serde(rename_all = "PascalCase")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct ArtistsPreviewList {
+    pub main_artist: Vec<ArtistPreview>,
+}
+
 /// A preview / summary of an artist. Returned when requesting a [`MusicVideo`] or [`Concert`].
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct ArtistPreview {
@@ -20,6 +30,13 @@ pub struct ArtistPreview {
 
     pub slug: String,
     pub name: String,
+
+    #[cfg(feature = "__test_strict")]
+    connector: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    roles: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    sequence_number: Option<crate::StrictValue>,
 }
 
 impl ArtistPreview {
