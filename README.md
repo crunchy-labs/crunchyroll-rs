@@ -40,8 +40,8 @@ The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).
 You need this crate and [tokio](https://github.com/tokio-rs/tokio) as dependency in your Cargo.toml in order to start working:
 ```toml
 [dependencies]
-crunchyroll-rs = "0.5"
-tokio = { version = "1.29", features = ["full"] }
+crunchyroll-rs = "0.6"
+tokio = { version = "1.31", features = ["full"] }
 ```
 
 The following code prints the data of the episode behind the given url:
