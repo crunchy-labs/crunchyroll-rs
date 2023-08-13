@@ -124,7 +124,7 @@ impl Stream {
         let mut map = data.meta.clone();
         map.insert("variants".to_string(), data.data.remove(0).into());
 
-        let mut stream: Stream = serde_json::from_value(serde_json::to_value(map)?)?;
+        let mut stream: Stream = serde_json::from_value(Value::Object(map))?;
         stream.executor = executor;
         stream.version_request_url = Some(base.as_ref().to_string());
 
@@ -160,7 +160,7 @@ impl Stream {
             .map_or(serde_json::Map::new().into(), |s| s);
         data.insert("variants".to_string(), variants);
 
-        let mut stream: Stream = serde_json::from_value(serde_json::to_value(data)?)?;
+        let mut stream: Stream = serde_json::from_value(Value::Object(data))?;
         stream.executor = executor;
 
         Ok(stream)
@@ -238,8 +238,9 @@ pub struct Subtitle {
 impl Subtitle {
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
         let resp = self.executor.get(self.url).request_raw().await?;
-        w.write_all(resp.as_ref())
-            .map_err(|e| Error::Input(e.to_string().into()))?;
+        w.write_all(resp.as_ref()).map_err(|e| Error::Input {
+            message: e.to_string(),
+        })?;
         Ok(())
     }
 }

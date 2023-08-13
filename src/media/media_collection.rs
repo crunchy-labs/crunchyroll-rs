@@ -43,9 +43,9 @@ impl MediaCollection {
         } else if let Ok(music_video) = MusicVideo::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::MusicVideo(music_video))
         } else {
-            Err(Error::Input(
-                format!("failed to find valid media with id '{}'", id.as_ref()).into(),
-            ))
+            Err(Error::Input {
+                message: format!("failed to find valid media with id '{}'", id.as_ref()),
+            })
         }
     }
 }

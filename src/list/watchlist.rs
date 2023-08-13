@@ -51,9 +51,9 @@ impl WatchlistEntry {
         match self.panel.clone() {
             MediaCollection::Series(series) => Ok(series.id),
             MediaCollection::MovieListing(movie_listing) => Ok(movie_listing.id),
-            _ => Err(Error::Internal(
-                "panel is not series nor movie listing".into(),
-            )),
+            _ => Err(Error::Internal {
+                message: "panel is not series nor movie listing".to_string(),
+            }),
         }
     }
 }

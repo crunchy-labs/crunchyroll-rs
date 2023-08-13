@@ -152,14 +152,14 @@ impl Account {
         if !profile_update.is_empty() {
             self.executor
                 .patch(profile_endpoint)
-                .json(&serde_json::to_value(profile_update)?)
+                .json(&Value::Object(profile_update))
                 .request::<EmptyJsonProxy>()
                 .await?;
         }
         if !notification_update.is_empty() {
             self.executor
                 .patch(notification_endpoint)
-                .json(&serde_json::to_value(notification_update)?)
+                .json(&Value::Object(notification_update))
                 .request::<EmptyJsonProxy>()
                 .await?;
         }
@@ -218,7 +218,7 @@ impl Crunchyroll {
     /// Return information about the current account. [`Account`] can be used to modify account
     /// settings like the email or web interface language.
     pub async fn account(&self) -> Result<Account> {
-        let mut result: HashMap<String, Value> = HashMap::new();
+        let mut result: serde_json::Map<String, Value> = serde_json::Map::new();
 
         let me_endpoint = "https://www.crunchyroll.com/accounts/v1/me";
         result.extend(
@@ -236,7 +236,7 @@ impl Crunchyroll {
                 .await?,
         );
 
-        let mut account: Account = serde_json::from_value(serde_json::to_value(result)?)?;
+        let mut account: Account = serde_json::from_value(Value::Object(result))?;
         account.executor = self.executor.clone();
 
         Ok(account)

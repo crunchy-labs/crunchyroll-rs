@@ -41,9 +41,9 @@ impl Stream {
                 )
                 .await
             } else {
-                Err(Error::Input(
-                    format!("could not find any stream with hardsub locale '{}'", locale).into(),
-                ))
+                Err(Error::Input {
+                    message: format!("could not find any stream with hardsub locale '{}'", locale),
+                })
             }
         } else if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
             VariantData::from_hls_master(
@@ -58,7 +58,9 @@ impl Stream {
             )
             .await
         } else {
-            Err(Error::Internal("could not find supported stream".into()))
+            Err(Error::Internal {
+                message: "could not find supported stream".to_string(),
+            })
         }
     }
 
@@ -87,26 +89,32 @@ impl Stream {
             if let Some(raw_streams) = self.variants.get(&locale) {
                 raw_streams.adaptive_dash.as_ref().unwrap().url.clone()
             } else {
-                return Err(Error::Input(
-                    format!("could not find any stream with hardsub locale '{}'", locale).into(),
-                ));
+                return Err(Error::Input {
+                    message: format!("could not find any stream with hardsub locale '{}'", locale),
+                });
             }
         } else if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
             raw_streams.adaptive_dash.as_ref().unwrap().url.clone()
         } else {
-            return Err(Error::Internal("could not find supported stream".into()));
+            return Err(Error::Internal {
+                message: "could not find supported stream".to_string(),
+            });
         };
 
         let mut video = vec![];
         let mut audio = vec![];
 
-        let raw_mpd = self.executor.get(url).request_raw().await?;
+        let raw_mpd = self.executor.get(&url).request_raw().await?;
         let period = dash_mpd::parse(
             String::from_utf8_lossy(raw_mpd.as_slice())
                 .to_string()
                 .as_str(),
         )
-        .map_err(|e| Error::Decode(e.to_string().into()))?
+        .map_err(|e| Error::Decode {
+            message: e.to_string(),
+            content: raw_mpd,
+            url,
+        })?
         .periods[0]
             .clone();
         let adaptions = period.adaptations;
@@ -202,10 +210,14 @@ pub struct VariantData {
 impl VariantData {
     #[cfg(feature = "hls-stream")]
     async fn from_hls_master(executor: Arc<Executor>, url: String) -> Result<Vec<VariantData>> {
-        let raw_master_playlist = executor.get(url).request_raw().await?;
+        let raw_master_playlist = executor.get(&url).request_raw().await?;
 
         let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_slice())
-            .map_err(|e| Error::Decode(e.to_string().into()))?;
+            .map_err(|e| Error::Decode {
+                message: e.to_string(),
+                content: raw_master_playlist.clone(),
+                url,
+            })?;
 
         let mut stream_data: Vec<VariantData> = vec![];
 
@@ -367,12 +379,16 @@ impl VariantData {
 
         #[allow(irrefutable_let_patterns)]
         let VariantDataUrl::Hls { url } = &self.url else {
-            return Err(Error::Internal("variant url should be hls".into()))
+            return Err(Error::Internal { message: "variant url should be hls".to_string() })
         };
 
         let raw_media_playlist = self.executor.get(url).request_raw().await?;
         let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_slice())
-            .map_err(|e| Error::Decode(e.to_string().into()))?;
+            .map_err(|e| Error::Decode {
+                message: e.to_string(),
+                content: raw_media_playlist.clone(),
+                url: url.clone(),
+            })?;
 
         let mut segments: Vec<VariantSegment> = vec![];
         let mut key: Option<Aes128CbcDec> = None;
@@ -424,7 +440,7 @@ impl VariantData {
     async fn dash_segments(&self) -> Result<Vec<VariantSegment>> {
         #[allow(irrefutable_let_patterns)]
         let VariantDataUrl::MpegDash { id, base, init, fragments, start, lengths } = self.url.clone() else {
-            return Err(Error::Internal("variant url should be dash".into()))
+            return Err(Error::Internal{ message: "variant url should be dash".to_string() })
         };
 
         let mut segments = vec![VariantSegment {
@@ -475,9 +491,16 @@ impl VariantSegment {
     pub fn decrypt(segment_bytes: &mut [u8], key: Option<Aes128CbcDec>) -> Result<&[u8]> {
         use aes::cipher::BlockDecryptMut;
         if let Some(key) = key {
+            // yes, the input bytes are copied into a new vec just for a better error output.
+            // probably not worth it but better safe than sorry
+            let error_segment_content = segment_bytes.to_vec();
             let decrypted = key
                 .decrypt_padded_mut::<aes::cipher::block_padding::Pkcs7>(segment_bytes)
-                .map_err(|e| Error::Decode(e.to_string().into()))?;
+                .map_err(|e| Error::Decode {
+                    message: e.to_string(),
+                    content: error_segment_content,
+                    url: "n/a".to_string(),
+                })?;
             Ok(decrypted)
         } else {
             Ok(segment_bytes)
@@ -492,7 +515,9 @@ impl VariantSegment {
             segment.borrow_mut(),
             self.key.clone(),
         )?)
-        .map_err(|e| Error::Input(e.to_string().into()))?;
+        .map_err(|e| Error::Input {
+            message: e.to_string(),
+        })?;
 
         Ok(())
     }

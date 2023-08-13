@@ -136,7 +136,11 @@ impl Crunchylist {
             MediaCollection::Episode(episode) => episode.series_id,
             MediaCollection::MovieListing(movie_listing) => movie_listing.id,
             MediaCollection::Movie(movie) => movie.movie_listing_id,
-            _ => return Err(Error::Input("music related media isn't supported".into())),
+            _ => {
+                return Err(Error::Input {
+                    message: "music related media isn't supported".to_string(),
+                })
+            }
         };
         self.executor
             .post(endpoint)

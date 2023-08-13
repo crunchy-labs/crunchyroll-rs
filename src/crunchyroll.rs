@@ -687,9 +687,10 @@ mod auth {
                         policy: index.cms_web.policy,
                         key_pair_id: index.cms_web.key_pair_id,
                         account_id: login_response.account_id.ok_or_else(|| {
-                            Error::Authentication(
-                                "Login with a user account to use this function".into(),
-                            )
+                            Error::Authentication {
+                                message: "Login with a user account to use this function"
+                                    .to_string(),
+                            }
                         }),
                     },
                     fixes: self.fixes,
@@ -721,17 +722,10 @@ mod auth {
             let value = serde_json::Value::deserialize(serde::de::value::MapDeserializer::new(
                 cleaned.into_iter(),
             ))?;
-            serde_json::from_value(value.clone()).map_err(|e| {
-                Error::Decode(
-                    crate::error::ErrorContext::new(format!(
-                        "{} at {}:{}",
-                        e,
-                        e.line(),
-                        e.column()
-                    ))
-                    .with_url(url)
-                    .with_value(value.to_string().as_bytes()),
-                )
+            serde_json::from_value(value.clone()).map_err(|e| Error::Decode {
+                message: format!("{} at {}:{}", e, e.line(), e.column()),
+                content: value.to_string().into_bytes(),
+                url,
             })
         }
     }
