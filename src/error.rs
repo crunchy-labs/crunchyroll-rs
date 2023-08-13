@@ -28,6 +28,10 @@ pub enum CrunchyrollError {
 
     /// Generally malformed or invalid user input.
     Input(CrunchyrollErrorContext<()>),
+
+    /// When the request got blocked. Currently this only triggers when the cloudflare bot
+    /// protection is detected.
+    Block(CrunchyrollErrorContext<()>),
 }
 
 impl Display for CrunchyrollError {
@@ -38,6 +42,7 @@ impl Display for CrunchyrollError {
             CrunchyrollError::Decode(context) => write!(f, "{context}"),
             CrunchyrollError::Authentication(context) => write!(f, "{context}"),
             CrunchyrollError::Input(context) => write!(f, "{context}"),
+            CrunchyrollError::Block(context) => write!(f, "{context}"),
         }
     }
 }
@@ -236,12 +241,28 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
 }
 
 pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Response) -> Result<T> {
-    match resp.status().as_u16() {
+    let content_length = resp.content_length().unwrap_or(0);
+    let status = resp.status();
+    let _raw = match resp.status().as_u16() {
+        403 => {
+            let raw = resp.bytes().await?;
+            if raw.starts_with(b"<!DOCTYPE html>")
+                && raw
+                    .windows(31)
+                    .any(|w| w == b"<title>Just a moment...</title>")
+            {
+                return Err(CrunchyrollError::Block(
+                    CrunchyrollErrorContext::new("Triggered Cloudflare bot protection")
+                        .with_url(url),
+                ));
+            }
+            raw
+        }
         404 => {
             return Err(CrunchyrollError::Request(
                 CrunchyrollErrorContext::new("The requested resource is not present (404)")
-                    .with_url(resp.url())
-                    .with_extra(resp.status()),
+                    .with_url(url)
+                    .with_extra(status),
             ))
         }
         429 => {
@@ -261,16 +282,12 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
                         "Try again in {secs} seconds"
                     ))
                 ))
-                .with_url(resp.url())
-                .with_extra(resp.status()),
+                .with_url(url)
+                .with_extra(status),
             ));
         }
-        _ => (),
-    }
-
-    let content_length = resp.content_length().unwrap_or(0);
-    let status = resp.status();
-    let _raw = resp.bytes().await.unwrap();
+        _ => resp.bytes().await?,
+    };
     let mut raw: &[u8] = _raw.as_ref();
 
     // to ensure compatibility with `T`, convert a empty response to {}
