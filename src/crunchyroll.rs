@@ -110,7 +110,7 @@ impl Crunchyroll {
 }
 
 mod auth {
-    use crate::error::{check_request, CrunchyrollError};
+    use crate::error::{check_request, Error};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
     use http::header;
@@ -687,7 +687,7 @@ mod auth {
                         policy: index.cms_web.policy,
                         key_pair_id: index.cms_web.key_pair_id,
                         account_id: login_response.account_id.ok_or_else(|| {
-                            CrunchyrollError::Authentication(
+                            Error::Authentication(
                                 "Login with a user account to use this function".into(),
                             )
                         }),
@@ -722,8 +722,8 @@ mod auth {
                 cleaned.into_iter(),
             ))?;
             serde_json::from_value(value.clone()).map_err(|e| {
-                CrunchyrollError::Decode(
-                    crate::error::CrunchyrollErrorContext::new(format!(
+                Error::Decode(
+                    crate::error::ErrorContext::new(format!(
                         "{} at {}:{}",
                         e,
                         e.line(),

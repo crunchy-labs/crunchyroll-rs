@@ -1,11 +1,10 @@
 use crate::common::Request;
 use crate::crunchyroll::Executor;
-use crate::error::CrunchyrollError;
+use crate::error::Error;
 use crate::media::Media;
 use crate::{
     Concert, Crunchyroll, Episode, Movie, MovieListing, MusicVideo, Result, Season, Series,
 };
-use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::sync::Arc;
@@ -44,7 +43,7 @@ impl MediaCollection {
         } else if let Ok(music_video) = MusicVideo::from_id(crunchyroll, id.as_ref()).await {
             Ok(MediaCollection::MusicVideo(music_video))
         } else {
-            Err(CrunchyrollError::Input(
+            Err(Error::Input(
                 format!("failed to find valid media with id '{}'", id.as_ref()).into(),
             ))
         }
@@ -64,7 +63,7 @@ impl<'de> Deserialize<'de> for MediaCollection {
     {
         let as_map = serde_json::Map::deserialize(deserializer)?;
 
-        let err_conv = |e: serde_json::Error| Error::custom(e.to_string());
+        let err_conv = |e: serde_json::Error| serde::de::Error::custom(e.to_string());
 
         if as_map.contains_key("series_metadata") || as_map.contains_key("series_launch_year") {
             Ok(MediaCollection::Series(
@@ -103,7 +102,7 @@ impl<'de> Deserialize<'de> for MediaCollection {
                 serde_json::from_value(Value::from(as_map)).map_err(err_conv)?,
             ))
         } else {
-            Err(Error::custom(
+            Err(serde::de::Error::custom(
                 "could not deserialize into media collection".to_string(),
             ))
         }

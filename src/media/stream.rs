@@ -1,7 +1,6 @@
 use crate::common::V2BulkResult;
-use crate::error::CrunchyrollError;
+use crate::error::Error;
 use crate::{Executor, Locale, Request, Result};
-use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -29,7 +28,7 @@ fn deserialize_streams<'de, D: Deserializer<'de>>(
             // check only for errors and not use the `Ok(...)` result in `raw` because `Variant`
             // then must implement `serde::Serialize`
             if let Err(e) = Variant::deserialize(&data) {
-                return Err(Error::custom(e.to_string()));
+                return Err(serde::de::Error::custom(e.to_string()));
             }
 
             if let Some(entry) = raw.get_mut(&locale) {
@@ -40,8 +39,9 @@ fn deserialize_streams<'de, D: Deserializer<'de>>(
         }
     }
 
-    let as_value = serde_json::to_value(raw).map_err(|e| Error::custom(e.to_string()))?;
-    serde_json::from_value(as_value).map_err(|e| Error::custom(e.to_string()))
+    let as_value =
+        serde_json::to_value(raw).map_err(|e| serde::de::Error::custom(e.to_string()))?;
+    serde_json::from_value(as_value).map_err(|e| serde::de::Error::custom(e.to_string()))
 }
 
 #[allow(dead_code)]
@@ -239,7 +239,7 @@ impl Subtitle {
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
         let resp = self.executor.get(self.url).request_raw().await?;
         w.write_all(resp.as_ref())
-            .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
+            .map_err(|e| Error::Input(e.to_string().into()))?;
         Ok(())
     }
 }

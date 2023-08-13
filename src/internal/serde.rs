@@ -1,8 +1,8 @@
 use crate::common::Image;
-use crate::error::{CrunchyrollError, CrunchyrollErrorContext};
+use crate::error::{Error, ErrorContext};
 use crate::{Request, Result};
 use chrono::Duration;
-use serde::de::{DeserializeOwned, Error};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::str::FromStr;
@@ -21,7 +21,7 @@ impl<'de> Deserialize<'de> for EmptyJsonProxy {
                 return Ok(EmptyJsonProxy);
             }
         }
-        Err(Error::custom(format!(
+        Err(serde::de::Error::custom(format!(
             "result must be empty object / map: '{value}'"
         )))
     }
@@ -45,8 +45,8 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
             Value::String(string) => string,
             Value::Null => continue,
             _ => {
-                return Err(CrunchyrollError::Internal(
-                    CrunchyrollErrorContext::new("value is not supported to urlencode")
+                return Err(Error::Internal(
+                    ErrorContext::new("value is not supported to urlencode")
                         .with_value(key.to_string().as_bytes()),
                 ))
             }
@@ -61,8 +61,8 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
                     Value::Number(number) => Ok(number.to_string()),
                     Value::String(string) => Ok(string),
                     _ => {
-                        return Err(CrunchyrollError::Internal(
-                            CrunchyrollErrorContext::new("value is not supported to urlencode")
+                        return Err(Error::Internal(
+                            ErrorContext::new("value is not supported to urlencode")
                                 .with_value(vv.to_string().as_bytes()),
                         ))
                     }
@@ -71,8 +71,8 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
                 .join(","),
             Value::Null => continue,
             _ => {
-                return Err(CrunchyrollError::Internal(
-                    CrunchyrollErrorContext::new("value is not supported to urlencode")
+                return Err(Error::Internal(
+                    ErrorContext::new("value is not supported to urlencode")
                         .with_value(value.to_string().as_bytes()),
                 ))
             }
@@ -107,7 +107,8 @@ where
     D: Deserializer<'de>,
 {
     let value = String::deserialize(deserializer)?;
-    T::from_str(value.as_str()).map_err(|_| Error::custom("could not convert string to T"))
+    T::from_str(value.as_str())
+        .map_err(|_| serde::de::Error::custom("could not convert string to T"))
 }
 
 /// Some response values are `null` for whatever reason even though they shouldn't be.
@@ -136,7 +137,7 @@ where
     if value.is_object() {
         Ok(vec![])
     } else {
-        serde_json::from_value(value).map_err(|e| D::Error::custom(e.to_string()))
+        serde_json::from_value(value).map_err(|e| serde::de::Error::custom(e.to_string()))
     }
 }
 
@@ -163,7 +164,7 @@ pub(crate) fn deserialize_thumbnail_image<'de, D: Deserializer<'de>>(
 
     if let Some(thumbnail) = as_map.get("thumbnail") {
         Ok(serde_json::from_value::<Vec<Vec<Image>>>(thumbnail.clone())
-            .map_err(|e| Error::custom(e.to_string()))?
+            .map_err(|e| serde::de::Error::custom(e.to_string()))?
             .into_iter()
             .flatten()
             .collect())
@@ -181,6 +182,6 @@ pub(crate) fn deserialize_streams_link<'de, D: Deserializer<'de>>(
         .trim_end_matches("/streams")
         .split('/')
         .last()
-        .ok_or_else(|| Error::custom("cannot extract stream id"))?
+        .ok_or_else(|| serde::de::Error::custom("cannot extract stream id"))?
         .to_string())
 }

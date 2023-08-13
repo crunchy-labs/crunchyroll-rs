@@ -1,5 +1,5 @@
 use crate::common::V2BulkResult;
-use crate::error::CrunchyrollError;
+use crate::error::Error;
 use crate::{
     enum_values, options, Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result,
 };
@@ -51,7 +51,7 @@ impl WatchlistEntry {
         match self.panel.clone() {
             MediaCollection::Series(series) => Ok(series.id),
             MediaCollection::MovieListing(movie_listing) => Ok(movie_listing.id),
-            _ => Err(CrunchyrollError::Internal(
+            _ => Err(Error::Internal(
                 "panel is not series nor movie listing".into(),
             )),
         }

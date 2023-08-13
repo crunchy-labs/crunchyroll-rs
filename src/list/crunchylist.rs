@@ -1,5 +1,5 @@
 use crate::common::V2BulkResult;
-use crate::error::CrunchyrollError;
+use crate::error::Error;
 use crate::{Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -136,11 +136,7 @@ impl Crunchylist {
             MediaCollection::Episode(episode) => episode.series_id,
             MediaCollection::MovieListing(movie_listing) => movie_listing.id,
             MediaCollection::Movie(movie) => movie.movie_listing_id,
-            _ => {
-                return Err(CrunchyrollError::Input(
-                    "music related media isn't supported".into(),
-                ))
-            }
+            _ => return Err(Error::Input("music related media isn't supported".into())),
         };
         self.executor
             .post(endpoint)

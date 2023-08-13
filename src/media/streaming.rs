@@ -1,4 +1,4 @@
-use crate::error::CrunchyrollError;
+use crate::error::Error;
 use crate::media::Stream;
 use crate::{Executor, Locale, Request, Result};
 use serde::{Deserialize, Serialize};
@@ -41,7 +41,7 @@ impl Stream {
                 )
                 .await
             } else {
-                Err(CrunchyrollError::Input(
+                Err(Error::Input(
                     format!("could not find any stream with hardsub locale '{}'", locale).into(),
                 ))
             }
@@ -58,9 +58,7 @@ impl Stream {
             )
             .await
         } else {
-            Err(CrunchyrollError::Internal(
-                "could not find supported stream".into(),
-            ))
+            Err(Error::Internal("could not find supported stream".into()))
         }
     }
 
@@ -89,16 +87,14 @@ impl Stream {
             if let Some(raw_streams) = self.variants.get(&locale) {
                 raw_streams.adaptive_dash.as_ref().unwrap().url.clone()
             } else {
-                return Err(CrunchyrollError::Input(
+                return Err(Error::Input(
                     format!("could not find any stream with hardsub locale '{}'", locale).into(),
                 ));
             }
         } else if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
             raw_streams.adaptive_dash.as_ref().unwrap().url.clone()
         } else {
-            return Err(CrunchyrollError::Internal(
-                "could not find supported stream".into(),
-            ));
+            return Err(Error::Internal("could not find supported stream".into()));
         };
 
         let mut video = vec![];
@@ -110,7 +106,7 @@ impl Stream {
                 .to_string()
                 .as_str(),
         )
-        .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?
+        .map_err(|e| Error::Decode(e.to_string().into()))?
         .periods[0]
             .clone();
         let adaptions = period.adaptations;
@@ -209,7 +205,7 @@ impl VariantData {
         let raw_master_playlist = executor.get(url).request_raw().await?;
 
         let master_playlist = m3u8_rs::parse_master_playlist_res(raw_master_playlist.as_slice())
-            .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
+            .map_err(|e| Error::Decode(e.to_string().into()))?;
 
         let mut stream_data: Vec<VariantData> = vec![];
 
@@ -371,12 +367,12 @@ impl VariantData {
 
         #[allow(irrefutable_let_patterns)]
         let VariantDataUrl::Hls { url } = &self.url else {
-            return Err(CrunchyrollError::Internal("variant url should be hls".into()))
+            return Err(Error::Internal("variant url should be hls".into()))
         };
 
         let raw_media_playlist = self.executor.get(url).request_raw().await?;
         let media_playlist = m3u8_rs::parse_media_playlist_res(raw_media_playlist.as_slice())
-            .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
+            .map_err(|e| Error::Decode(e.to_string().into()))?;
 
         let mut segments: Vec<VariantSegment> = vec![];
         let mut key: Option<Aes128CbcDec> = None;
@@ -428,7 +424,7 @@ impl VariantData {
     async fn dash_segments(&self) -> Result<Vec<VariantSegment>> {
         #[allow(irrefutable_let_patterns)]
         let VariantDataUrl::MpegDash { id, base, init, fragments, start, lengths } = self.url.clone() else {
-            return Err(CrunchyrollError::Internal("variant url should be dash".into()))
+            return Err(Error::Internal("variant url should be dash".into()))
         };
 
         let mut segments = vec![VariantSegment {
@@ -481,7 +477,7 @@ impl VariantSegment {
         if let Some(key) = key {
             let decrypted = key
                 .decrypt_padded_mut::<aes::cipher::block_padding::Pkcs7>(segment_bytes)
-                .map_err(|e| CrunchyrollError::Decode(e.to_string().into()))?;
+                .map_err(|e| Error::Decode(e.to_string().into()))?;
             Ok(decrypted)
         } else {
             Ok(segment_bytes)
@@ -496,7 +492,7 @@ impl VariantSegment {
             segment.borrow_mut(),
             self.key.clone(),
         )?)
-        .map_err(|e| CrunchyrollError::Input(e.to_string().into()))?;
+        .map_err(|e| Error::Input(e.to_string().into()))?;
 
         Ok(())
     }

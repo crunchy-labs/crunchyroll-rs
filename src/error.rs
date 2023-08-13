@@ -5,60 +5,58 @@ use reqwest::Response;
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
-use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
-pub(crate) type Result<T, E = CrunchyrollError> = core::result::Result<T, E>;
+pub(crate) type Result<T, E = Error> = core::result::Result<T, E>;
 
 /// Crate specfic error types.
 #[derive(Clone, Debug)]
-pub enum CrunchyrollError {
+pub enum Error {
     /// Error was caused by something library internal. This only happens if something was
     /// implemented incorrectly (which hopefully should never be the case) or if Crunchyroll
     /// surprisingly changed specific parts of their api which broke a part of this crate.
-    Internal(CrunchyrollErrorContext<()>),
+    Internal(ErrorContext<()>),
 
     /// Some sort of error occurred while requesting the Crunchyroll api.
-    Request(CrunchyrollErrorContext<StatusCode>),
+    Request(ErrorContext<StatusCode>),
     /// While decoding the api response body something went wrong.
-    Decode(CrunchyrollErrorContext<()>),
+    Decode(ErrorContext<()>),
 
     /// Something went wrong while logging in.
-    Authentication(CrunchyrollErrorContext<()>),
+    Authentication(ErrorContext<()>),
 
     /// Generally malformed or invalid user input.
-    Input(CrunchyrollErrorContext<()>),
+    Input(ErrorContext<()>),
 
     /// When the request got blocked. Currently this only triggers when the cloudflare bot
     /// protection is detected.
-    Block(CrunchyrollErrorContext<()>),
+    Block(ErrorContext<()>),
 }
 
-impl Display for CrunchyrollError {
+impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CrunchyrollError::Internal(context) => write!(f, "{context}"),
-            CrunchyrollError::Request(context) => write!(f, "{context}"),
-            CrunchyrollError::Decode(context) => write!(f, "{context}"),
-            CrunchyrollError::Authentication(context) => write!(f, "{context}"),
-            CrunchyrollError::Input(context) => write!(f, "{context}"),
-            CrunchyrollError::Block(context) => write!(f, "{context}"),
+            Error::Internal(context) => write!(f, "{context}"),
+            Error::Request(context) => write!(f, "{context}"),
+            Error::Decode(context) => write!(f, "{context}"),
+            Error::Authentication(context) => write!(f, "{context}"),
+            Error::Input(context) => write!(f, "{context}"),
+            Error::Block(context) => write!(f, "{context}"),
         }
     }
 }
 
-impl Error for CrunchyrollError {}
+impl std::error::Error for Error {}
 
-impl From<serde_json::Error> for CrunchyrollError {
+impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
-        Self::Decode(CrunchyrollErrorContext::new(err.to_string()))
+        Self::Decode(ErrorContext::new(err.to_string()))
     }
 }
 
-impl From<reqwest::Error> for CrunchyrollError {
+impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Self {
-        let mut context: CrunchyrollErrorContext<()> =
-            CrunchyrollErrorContext::new(err.to_string());
+        let mut context: ErrorContext<()> = ErrorContext::new(err.to_string());
         if let Some(url) = err.url() {
             context = context.with_url(url.clone());
         }
@@ -74,22 +72,22 @@ impl From<reqwest::Error> for CrunchyrollError {
             if let Some(status) = err.status() {
                 request_context = request_context.with_extra(status)
             }
-            CrunchyrollError::Request(request_context)
+            Error::Request(request_context)
         } else if err.is_decode() {
-            CrunchyrollError::Decode(context)
+            Error::Decode(context)
         } else if err.is_builder() {
-            CrunchyrollError::Internal(context)
+            Error::Internal(context)
         } else {
-            CrunchyrollError::Internal(CrunchyrollErrorContext::new(format!(
+            Error::Internal(ErrorContext::new(format!(
                 "Could not determine request error type - {err}"
             )))
         }
     }
 }
 
-/// Information about a [`CrunchyrollError`].
+/// Information about a [`Error`].
 #[derive(Clone, Debug)]
-pub struct CrunchyrollErrorContext<T: Clone> {
+pub struct ErrorContext<T: Clone> {
     pub message: String,
     pub url: Option<String>,
     pub value: Option<String>,
@@ -97,7 +95,7 @@ pub struct CrunchyrollErrorContext<T: Clone> {
     pub extra: Option<T>,
 }
 
-impl<T: Clone> Display for CrunchyrollErrorContext<T> {
+impl<T: Clone> Display for ErrorContext<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut res = self.message.clone();
 
@@ -112,19 +110,19 @@ impl<T: Clone> Display for CrunchyrollErrorContext<T> {
     }
 }
 
-impl<T: Clone> From<String> for CrunchyrollErrorContext<T> {
+impl<T: Clone> From<String> for ErrorContext<T> {
     fn from(string: String) -> Self {
-        CrunchyrollErrorContext::new(string)
+        ErrorContext::new(string)
     }
 }
 
-impl<T: Clone> From<&str> for CrunchyrollErrorContext<T> {
+impl<T: Clone> From<&str> for ErrorContext<T> {
     fn from(str: &str) -> Self {
-        CrunchyrollErrorContext::new(str)
+        ErrorContext::new(str)
     }
 }
 
-impl<T: Clone> CrunchyrollErrorContext<T> {
+impl<T: Clone> ErrorContext<T> {
     pub(crate) fn new<S: ToString>(message: S) -> Self {
         Self {
             message: message.to_string(),
@@ -155,8 +153,8 @@ impl<T: Clone> CrunchyrollErrorContext<T> {
         self
     }
 
-    pub(crate) fn into_other_context<T1: Clone>(self) -> CrunchyrollErrorContext<T1> {
-        CrunchyrollErrorContext {
+    pub(crate) fn into_other_context<T1: Clone>(self) -> ErrorContext<T1> {
+        ErrorContext {
             message: self.message,
             url: self.url,
             value: self.value,
@@ -197,7 +195,7 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
     }
 
     if let Ok(err) = serde_json::from_value::<MessageType>(value.clone()) {
-        return Err(CrunchyrollError::Request(
+        return Err(Error::Request(
             format!("{} - {}", err.error_type, err.message).into(),
         ));
     } else if let Ok(err) = serde_json::from_value::<CodeContextError>(value.clone()) {
@@ -208,11 +206,11 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
         }
 
         return if let Some(message) = err.message {
-            Err(CrunchyrollError::Request(
+            Err(Error::Request(
                 format!("{} ({}) - {}", message, err.code, details.join(", ")).into(),
             ))
         } else {
-            Err(CrunchyrollError::Request(
+            Err(Error::Request(
                 format!("({}) - {}", err.code, details.join(", ")).into(),
             ))
         };
@@ -233,7 +231,7 @@ pub(crate) fn is_request_error(value: Value) -> Result<()> {
             })
             .collect::<Vec<String>>();
 
-        return Err(CrunchyrollError::Request(
+        return Err(Error::Request(
             format!("{}: {}", err.code, details.join(", ")).into(),
         ));
     }
@@ -251,16 +249,15 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
                     .windows(31)
                     .any(|w| w == b"<title>Just a moment...</title>")
             {
-                return Err(CrunchyrollError::Block(
-                    CrunchyrollErrorContext::new("Triggered Cloudflare bot protection")
-                        .with_url(url),
+                return Err(Error::Block(
+                    ErrorContext::new("Triggered Cloudflare bot protection").with_url(url),
                 ));
             }
             raw
         }
         404 => {
-            return Err(CrunchyrollError::Request(
-                CrunchyrollErrorContext::new("The requested resource is not present (404)")
+            return Err(Error::Request(
+                ErrorContext::new("The requested resource is not present (404)")
                     .with_url(url)
                     .with_extra(status),
             ))
@@ -275,8 +272,8 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
                     None
                 };
 
-            return Err(CrunchyrollError::Request(
-                CrunchyrollErrorContext::new(format!(
+            return Err(Error::Request(
+                ErrorContext::new(format!(
                     "Rate limit detected. {}",
                     retry_secs.map_or("Try again later".to_string(), |secs| format!(
                         "Try again in {secs} seconds"
@@ -296,22 +293,22 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
     }
 
     let value: Value = serde_json::from_slice(raw).map_err(|e| {
-        CrunchyrollError::Decode(
-            CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
+        Error::Decode(
+            ErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
                 .with_url(&url)
                 .with_value(raw),
         )
     })?;
     is_request_error(value.clone()).map_err(|e| {
-        if let CrunchyrollError::Request(context) = e {
-            CrunchyrollError::Request(context.with_url(&url).with_extra(status))
+        if let Error::Request(context) = e {
+            Error::Request(context.with_url(&url).with_extra(status))
         } else {
             e
         }
     })?;
     serde_json::from_value::<T>(value).map_err(|e| {
-        CrunchyrollError::Decode(
-            CrunchyrollErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
+        Error::Decode(
+            ErrorContext::new(format!("{} at {}:{}", e, e.line(), e.column()))
                 .with_url(&url)
                 .with_value(raw),
         )

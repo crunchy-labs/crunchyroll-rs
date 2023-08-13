@@ -104,7 +104,7 @@
 //! ### Cloudflare
 //! Crunchyroll uses the cloudflare bot protection to detect if requests are made by a human.
 //! Obviously this crate makes automated requests and thus, Cloudflare sometimes blocks requests.
-//! The crate catches these errors with the [`error::CrunchyrollError::Block`] enum field. The block
+//! The crate catches these errors with the [`error::Error::Block`] enum field. The block
 //! occurs depending on different factors like your location. If such a block occurs you can try to
 //! create a custom [`reqwest::Client`] which has the needed configuration to bypass this check,
 //! like other user agents or tls backends (note that [`reqwest`] currently only supports
