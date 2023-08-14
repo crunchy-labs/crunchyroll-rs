@@ -104,7 +104,7 @@ impl Media for Movie {
         Ok(request_media(
             crunchyroll.executor.clone(),
             format!(
-                "https://www.crunchyroll.com/content/v2/cms/objects/{}",
+                "https://www.crunchyroll.com/content/v2/cms/movies/{}",
                 id.as_ref()
             ),
         )
