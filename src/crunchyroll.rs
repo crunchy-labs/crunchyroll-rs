@@ -24,6 +24,7 @@ enum_values! {
         pt_BR = "pt-BR"
         pt_PT = "pt-PT"
         ru_RU = "ru-RU"
+        ta_IN = "ta-IN"
         zh_CN = "zh-CN"
     }
 }
@@ -46,6 +47,7 @@ impl Locale {
             Locale::pt_BR,
             Locale::pt_PT,
             Locale::ru_RU,
+            Locale::ta_IN,
             Locale::zh_CN,
         ]
     }
@@ -66,6 +68,7 @@ impl Locale {
             Locale::pt_BR => "Portuguese (Brazil)",
             Locale::pt_PT => "Portuguese (Europe)",
             Locale::ru_RU => "Russian",
+            Locale::ta_IN => "Tamil",
             Locale::zh_CN => "Chinese (China)",
             Locale::Custom(custom) => custom.as_str(),
         }
