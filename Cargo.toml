@@ -32,13 +32,13 @@ http = "0.2"
 futures-util = { version = "0.3", features = ["std"], default-features = false }
 # patch version number is necessary for 'reqwest' and 'rustls' dependency to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
-reqwest = { version = "0.11.18", features = ["cookies", "json", "rustls-tls"], default-features = false }
-rustls = { version = "0.21.0", features = ["dangerous_configuration"] }
+reqwest = { version = "0.11.20", features = ["cookies", "json", "rustls-tls"], default-features = false }
+rustls = { version = "0.21.6", features = ["dangerous_configuration"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 smart-default = "0.7"
-tokio = { version = "1.31", features = ["sync"] }
+tokio = { version = "1.32", features = ["sync"] }
 webpki-roots = "0.25"
 
 crunchyroll-rs-internal = { version = "0.6.1", path = "internal" }
@@ -55,7 +55,7 @@ regex = { version = "1.9", default-features = false, features = ["std"], optiona
 anyhow = "1.0"
 once_cell = "1.18"
 rand = "0.8"
-tokio = { version = "1.31", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { version = "1.32", features = ["macros", "rt", "rt-multi-thread"] }
 
 [workspace]
 members = ["internal"]
