@@ -1,6 +1,6 @@
 [package]
 name = "crunchyroll-rs"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2021"
 description = "Pure Rust implementation of the crunchyroll api."
@@ -41,7 +41,7 @@ smart-default = "0.7"
 tokio = { version = "1.32", features = ["sync"] }
 webpki-roots = "0.25"
 
-crunchyroll-rs-internal = { version = "0.6.1", path = "internal" }
+crunchyroll-rs-internal = { version = "0.6.2", path = "internal" }
 
 # Optional / required from features
 aes = { version = "0.8", optional = true }
