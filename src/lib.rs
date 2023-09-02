@@ -48,7 +48,7 @@
 //!
 //! ```
 //! let seasons = series
-//!     // get the seasons of this episode
+//!     // get the seasons of this series
 //!     .seasons()
 //!     .await?;
 //! ```
