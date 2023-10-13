@@ -18,6 +18,7 @@ pub struct Account {
 
     pub username: String,
     pub email: String,
+    pub phone: String,
 
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub created: DateTime<Utc>,
@@ -53,6 +54,7 @@ pub struct Account {
     pub cr_beta_opt_in: bool,
     pub qa_user: bool,
     pub email_verified: bool,
+    pub has_password: bool,
 
     #[cfg(feature = "__test_strict")]
     crleg_email_verified: crate::StrictValue,

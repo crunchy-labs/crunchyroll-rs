@@ -1,10 +1,9 @@
 use crate::common::{PaginationBulkResultMeta, Request};
 use crate::media::Media;
-use crate::{Episode, Locale, MediaCollection, Movie, MovieListing, Result, Season, Series};
+use crate::{Episode, MediaCollection, Movie, MovieListing, Result, Season, Series};
 use chrono::{DateTime, Utc};
-use serde::de::{DeserializeOwned, Error};
-use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::Map;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 /// Information about the intro of an [`Episode`] or [`Movie`].
 #[allow(dead_code)]
@@ -44,28 +43,11 @@ pub struct RelatedMedia<T: Request + DeserializeOwned> {
     pub playhead: u32,
 
     #[serde(alias = "panel")]
-    #[serde(deserialize_with = "deserialize_panel")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_panel")]
     pub media: T,
 
-    /// Only populated if called with [`Episode::previous`] or [`Movie::previous`].
+    /// Only populated if called with [`Episode::next`] or [`Movie::next`].
     pub shortcut: Option<bool>,
-    /// Only populated if called with [`Episode::previous`] or [`Movie::previous`].
-    pub recent_audio_locale: Option<Locale>,
-}
-
-fn deserialize_panel<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-where
-    D: Deserializer<'de>,
-    T: DeserializeOwned,
-{
-    let mut as_map = Map::deserialize(deserializer)?;
-
-    if let Some(mut episode_metadata) = as_map.remove("episode_metadata") {
-        as_map.append(episode_metadata.as_object_mut().unwrap())
-    }
-
-    serde_json::from_value(serde_json::to_value(as_map).map_err(|e| Error::custom(e.to_string()))?)
-        .map_err(|e| Error::custom(e.to_string()))
 }
 
 /// Information about the playhead of an [`Episode`] or [`Movie`].

@@ -2,9 +2,9 @@ use crate::common::Image;
 use crate::error::Error;
 use crate::{Request, Result};
 use chrono::Duration;
-use serde::de::DeserializeOwned;
+use serde::de::{DeserializeOwned, Error as SerdeError};
 use serde::{Deserialize, Deserializer};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::str::FromStr;
 
 #[derive(Request)]
@@ -179,4 +179,22 @@ pub(crate) fn deserialize_streams_link<'de, D: Deserializer<'de>>(
         .last()
         .ok_or_else(|| serde::de::Error::custom("cannot extract stream id"))?
         .to_string())
+}
+
+pub(crate) fn deserialize_panel<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: DeserializeOwned,
+{
+    let mut as_map = Map::deserialize(deserializer)?;
+
+    if let Some(mut episode_metadata) = as_map.remove("episode_metadata") {
+        as_map.append(episode_metadata.as_object_mut().unwrap())
+    }
+    as_map.remove("recent_variant");
+
+    serde_json::from_value(
+        serde_json::to_value(as_map).map_err(|e| SerdeError::custom(e.to_string()))?,
+    )
+    .map_err(|e| SerdeError::custom(e.to_string()))
 }

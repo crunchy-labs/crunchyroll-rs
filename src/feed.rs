@@ -14,9 +14,9 @@ use serde::{Deserialize, Deserializer, Serialize};
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct FeedCarouselImages {
-    pub landscape_poster: Option<String>,
-    #[serde(alias = "portrait_image")]
-    pub portrait_poster: Option<String>,
+    pub landscape_large: Option<String>,
+    pub portrait_large: Option<String>,
+    pub logo: Option<String>,
 }
 
 /// The carousel / sliding images showed at first when visiting crunchyroll.com
@@ -32,6 +32,8 @@ pub struct FeedCarousel {
     /// Link to a crunchyroll series or article.
     pub link: String,
 
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_panel")]
+    pub panel: MediaCollection,
     pub images: FeedCarouselImages,
 
     pub button_text: String,

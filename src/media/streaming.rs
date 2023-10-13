@@ -378,8 +378,11 @@ impl VariantData {
         use aes::cipher::KeyIvInit;
 
         #[allow(irrefutable_let_patterns)]
-        let VariantDataUrl::Hls { url } = &self.url else {
-            return Err(Error::Internal { message: "variant url should be hls".to_string() })
+        let VariantDataUrl::Hls { url } = &self.url
+        else {
+            return Err(Error::Internal {
+                message: "variant url should be hls".to_string(),
+            });
         };
 
         let raw_media_playlist = self.executor.get(url).request_raw().await?;
@@ -439,8 +442,18 @@ impl VariantData {
     #[cfg(feature = "dash-stream")]
     async fn dash_segments(&self) -> Result<Vec<VariantSegment>> {
         #[allow(irrefutable_let_patterns)]
-        let VariantDataUrl::MpegDash { id, base, init, fragments, start, lengths } = self.url.clone() else {
-            return Err(Error::Internal{ message: "variant url should be dash".to_string() })
+        let VariantDataUrl::MpegDash {
+            id,
+            base,
+            init,
+            fragments,
+            start,
+            lengths,
+        } = self.url.clone()
+        else {
+            return Err(Error::Internal {
+                message: "variant url should be dash".to_string(),
+            });
         };
 
         let mut segments = vec![VariantSegment {
