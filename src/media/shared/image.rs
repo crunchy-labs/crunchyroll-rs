@@ -31,7 +31,7 @@ impl TryFrom<Map<String, Value>> for ThumbnailImages {
     }
 }
 
-/// Images for [`Series`], [`MovieListing`] or [`crate::media::Artist`].
+/// Images for [`crate::Series`], [`crate::MovieListing`] or [`crate::media::Artist`].
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(try_from = "Map<String, Value>")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]

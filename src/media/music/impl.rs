@@ -27,8 +27,8 @@ macro_rules! impl_media_music {
                 /// Streams for this music video / concert. This endpoint triggers a rate limiting
                 /// if requested too much over a short time period (the rate limiting may occur as an
                 /// error, Crunchyroll doesn't give a hint that a ratelimit is hit). Unlike
-                /// [`Episode`] and [`Movie`] there is no older stream endpoint available to get the
-                /// streams from.
+                /// [`crate::Episode`] and [`crate::Movie`] there is no older stream endpoint
+                /// available to get the streams from.
                 pub async fn stream(&self) -> Result<$crate::media::Stream> {
                     $crate::media::Stream::from_url(self.executor.clone(), "https://www.crunchyroll.com/content/v2/music", &self.stream_id).await
                 }

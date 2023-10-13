@@ -56,7 +56,7 @@
 //! ## Streaming
 //!
 //! This crate allows you to get the actual video streams behind episodes and movies. With
-//! [`Episode::streams`] and [`Movie::streams`] you get access to the streams. The returning struct
+//! [`Episode::stream`] and [`Movie::stream`] you get access to the streams. The returning struct
 //! [`media::Stream`] has all required information to access the streams.
 //!
 //! ```

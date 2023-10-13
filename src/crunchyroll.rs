@@ -462,7 +462,7 @@ mod auth {
         /// fluctuations that requests doesn't work for a specific amount of time and after that
         /// amount everything goes back to normal and works as it should). You can use this builder
         /// to configure the behavior of the download client. Use [`CrunchyrollBuilder::client`] or
-        /// [`CrunchyrollBuilder::try_bypass`] to set your built client.
+        /// to set your built client.
         pub fn predefined_client_builder() -> ClientBuilder {
             let mut root_store = rustls::RootCertStore::empty();
             root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
