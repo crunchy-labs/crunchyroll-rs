@@ -23,13 +23,6 @@ enum_values! {
         Sports = "sports"
         Supernatural = "supernatural"
         Thriller = "thriller"
-        Historical = "historical"
-        Isekai = "isekai"
-        Mystery = "mystery"
-        Idols = "idols"
-        Harem = "harem"
-        Mecha = "mecha"
-        PostApocalyptic = "post-apocalyptic"
     }
 }
 
