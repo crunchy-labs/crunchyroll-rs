@@ -72,8 +72,9 @@ pub struct Episode {
 
     /// Usually the same as [`Episode::episode_number`], just as string.
     pub episode: String,
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
-    pub episode_number: u32,
+    /// The episode number may be null. In most of the cases this is when the episode is a special,
+    /// like 0.5. Consider using [`Episode::sequence_number`] instead as this is always populated.
+    pub episode_number: Option<u32>,
     /// Usually also the same as [`Episode::episode_number`]. If the episode number is null (which
     /// occurs for the first AOT episode, which is a preview, for example) this might be a floating
     /// number like 0.5.

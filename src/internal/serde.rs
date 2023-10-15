@@ -106,19 +106,6 @@ where
         .map_err(|_| serde::de::Error::custom("could not convert string to T"))
 }
 
-/// Some response values are `null` for whatever reason even though they shouldn't be.
-/// This is a fix to these events. If this occurs more often, a custom `Deserialize` implementation
-/// must be written which automatically detects if a value is `null` even it they shouldn't be
-/// and replace it with the [`Default`] implementation of the corresponding type.
-pub(crate) fn deserialize_maybe_null_to_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
-where
-    D: Deserializer<'de>,
-    T: Default + DeserializeOwned,
-{
-    let value: Option<T> = Deserialize::deserialize(deserializer)?;
-    Ok(value.unwrap_or_default())
-}
-
 /// Some responses are empty objects but actually must be array.
 pub(crate) fn deserialize_maybe_object_to_array<'de, D, T>(
     deserializer: D,
