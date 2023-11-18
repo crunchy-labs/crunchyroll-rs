@@ -123,6 +123,20 @@ where
     }
 }
 
+pub(crate) fn deserialize_maybe_null_to_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: DeserializeOwned + Default,
+{
+    let value: Value = Deserialize::deserialize(deserializer)?;
+
+    if value.is_null() {
+        Ok(T::default())
+    } else {
+        serde_json::from_value(value).map_err(|e| serde::de::Error::custom(e.to_string()))
+    }
+}
+
 /// Deserializes a empty string (`""`) to `None`.
 pub(crate) fn deserialize_empty_pre_string_to_none<'de, D, T>(
     deserializer: D,

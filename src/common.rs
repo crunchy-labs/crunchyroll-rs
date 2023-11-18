@@ -249,6 +249,7 @@ impl<T: Default + DeserializeOwned + Request> Pagination<T> {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub(crate) struct BulkResult<T: Default + DeserializeOwned + Request> {
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     pub items: Vec<T>,
     pub total: u32,
 }

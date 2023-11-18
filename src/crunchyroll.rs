@@ -148,6 +148,8 @@ mod auth {
         country: String,
         /// Is [`None`] if generated via [`Executor::auth_anonymously`].
         account_id: Option<String>,
+        /// Is [`None`] if generated via [`Executor::auth_anonymously`].
+        profile_id: Option<String>,
     }
 
     #[derive(Clone, Debug)]
@@ -175,6 +177,8 @@ mod auth {
         /// writing error messages multiple times in functions which require the account id to be
         /// set they can just get the id or return the fix set error message.
         pub(crate) account_id: Result<String>,
+        pub(crate) device_id: Option<String>,
+        pub(crate) device_type: Option<String>,
     }
 
     /// Contains which fixes should be used to make the api more reliable as Crunchyroll does weird
@@ -229,10 +233,22 @@ mod auth {
             if config.session_expire <= Utc::now() {
                 let login_response = match config.session_token.clone() {
                     SessionToken::RefreshToken(refresh_token) => {
-                        Executor::auth_with_refresh_token(&self.client, refresh_token).await?
+                        Executor::auth_with_refresh_token(
+                            &self.client,
+                            refresh_token,
+                            self.details.device_id.clone(),
+                            self.details.device_type.clone(),
+                        )
+                        .await?
                     }
                     SessionToken::EtpRt(etp_rt) => {
-                        Executor::auth_with_etp_rt(&self.client, etp_rt).await?
+                        Executor::auth_with_etp_rt(
+                            &self.client,
+                            etp_rt,
+                            self.details.device_id.clone(),
+                            self.details.device_type.clone(),
+                        )
+                        .await?
                     }
                     SessionToken::Anonymous => Executor::auth_anonymously(&self.client).await?,
                 };
@@ -295,20 +311,26 @@ mod auth {
             client: &Client,
             user: String,
             password: String,
+            device_id: Option<String>,
+            device_type: Option<String>,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
+            let mut body = vec![
+                ("username", user.as_ref()),
+                ("password", password.as_ref()),
+                ("grant_type", "password"),
+                ("scope", "offline_access"),
+            ];
+            if let Some(d_id) = &device_id {
+                body.extend_from_slice(&[("device_id", d_id)])
+            }
+            if let Some(d_type) = &device_type {
+                body.extend_from_slice(&[("device_type", d_type)])
+            }
             let resp = client.post(endpoint)
                 .header(header::AUTHORIZATION, "Basic aHJobzlxM2F3dnNrMjJ1LXRzNWE6cHROOURteXRBU2Z6QjZvbXVsSzh6cUxzYTczVE1TY1k=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-                .body(
-                    serde_urlencoded::to_string([
-                        ("username", user.as_ref()),
-                        ("password", password.as_ref()),
-                        ("grant_type", "password"),
-                        ("scope", "offline_access"),
-                    ])
-                    .unwrap(),
-                )
+                .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
                 .await?;
 
@@ -318,39 +340,51 @@ mod auth {
         async fn auth_with_refresh_token(
             client: &Client,
             refresh_token: String,
+            device_id: Option<String>,
+            device_type: Option<String>,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
+            let mut body = vec![
+                ("refresh_token", refresh_token.as_str()),
+                ("grant_type", "refresh_token"),
+                ("scope", "offline_access"),
+            ];
+            if let Some(d_id) = &device_id {
+                body.extend_from_slice(&[("device_id", d_id)])
+            }
+            if let Some(d_type) = &device_type {
+                body.extend_from_slice(&[("device_type", d_type)])
+            }
             let resp = client.post(endpoint)
                 .header(header::AUTHORIZATION, "Basic aHJobzlxM2F3dnNrMjJ1LXRzNWE6cHROOURteXRBU2Z6QjZvbXVsSzh6cUxzYTczVE1TY1k=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-                .body(
-                    serde_urlencoded::to_string([
-                        ("refresh_token", refresh_token.as_str()),
-                        ("grant_type", "refresh_token"),
-                        ("scope", "offline_access"),
-                    ])
-                    .unwrap(),
-                )
+                .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
                 .await?;
 
             check_request(endpoint.to_string(), resp).await
         }
 
-        async fn auth_with_etp_rt(client: &Client, etp_rt: String) -> Result<AuthResponse> {
+        async fn auth_with_etp_rt(
+            client: &Client,
+            etp_rt: String,
+            device_id: Option<String>,
+            device_type: Option<String>,
+        ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
+            let mut body = vec![("grant_type", "etp_rt_cookie"), ("scope", "offline_access")];
+            if let Some(d_id) = &device_id {
+                body.extend_from_slice(&[("device_id", d_id)])
+            }
+            if let Some(d_type) = &device_type {
+                body.extend_from_slice(&[("device_type", d_type)])
+            }
             let resp = client
                 .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .header(header::COOKIE, format!("etp_rt={etp_rt}"))
-                .body(
-                    serde_urlencoded::to_string([
-                        ("grant_type", "etp_rt_cookie"),
-                        ("scope", "offline_access"),
-                    ])
-                    .unwrap(),
-                )
+                .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
                 .await?;
 
@@ -371,12 +405,14 @@ mod auth {
                 details: ExecutorDetails {
                     locale: Default::default(),
                     preferred_audio_locale: None,
-                    account_id: Ok("".to_string()),
                     bucket: "".to_string(),
                     premium: false,
                     signature: "".to_string(),
                     policy: "".to_string(),
                     key_pair_id: "".to_string(),
+                    account_id: Ok("".to_string()),
+                    device_id: None,
+                    device_type: None,
                 },
                 fixes: ExecutorFixes {
                     locale_name_parsing: false,
@@ -436,6 +472,7 @@ mod auth {
         client: Client,
         locale: Locale,
         preferred_audio_locale: Option<Locale>,
+        device_identifier: Option<(String, String)>,
 
         fixes: ExecutorFixes,
     }
@@ -448,6 +485,7 @@ mod auth {
                     .unwrap(),
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
+                device_identifier: None,
                 fixes: ExecutorFixes {
                     locale_name_parsing: false,
                     season_number: false,
@@ -517,6 +555,18 @@ mod auth {
             self
         }
 
+        /// Set a identifier for the session which will be opened. `device_id` is usually a random
+        /// UUID, `device_type` a description of the device which issues the session, e.g. `Chrome
+        /// on Windows` or `iPhone 15`.
+        pub fn device_identifier(
+            mut self,
+            device_id: String,
+            device_type: String,
+        ) -> CrunchyrollBuilder {
+            self.device_identifier = Some((device_id, device_type));
+            self
+        }
+
         /// Set season and episode locales by parsing the season name and check if it contains
         /// any language name.
         /// Under special circumstances, this can slow down some methods as additional request must
@@ -564,6 +614,12 @@ mod auth {
                 &self.client,
                 user.as_ref().to_string(),
                 password.as_ref().to_string(),
+                self.device_identifier
+                    .as_ref()
+                    .map(|(device_id, _)| device_id.clone()),
+                self.device_identifier
+                    .as_ref()
+                    .map(|(_, device_type)| device_type.clone()),
             )
             .await?;
             let session_token =
@@ -584,9 +640,17 @@ mod auth {
         ) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
-            let login_response =
-                Executor::auth_with_refresh_token(&self.client, refresh_token.as_ref().to_string())
-                    .await?;
+            let login_response = Executor::auth_with_refresh_token(
+                &self.client,
+                refresh_token.as_ref().to_string(),
+                self.device_identifier
+                    .as_ref()
+                    .map(|(device_id, _)| device_id.clone()),
+                self.device_identifier
+                    .as_ref()
+                    .map(|(_, device_type)| device_type.clone()),
+            )
+            .await?;
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
@@ -602,8 +666,17 @@ mod auth {
         pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
-            let login_response =
-                Executor::auth_with_etp_rt(&self.client, etp_rt.as_ref().to_string()).await?;
+            let login_response = Executor::auth_with_etp_rt(
+                &self.client,
+                etp_rt.as_ref().to_string(),
+                self.device_identifier
+                    .as_ref()
+                    .map(|(device_id, _)| device_id.clone()),
+                self.device_identifier
+                    .as_ref()
+                    .map(|(_, device_type)| device_type.clone()),
+            )
+            .await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone().unwrap());
 
             self.post_login(login_response, session_token).await
@@ -695,6 +768,14 @@ mod auth {
                                     .to_string(),
                             }
                         }),
+                        device_id: self
+                            .device_identifier
+                            .as_ref()
+                            .map(|(device_id, _)| device_id.clone()),
+                        device_type: self
+                            .device_identifier
+                            .as_ref()
+                            .map(|(_, device_type)| device_type.clone()),
                     },
                     fixes: self.fixes,
                 }),
