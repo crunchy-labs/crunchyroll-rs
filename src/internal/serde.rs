@@ -192,7 +192,6 @@ where
     if let Some(mut episode_metadata) = as_map.remove("episode_metadata") {
         as_map.append(episode_metadata.as_object_mut().unwrap())
     }
-    as_map.remove("recent_variant");
 
     serde_json::from_value(
         serde_json::to_value(as_map).map_err(|e| SerdeError::custom(e.to_string()))?,

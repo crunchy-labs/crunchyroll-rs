@@ -19,6 +19,7 @@ pub struct Account {
     pub username: String,
     pub email: String,
     pub phone: String,
+    pub profile_name: String,
 
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub created: DateTime<Utc>,

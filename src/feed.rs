@@ -32,8 +32,9 @@ pub struct FeedCarousel {
     /// Link to a crunchyroll series or article.
     pub link: String,
 
+    #[serde(default)]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_panel")]
-    pub panel: MediaCollection,
+    pub panel: Option<MediaCollection>,
     pub images: FeedCarouselImages,
 
     pub button_text: String,

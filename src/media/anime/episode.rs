@@ -164,6 +164,8 @@ pub struct Episode {
     listing_id: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     hd_flag: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    recent_variant: Option<crate::StrictValue>,
 }
 
 impl Episode {
