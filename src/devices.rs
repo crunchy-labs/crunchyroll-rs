@@ -106,11 +106,6 @@ impl Crunchyroll {
         Ok(())
     }
 
-    #[deprecated = "Use `Crunchyroll::activate_device` instead"]
-    pub async fn verify_device(&self, code: String) -> Result<()> {
-        self.activate_device(code).await
-    }
-
     /// Deactivates all devices (deletes all active sessions) besides the currently used one.
     pub async fn deactivate_all_devices(&self) -> Result<()> {
         let endpoint = format!(
