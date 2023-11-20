@@ -31,6 +31,7 @@ pub struct Device {
 
     pub id: String,
     pub account_id: String,
+    pub profile_id: String,
     pub client_id: String,
     pub device_id: String,
 
