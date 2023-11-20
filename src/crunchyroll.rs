@@ -116,8 +116,7 @@ mod auth {
     use crate::error::{check_request, Error};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
-    use http::header;
-    use reqwest::{Client, ClientBuilder, IntoUrl, RequestBuilder};
+    use reqwest::{header, Client, ClientBuilder, IntoUrl, RequestBuilder};
     use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
     use std::ops::Add;

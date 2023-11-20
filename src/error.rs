@@ -1,7 +1,6 @@
 //! Library specific errors.
 
-use http::StatusCode;
-use reqwest::Response;
+use reqwest::{Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde_json::Value;
@@ -244,7 +243,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
         }
         429 => {
             let retry_secs =
-                if let Some(retry_after) = resp.headers().get(http::header::RETRY_AFTER) {
+                if let Some(retry_after) = resp.headers().get(reqwest::header::RETRY_AFTER) {
                     retry_after.to_str().map_or(None, |retry_after_secs| {
                         retry_after_secs.parse::<u32>().ok()
                     })
