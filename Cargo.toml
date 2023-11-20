@@ -28,7 +28,7 @@ __test_strict = []
 [dependencies]
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-http = "0.2"
+http = "1.0"
 futures-util = { version = "0.3", features = ["std"], default-features = false }
 # patch version number is necessary for 'reqwest' and 'rustls' dependency to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
