@@ -199,6 +199,8 @@ mod auth {
         pub(crate) config: Mutex<ExecutorConfig>,
         pub(crate) details: ExecutorDetails,
 
+        #[cfg(feature = "tower")]
+        pub(crate) middleware: Option<Mutex<crate::internal::tower::Middleware>>,
         #[allow(unused)]
         pub(crate) fixes: ExecutorFixes,
     }
@@ -276,7 +278,13 @@ mod auth {
             );
             req = req.header(header::CONTENT_TYPE, "application/json");
 
-            let mut resp: T = request(&self.client, req).await?;
+            let mut resp: T = request(
+                &self.client,
+                req,
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
+            )
+            .await?;
 
             // drop config here explicitly as `__set_executor` can call this function recursively
             // which would lead to a deadlock
@@ -413,6 +421,8 @@ mod auth {
                     device_id: None,
                     device_type: None,
                 },
+                #[cfg(feature = "tower")]
+                middleware: None,
                 fixes: ExecutorFixes {
                     locale_name_parsing: false,
                     season_number: false,
@@ -473,6 +483,8 @@ mod auth {
         preferred_audio_locale: Option<Locale>,
         device_identifier: Option<(String, String)>,
 
+        #[cfg(feature = "tower")]
+        middleware: Option<Mutex<crate::internal::tower::Middleware>>,
         fixes: ExecutorFixes,
     }
 
@@ -485,6 +497,8 @@ mod auth {
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
                 device_identifier: None,
+                #[cfg(feature = "tower")]
+                middleware: None,
                 fixes: ExecutorFixes {
                     locale_name_parsing: false,
                     season_number: false,
@@ -563,6 +577,25 @@ mod auth {
             device_type: String,
         ) -> CrunchyrollBuilder {
             self.device_identifier = Some((device_id, device_type));
+            self
+        }
+
+        /// Adds a [tower](https://docs.rs/tower/latest/tower/) middleware which is called on every
+        /// request.
+        #[cfg(feature = "tower")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "tower")))]
+        pub fn middleware<F, S>(mut self, service: S) -> CrunchyrollBuilder
+        where
+            F: std::future::Future<Output = Result<reqwest::Response, Error>> + Send + 'static,
+            S: tower_service::Service<
+                    reqwest::Request,
+                    Response = reqwest::Response,
+                    Error = Error,
+                    Future = F,
+                > + Send
+                + 'static,
+        {
+            self.middleware = Some(Mutex::new(crate::internal::tower::Middleware::new(service)));
             self
         }
 
@@ -731,7 +764,13 @@ mod auth {
                     login_response.token_type, login_response.access_token
                 ),
             );
-            let index: IndexResp = request(&self.client, index_req).await?;
+            let index: IndexResp = request(
+                &self.client,
+                index_req,
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
+            )
+            .await?;
 
             let crunchy = Crunchyroll {
                 executor: Arc::new(Executor {
@@ -776,6 +815,8 @@ mod auth {
                             .as_ref()
                             .map(|(_, device_type)| device_type.clone()),
                     },
+                    #[cfg(feature = "tower")]
+                    middleware: self.middleware,
                     fixes: self.fixes,
                 }),
             };
@@ -788,10 +829,21 @@ mod auth {
     async fn request<T: Request + DeserializeOwned>(
         client: &Client,
         req: RequestBuilder,
+        #[cfg(feature = "tower")] middleware: Option<&Mutex<crate::internal::tower::Middleware>>,
     ) -> Result<T> {
         let built_req = req.build()?;
         let url = built_req.url().to_string();
+        #[cfg(not(feature = "tower"))]
         let resp = client.execute(built_req).await?;
+        #[cfg(feature = "tower")]
+        let resp = {
+            use std::ops::DerefMut;
+            if let Some(middleware) = middleware {
+                middleware.lock().await.deref_mut().call(built_req).await?
+            } else {
+                client.execute(built_req).await?
+            }
+        };
 
         #[cfg(not(feature = "__test_strict"))]
         {
