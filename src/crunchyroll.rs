@@ -180,10 +180,10 @@ mod auth {
         pub(crate) device_type: Option<String>,
     }
 
+    #[cfg(feature = "experimental-stabilizations")]
     /// Contains which fixes should be used to make the api more reliable as Crunchyroll does weird
     /// stuff / delivers incorrect results.
     #[derive(Clone, Debug)]
-    #[allow(unused)]
     pub(crate) struct ExecutorFixes {
         pub(crate) locale_name_parsing: bool,
         pub(crate) season_number: bool,
@@ -201,7 +201,7 @@ mod auth {
 
         #[cfg(feature = "tower")]
         pub(crate) middleware: Option<Mutex<crate::internal::tower::Middleware>>,
-        #[allow(unused)]
+        #[cfg(feature = "experimental-stabilizations")]
         pub(crate) fixes: ExecutorFixes,
     }
 
@@ -423,6 +423,7 @@ mod auth {
                 },
                 #[cfg(feature = "tower")]
                 middleware: None,
+                #[cfg(feature = "experimental-stabilizations")]
                 fixes: ExecutorFixes {
                     locale_name_parsing: false,
                     season_number: false,
@@ -817,6 +818,7 @@ mod auth {
                     },
                     #[cfg(feature = "tower")]
                     middleware: self.middleware,
+                    #[cfg(feature = "experimental-stabilizations")]
                     fixes: self.fixes,
                 }),
             };
