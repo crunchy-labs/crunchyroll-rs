@@ -521,8 +521,8 @@ impl VariantSegment {
     }
 
     /// Write this segment to a writer.
-    pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        let mut segment = self.executor.get(self.url).request_raw().await?;
+    pub async fn write_to(&self, w: &mut impl Write) -> Result<()> {
+        let mut segment = self.executor.get(&self.url).request_raw().await?;
 
         w.write(VariantSegment::decrypt(
             segment.borrow_mut(),
