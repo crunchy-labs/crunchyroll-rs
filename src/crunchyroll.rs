@@ -316,14 +316,14 @@ mod auth {
 
         async fn auth_with_credentials(
             client: &Client,
-            user: String,
+            email: String,
             password: String,
             device_id: Option<String>,
             device_type: Option<String>,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
             let mut body = vec![
-                ("username", user.as_ref()),
+                ("username", email.as_ref()),
                 ("password", password.as_ref()),
                 ("grant_type", "password"),
                 ("scope", "offline_access"),
@@ -645,18 +645,17 @@ mod auth {
             self.post_login(login_response, session_token).await
         }
 
-        /// Logs in with credentials (username or email and password) and returns a new `Crunchyroll`
-        /// instance.
+        /// Logs in with credentials (email and password) and returns a new `Crunchyroll` instance.
         pub async fn login_with_credentials<S: AsRef<str>>(
             self,
-            user: S,
+            email: S,
             password: S,
         ) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
             let login_response = Executor::auth_with_credentials(
                 &self.client,
-                user.as_ref().to_string(),
+                email.as_ref().to_string(),
                 password.as_ref().to_string(),
                 self.device_identifier
                     .as_ref()

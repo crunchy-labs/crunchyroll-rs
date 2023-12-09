@@ -52,9 +52,10 @@ use crunchyroll_rs::parse::UrlType;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // log in to crunchyroll with your username and password
+    // Log in to Crunchyroll with your email and password.
+    // Support for username login was dropped by Crunchyroll on December 6th, 2023
     let crunchyroll = Crunchyroll::builder()
-        .login_with_credentials("<username>", "<password>")
+        .login_with_credentials("<email>", "<password>")
         .await?;
 
     let url = crunchyroll_rs::parse_url("https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome").expect("url is not valid");

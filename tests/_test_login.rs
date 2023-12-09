@@ -6,11 +6,11 @@ use std::env;
 
 #[tokio::test]
 async fn login_with_credentials() {
-    let user = env::var("USER").expect("'USER' environment variable not found");
+    let email = env::var("EMAIL").expect("'EMAIL' environment variable not found");
     let password = env::var("PASSWORD").expect("'PASSWORD' environment variable not found");
 
     let crunchy = Crunchyroll::builder()
-        .login_with_credentials(user, password)
+        .login_with_credentials(email, password)
         .await;
 
     assert_result!(crunchy);

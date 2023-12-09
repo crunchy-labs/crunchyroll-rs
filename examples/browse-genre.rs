@@ -7,11 +7,11 @@ use std::env;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let user = env::var("USER").expect("'USER' environment variable not found");
+    let email = env::var("EMAIL").expect("'EMAIL' environment variable not found");
     let password = env::var("PASSWORD").expect("'PASSWORD' environment variable not found");
 
     let crunchyroll = Crunchyroll::builder()
-        .login_with_credentials(user, password)
+        .login_with_credentials(email, password)
         .await?;
 
     let options = BrowseOptions::default()
