@@ -472,6 +472,17 @@ mod auth {
         }
 
         pub(crate) async fn request_raw(self) -> Result<Vec<u8>> {
+            #[cfg(feature = "tower")]
+            if let Some(middleware) = &self.executor.middleware {
+                return Ok(middleware
+                    .lock()
+                    .await
+                    .call(self.builder.build()?)
+                    .await?
+                    .bytes()
+                    .await?
+                    .to_vec());
+            }
             Ok(self.builder.send().await?.bytes().await?.to_vec())
         }
     }
