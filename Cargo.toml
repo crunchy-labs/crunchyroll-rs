@@ -11,7 +11,7 @@ keywords = ["crunchyroll", "anime", "downloader"]
 categories = ["api-bindings"]
 
 [features]
-default = ["hls-stream", "parse", "experimental-stabilizations"]
+default = ["hls-stream", "parse"]
 
 # Add functionality to stream episodes / movies so you can process the unencrypted streaming data further, e.g. write it
 # to a file and then play it.
