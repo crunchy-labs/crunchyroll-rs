@@ -1,34 +1,34 @@
-use crate::Locale;
-
 #[cfg(feature = "experimental-stabilizations")]
-pub(crate) fn parse_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> Locale {
+pub(crate) fn parse_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> crate::Locale {
     split_locale_from_slug_title(slug_title).1
 }
 
 #[cfg(feature = "experimental-stabilizations")]
-pub(crate) fn split_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> (String, Locale) {
+pub(crate) fn split_locale_from_slug_title<S: AsRef<str>>(
+    slug_title: S,
+) -> (String, crate::Locale) {
     let title = slug_title.as_ref().trim_end_matches("-dub").to_string();
 
     let locales = vec![
-        ("-arabic", Locale::ar_SA),
-        ("-castilian", Locale::es_ES),
-        ("-english", Locale::en_US),
-        ("-english-in", Locale::en_IN),
-        ("-french", Locale::fr_FR),
-        ("-german", Locale::de_DE),
-        ("-hindi", Locale::hi_IN),
-        ("-italian", Locale::it_IT),
-        ("-portuguese", Locale::pt_BR),
-        ("-russian", Locale::ru_RU),
-        ("-spanish", Locale::es_419),
-        ("-japanese-audio", Locale::ja_JP),
+        ("-arabic", crate::Locale::ar_SA),
+        ("-castilian", crate::Locale::es_ES),
+        ("-english", crate::Locale::en_US),
+        ("-english-in", crate::Locale::en_IN),
+        ("-french", crate::Locale::fr_FR),
+        ("-german", crate::Locale::de_DE),
+        ("-hindi", crate::Locale::hi_IN),
+        ("-italian", crate::Locale::it_IT),
+        ("-portuguese", crate::Locale::pt_BR),
+        ("-russian", crate::Locale::ru_RU),
+        ("-spanish", crate::Locale::es_419),
+        ("-japanese-audio", crate::Locale::ja_JP),
     ];
     for (end, locale) in locales {
         if title.ends_with(end) {
             return (title.trim_end_matches(end).to_string(), locale);
         }
     }
-    (title, Locale::ja_JP)
+    (title, crate::Locale::ja_JP)
 }
 
 /// Remove all duplicates from a [`Vec`].

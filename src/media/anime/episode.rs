@@ -1,6 +1,5 @@
 use crate::common::Image;
 use crate::crunchyroll::Executor;
-use crate::media::anime::util::parse_locale_from_slug_title;
 use crate::media::util::request_media;
 use crate::media::Media;
 use crate::{Crunchyroll, Locale, Result, Season, Series};
@@ -209,7 +208,8 @@ impl Media for Episode {
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_experimental_stabilizations(&mut self) {
         if self.executor.fixes.locale_name_parsing {
-            self.audio_locale = parse_locale_from_slug_title(&self.season_slug_title)
+            self.audio_locale =
+                crate::media::anime::util::parse_locale_from_slug_title(&self.season_slug_title)
         }
         if self.executor.fixes.season_number {
             let mut split = self.identifier.splitn(3, '|');

@@ -497,6 +497,7 @@ mod auth {
 
         #[cfg(feature = "tower")]
         middleware: Option<Mutex<crate::internal::tower::Middleware>>,
+        #[cfg(feature = "experimental-stabilizations")]
         fixes: ExecutorFixes,
     }
 
@@ -511,6 +512,7 @@ mod auth {
                 device_identifier: None,
                 #[cfg(feature = "tower")]
                 middleware: None,
+                #[cfg(feature = "experimental-stabilizations")]
                 fixes: ExecutorFixes {
                     locale_name_parsing: false,
                     season_number: false,

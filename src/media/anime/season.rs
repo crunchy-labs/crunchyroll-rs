@@ -1,5 +1,4 @@
 use crate::crunchyroll::Executor;
-use crate::media::anime::util::{parse_locale_from_slug_title, real_dedup_vec};
 use crate::media::util::request_media;
 use crate::media::Media;
 use crate::{Crunchyroll, Episode, Locale, Result, Series};
@@ -128,14 +127,16 @@ impl Media for Season {
     async fn __apply_fixes(&mut self) {
         if let Some(audio_locale) = &self.audio_locale {
             self.audio_locales.push(audio_locale.clone());
-            real_dedup_vec(&mut self.audio_locales);
+            crate::media::anime::util::real_dedup_vec(&mut self.audio_locales);
         }
     }
 
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_experimental_stabilizations(&mut self) {
         if self.executor.fixes.locale_name_parsing {
-            self.audio_locales = vec![parse_locale_from_slug_title(&self.slug_title)]
+            self.audio_locales = vec![crate::media::anime::util::parse_locale_from_slug_title(
+                &self.slug_title,
+            )]
         }
         if self.executor.fixes.season_number {
             let mut split = self.identifier.splitn(2, '|');

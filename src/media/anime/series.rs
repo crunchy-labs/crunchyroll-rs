@@ -1,6 +1,5 @@
 use crate::categories::Category;
 use crate::crunchyroll::Executor;
-use crate::media::anime::util::real_dedup_vec;
 use crate::media::util::request_media;
 use crate::media::{Media, PosterImages};
 use crate::{Crunchyroll, Locale, MusicVideo, Result, Season};
@@ -132,7 +131,7 @@ impl Media for Series {
                     locales.extend(season.available_versions().await.unwrap_or_default());
                     locales.extend(season.audio_locales)
                 }
-                real_dedup_vec(&mut locales);
+                crate::media::anime::util::real_dedup_vec(&mut locales);
 
                 self.audio_locales = locales
             }
