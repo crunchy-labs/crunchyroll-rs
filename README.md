@@ -40,7 +40,7 @@ The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).
 You need this crate and [tokio](https://github.com/tokio-rs/tokio) as dependency in your Cargo.toml in order to start working:
 ```toml
 [dependencies]
-crunchyroll-rs = "0.7"
+crunchyroll-rs = "0.8"
 tokio = { version = "1", features = ["full"] }
 ```
 
