@@ -119,7 +119,7 @@
 //!
 //! - **hls-stream** *(enabled by default)*: Enables processing of [HLS] video streams.
 //! - **dash-stream**: Enables processing of [DASH] video streams.
-//! - **parse** *(enabled by default)*: Enables url parsing
+//! - **parse** *(enabled by default)*: Enables url parsing.
 //! - **tower**: Enables the usage of a [tower](https://docs.rs/tower) compatible middleware.
 //! - **experimental-stabilizations**: Provides some functions to maybe fix broken api results. See
 //!   [Bugs](#bugs) for more information.
@@ -130,8 +130,8 @@
 //! that no fields were added or removed from an api response, otherwise the associated test will
 //! fail.
 //!
-//! [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming)
-//! [DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP)
+//! [HLS]: https://en.wikipedia.org/wiki/HTTP_Live_Streaming
+//! [DASH]: https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
