@@ -66,9 +66,8 @@
 //!     .await?;
 //! ```
 //!
-//! Crunchyroll uses the [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) and
-//! [MPEG-DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP) video streaming
-//! formats to distribute their streams. The logic to work with this formats is already implemented
+//! Crunchyroll uses the [HLS] and [DASH] video streaming formats to distribute their streams. The
+//! logic to work with this formats is already implemented
 //! into this crate.
 //!
 //! The feature `hls-stream` and / or `dash-stream` must be activated to get streams. `hls-stream`
@@ -100,7 +99,9 @@
 //! # Bugs
 //! Crunchyroll is awful in keep their api clean. Thus, some things are broken, will break for no
 //! reason or aren't well implemented (if at all). The methods added with the
-//! `experimental-stabilizations` feature (`CrunchyrollBuilder::stabilization_*`).
+//! `experimental-stabilizations` feature (`CrunchyrollBuilder::stabilization_*`) can be used to
+//! prevent some issues. Note that there is no guarantee that these functions will work or that they
+//! will not break anything.
 //!
 //! ### Cloudflare
 //! Crunchyroll uses the cloudflare bot protection to detect if requests are made by a human.
@@ -114,11 +115,23 @@
 //! aggressive). The configurations may vary on the factors addressed so there is no 100% right way
 //! to do it.
 //!
+//! # Features
+//!
+//! - **hls-stream** *(enabled by default)*: Enables processing of [HLS] video streams.
+//! - **dash-stream**: Enables processing of [DASH] video streams.
+//! - **parse** *(enabled by default)*: Enables url parsing
+//! - **tower**: Enables the usage of a [tower](https://docs.rs/tower) compatible middleware.
+//! - **experimental-stabilizations**: Provides some functions to maybe fix broken api results. See
+//!   [Bugs](#bugs) for more information.
+//!
 //! # Implementation
 //! To ensure at least all existing parts of the library are working as expected, a special feature
 //! only for testing is implemented. When running tests with the `__test_strict` feature, it ensures
 //! that no fields were added or removed from an api response, otherwise the associated test will
 //! fail.
+//!
+//! [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming)
+//! [DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP)
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
