@@ -59,9 +59,9 @@ mod browse {
         is_subbed(bool, "is_subbed") = None,
         /// Specifies a particular simulcast season in which the entries should have been aired. Use
         /// [`Crunchyroll::simulcast_seasons`] to get all seasons.
-        simulcast_season(String, "season_tag") = None,
+        simulcast_season(String, "seasonal_tag") = None,
         /// Specifies how the entries should be sorted.
-        sort(BrowseSortType, "sort") = Some(BrowseSortType::NewlyAdded),
+        sort(BrowseSortType, "sort_by") = Some(BrowseSortType::NewlyAdded),
         /// Specifies the media type of the entries.
         media_type(MediaType, "type") = None
     }
