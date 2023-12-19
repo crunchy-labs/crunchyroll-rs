@@ -288,6 +288,9 @@ macro_rules! impl_media_video {
                 /// error, Crunchyroll doesn't give a hint that a ratelimit is hit). If you need to
                 /// query many streams in a short time, consider using [`Episode::stream`] /
                 /// [`Movie::stream`].
+                /// Note: It seems that Crunchyroll removed the non-drm endpoints for the results of this method, so the
+                /// [`crate::media::Stream::dash_streaming_data`] and [`crate::media::Stream::hls_streaming_data`]
+                /// functions will always error.
                 pub async fn alternative_stream(&self) -> Result<$crate::media::Stream> {
                     $crate::media::Stream::from_url(self.executor.clone(), "https://www.crunchyroll.com/content/v2/cms/videos", &self.stream_id).await
                 }
