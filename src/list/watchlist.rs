@@ -123,7 +123,7 @@ options! {
     sort(WatchlistSort, "sort_by") = None,
     media_type(crate::media::MediaType, "type") = None,
     language(WatchlistLanguage, "language") = None,
-    only_favorites(bool, "only_favorites") = Some(false)
+    only_favorites(bool, "is_favorite") = Some(false)
 }
 
 impl Crunchyroll {
