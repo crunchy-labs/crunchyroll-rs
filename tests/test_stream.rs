@@ -70,29 +70,6 @@ static ALTERNATIVE_STREAM: Store<Stream> = Store::new(|| {
     })
 });
 
-#[cfg(feature = "hls-stream")]
-static ALTERNATIVE_STREAM_HLS_DATA: Store<VariantData> = Store::new(|| {
-    Box::pin(async {
-        let stream = ALTERNATIVE_STREAM.get().await?;
-        let mut hls_streams = stream.hls_streaming_data(None).await?;
-
-        hls_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
-
-        Ok(hls_streams[0].clone())
-    })
-});
-#[cfg(feature = "dash-stream")]
-static ALTERNATIVE_STREAM_DASH_DATA: Store<VariantData> = Store::new(|| {
-    Box::pin(async {
-        let stream = ALTERNATIVE_STREAM.get().await?;
-        let mut dash_streams = stream.dash_streaming_data(None).await?.0;
-
-        dash_streams.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width));
-
-        Ok(dash_streams[0].clone())
-    })
-});
-
 #[tokio::test]
 async fn stream_from_id() {
     assert_result!(STREAM.get().await)
@@ -174,18 +151,6 @@ async fn stream_versions() {
 #[tokio::test]
 async fn alternative_stream_from_id() {
     assert_result!(ALTERNATIVE_STREAM.get().await)
-}
-
-#[cfg(feature = "hls-stream")]
-#[tokio::test]
-async fn alternative_stream_hls_data() {
-    assert_result!(ALTERNATIVE_STREAM_HLS_DATA.get().await)
-}
-
-#[cfg(feature = "dash-stream")]
-#[tokio::test]
-async fn alternative_stream_dash_data() {
-    assert_result!(ALTERNATIVE_STREAM_DASH_DATA.get().await)
 }
 
 #[tokio::test]

@@ -30,6 +30,8 @@ impl Stream {
     /// Note that this is only the implementation of this crate to stream data. You can
     /// still manually use the variants in [`Stream::variants`] and implement the streaming on
     /// your own.
+    /// If this function fails with [`Error::Input`] `no stream available`, this probably means
+    /// that no non-drm endpoint is available.
     #[cfg(feature = "hls-stream")]
     #[cfg_attr(docsrs, doc(cfg(feature = "hls-stream")))]
     pub async fn hls_streaming_data(&self, hardsub: Option<Locale>) -> Result<Vec<VariantData>> {
@@ -37,7 +39,17 @@ impl Stream {
             if let Some(raw_streams) = self.variants.get(&locale) {
                 VariantData::from_hls_master(
                     self.executor.clone(),
-                    raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
+                    raw_streams
+                        .adaptive_hls
+                        .as_ref()
+                        .map_or(
+                            Err(Error::Input {
+                                message: "no stream available".to_string(),
+                            }),
+                            Ok,
+                        )?
+                        .url
+                        .clone(),
                 )
                 .await
             } else {
@@ -48,13 +60,33 @@ impl Stream {
         } else if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
             VariantData::from_hls_master(
                 self.executor.clone(),
-                raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
+                raw_streams
+                    .adaptive_hls
+                    .as_ref()
+                    .map_or(
+                        Err(Error::Input {
+                            message: "no stream available".to_string(),
+                        }),
+                        Ok,
+                    )?
+                    .url
+                    .clone(),
             )
             .await
         } else if let Some(raw_streams) = self.variants.get(&Locale::Custom(":".into())) {
             VariantData::from_hls_master(
                 self.executor.clone(),
-                raw_streams.adaptive_hls.as_ref().unwrap().url.clone(),
+                raw_streams
+                    .adaptive_hls
+                    .as_ref()
+                    .map_or(
+                        Err(Error::Input {
+                            message: "no stream available".to_string(),
+                        }),
+                        Ok,
+                    )?
+                    .url
+                    .clone(),
             )
             .await
         } else {
@@ -79,6 +111,8 @@ impl Stream {
     /// Note that this is only the implementation of this crate to stream data. You can
     /// still manually use the variants in [`Stream::variants`] and implement the streaming on
     /// your own.
+    /// If this function fails with [`Error::Input`] `no stream available`, this probably means
+    /// that no non-drm endpoint is available.
     #[cfg(feature = "dash-stream")]
     #[cfg_attr(docsrs, doc(cfg(feature = "dash-stream")))]
     pub async fn dash_streaming_data(
@@ -87,14 +121,34 @@ impl Stream {
     ) -> Result<(Vec<VariantData>, Vec<VariantData>)> {
         let url = if let Some(locale) = hardsub {
             if let Some(raw_streams) = self.variants.get(&locale) {
-                raw_streams.adaptive_dash.as_ref().unwrap().url.clone()
+                raw_streams
+                    .adaptive_dash
+                    .as_ref()
+                    .map_or(
+                        Err(Error::Input {
+                            message: "no stream available".to_string(),
+                        }),
+                        Ok,
+                    )?
+                    .url
+                    .clone()
             } else {
                 return Err(Error::Input {
                     message: format!("could not find any stream with hardsub locale '{}'", locale),
                 });
             }
         } else if let Some(raw_streams) = self.variants.get(&Locale::Custom("".into())) {
-            raw_streams.adaptive_dash.as_ref().unwrap().url.clone()
+            raw_streams
+                .adaptive_dash
+                .as_ref()
+                .map_or(
+                    Err(Error::Input {
+                        message: "no stream available".to_string(),
+                    }),
+                    Ok,
+                )?
+                .url
+                .clone()
         } else {
             return Err(Error::Internal {
                 message: "could not find supported stream".to_string(),
