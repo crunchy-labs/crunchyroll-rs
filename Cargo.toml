@@ -64,3 +64,4 @@ members = ["internal"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]
+all-features = true
