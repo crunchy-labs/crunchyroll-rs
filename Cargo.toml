@@ -1,6 +1,6 @@
 [package]
 name = "crunchyroll-rs"
-version = "0.8.1"
+version = "0.8.2"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2021"
 description = "Pure Rust implementation of the crunchyroll api."
@@ -33,7 +33,7 @@ chrono = { version = "0.4", features = ["serde"] }
 futures-util = { version = "0.3", features = ["std"], default-features = false }
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
-reqwest = { version = "0.11.22", features = ["cookies", "json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.11.23", features = ["cookies", "json", "rustls-tls"], default-features = false }
 rustls = { version = "0.21.6", features = ["dangerous_configuration"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -42,7 +42,7 @@ smart-default = "0.7"
 tokio = { version = "1.35", features = ["sync"] }
 webpki-roots = "0.26"
 
-crunchyroll-rs-internal = { version = "0.8.1", path = "internal" }
+crunchyroll-rs-internal = { version = "0.8.2", path = "internal" }
 
 # Optional / required from features
 aes = { version = "0.8", optional = true }
