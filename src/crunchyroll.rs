@@ -335,7 +335,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic aHJobzlxM2F3dnNrMjJ1LXRzNWE6cHROOURteXRBU2Z6QjZvbXVsSzh6cUxzYTczVE1TY1k=")
+                .header(header::AUTHORIZATION, "Basic b2VkYXJteHN0bGgxanZhd2ltbnE6OWxFaHZIWkpEMzJqdVY1ZFc5Vk9TNTdkb3BkSnBnbzE=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
@@ -363,7 +363,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic aHJobzlxM2F3dnNrMjJ1LXRzNWE6cHROOURteXRBU2Z6QjZvbXVsSzh6cUxzYTczVE1TY1k=")
+                .header(header::AUTHORIZATION, "Basic b2VkYXJteHN0bGgxanZhd2ltbnE6OWxFaHZIWkpEMzJqdVY1ZFc5Vk9TNTdkb3BkSnBnbzE=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
