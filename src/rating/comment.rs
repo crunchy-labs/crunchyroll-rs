@@ -324,7 +324,7 @@ where
     match flags.len() {
         0 => Ok(false),
         1 => {
-            if flags.get(0).unwrap() == "spoiler" {
+            if flags[0] == "spoiler" {
                 Ok(true)
             } else {
                 Err(Error::custom(format!(

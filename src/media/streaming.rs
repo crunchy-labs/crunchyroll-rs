@@ -42,12 +42,9 @@ impl Stream {
                     raw_streams
                         .adaptive_hls
                         .as_ref()
-                        .map_or(
-                            Err(Error::Input {
-                                message: "no stream available".to_string(),
-                            }),
-                            Ok,
-                        )?
+                        .ok_or(Error::Input {
+                            message: "no stream available".to_string(),
+                        })?
                         .url
                         .clone(),
                 )
@@ -63,12 +60,9 @@ impl Stream {
                 raw_streams
                     .adaptive_hls
                     .as_ref()
-                    .map_or(
-                        Err(Error::Input {
-                            message: "no stream available".to_string(),
-                        }),
-                        Ok,
-                    )?
+                    .ok_or(Error::Input {
+                        message: "no stream available".to_string(),
+                    })?
                     .url
                     .clone(),
             )
@@ -79,12 +73,9 @@ impl Stream {
                 raw_streams
                     .adaptive_hls
                     .as_ref()
-                    .map_or(
-                        Err(Error::Input {
-                            message: "no stream available".to_string(),
-                        }),
-                        Ok,
-                    )?
+                    .ok_or(Error::Input {
+                        message: "no stream available".to_string(),
+                    })?
                     .url
                     .clone(),
             )
@@ -124,12 +115,9 @@ impl Stream {
                 raw_streams
                     .adaptive_dash
                     .as_ref()
-                    .map_or(
-                        Err(Error::Input {
-                            message: "no stream available".to_string(),
-                        }),
-                        Ok,
-                    )?
+                    .ok_or(Error::Input {
+                        message: "no stream available".to_string(),
+                    })?
                     .url
                     .clone()
             } else {
@@ -141,12 +129,9 @@ impl Stream {
             raw_streams
                 .adaptive_dash
                 .as_ref()
-                .map_or(
-                    Err(Error::Input {
-                        message: "no stream available".to_string(),
-                    }),
-                    Ok,
-                )?
+                .ok_or(Error::Input {
+                    message: "no stream available".to_string(),
+                })?
                 .url
                 .clone()
         } else {
@@ -388,7 +373,7 @@ impl VariantData {
                     id: representation.id.expect("dash representation id"),
                     base: representation
                         .BaseURL
-                        .get(0)
+                        .first()
                         .expect("dash base url")
                         .base
                         .clone(),
