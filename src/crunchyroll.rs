@@ -101,14 +101,14 @@ impl Crunchyroll {
     }
 
     /// Check if the current used account has premium.
-    pub fn premium(&self) -> bool {
-        self.executor.details.premium
+    pub async fn premium(&self) -> bool {
+        self.executor.premium().await
     }
 
     /// Return the current session token. It can be used to log-in later with
     /// [`CrunchyrollBuilder::login_with_refresh_token`] or [`CrunchyrollBuilder::login_with_etp_rt`].
     pub async fn session_token(&self) -> SessionToken {
-        self.executor.config.lock().await.session_token.clone()
+        self.executor.config.read().await.session_token.clone()
     }
 }
 
@@ -121,7 +121,7 @@ mod auth {
     use serde::{Deserialize, Serialize};
     use std::ops::Add;
     use std::sync::Arc;
-    use tokio::sync::Mutex;
+    use tokio::sync::RwLock;
 
     /// Stores if the refresh token or etp-rt cookie was used for login. Extract the token and use
     /// it as argument in their associated function ([`CrunchyrollBuilder::login_with_refresh_token`]
@@ -167,7 +167,6 @@ mod auth {
 
         pub(crate) bucket: String,
 
-        pub(crate) premium: bool,
         pub(crate) signature: String,
         pub(crate) policy: String,
         pub(crate) key_pair_id: String,
@@ -194,13 +193,13 @@ mod auth {
     pub struct Executor {
         pub(crate) client: Client,
 
-        /// Must be a mutex because `Executor` is always passed inside of `Arc` which does not allow
-        /// direct changes to the struct.
-        pub(crate) config: Mutex<ExecutorConfig>,
+        /// Must be a [`RwLock`] because `Executor` is always passed inside `Arc` which does not
+        /// allow direct changes to the struct.
+        pub(crate) config: RwLock<ExecutorConfig>,
         pub(crate) details: ExecutorDetails,
 
         #[cfg(feature = "tower")]
-        pub(crate) middleware: Option<Mutex<crate::internal::tower::Middleware>>,
+        pub(crate) middleware: Option<tokio::sync::Mutex<crate::internal::tower::Middleware>>,
         #[cfg(feature = "experimental-stabilizations")]
         pub(crate) fixes: ExecutorFixes,
     }
@@ -230,7 +229,7 @@ mod auth {
             self: &Arc<Self>,
             mut req: RequestBuilder,
         ) -> Result<T> {
-            let mut config = self.config.lock().await;
+            let mut config = self.config.write().await;
             if config.session_expire <= Utc::now() {
                 let login_response = match config.session_token.clone() {
                     SessionToken::RefreshToken(refresh_token) => {
@@ -293,6 +292,30 @@ mod auth {
             resp.__set_executor(self.clone()).await;
 
             Ok(resp)
+        }
+
+        pub(crate) async fn premium(&self) -> bool {
+            let executor_config = self.config.read().await;
+
+            if matches!(executor_config.session_token, SessionToken::Anonymous) {
+                return false;
+            }
+
+            #[derive(Deserialize)]
+            struct AccessTokenClaims {
+                benefits: Vec<String>,
+            }
+
+            let token = executor_config.access_token.as_str();
+            let key = jsonwebtoken::DecodingKey::from_rsa_components("", "").unwrap();
+            let mut validation = jsonwebtoken::Validation::default();
+            validation.insecure_disable_signature_validation();
+
+            jsonwebtoken::decode::<AccessTokenClaims>(token, &key, &validation)
+                .unwrap()
+                .claims
+                .benefits
+                .contains(&"cr_premium".to_string())
         }
 
         async fn auth_anonymously(client: &Client) -> Result<AuthResponse> {
@@ -403,7 +426,7 @@ mod auth {
         fn default() -> Self {
             Self {
                 client: Client::new(),
-                config: Mutex::new(ExecutorConfig {
+                config: RwLock::new(ExecutorConfig {
                     token_type: "".to_string(),
                     access_token: "".to_string(),
                     session_token: SessionToken::RefreshToken("".into()),
@@ -413,7 +436,6 @@ mod auth {
                     locale: Default::default(),
                     preferred_audio_locale: None,
                     bucket: "".to_string(),
-                    premium: false,
                     signature: "".to_string(),
                     policy: "".to_string(),
                     key_pair_id: "".to_string(),
@@ -496,7 +518,7 @@ mod auth {
         device_identifier: Option<(String, String)>,
 
         #[cfg(feature = "tower")]
-        middleware: Option<Mutex<crate::internal::tower::Middleware>>,
+        middleware: Option<tokio::sync::Mutex<crate::internal::tower::Middleware>>,
         #[cfg(feature = "experimental-stabilizations")]
         fixes: ExecutorFixes,
     }
@@ -609,7 +631,9 @@ mod auth {
                 > + Send
                 + 'static,
         {
-            self.middleware = Some(Mutex::new(crate::internal::tower::Middleware::new(service)));
+            self.middleware = Some(tokio::sync::Mutex::new(
+                crate::internal::tower::Middleware::new(service),
+            ));
             self
         }
 
@@ -789,7 +813,7 @@ mod auth {
                 executor: Arc::new(Executor {
                     client: self.client,
 
-                    config: Mutex::new(ExecutorConfig {
+                    config: RwLock::new(ExecutorConfig {
                         token_type: login_response.token_type,
                         access_token: login_response.access_token,
                         session_token,
@@ -809,7 +833,6 @@ mod auth {
                             .unwrap_or(index.cms_web.bucket.as_str())
                             .to_string(),
 
-                        premium: false,
                         signature: index.cms_web.signature,
                         policy: index.cms_web.policy,
                         key_pair_id: index.cms_web.key_pair_id,
@@ -843,7 +866,9 @@ mod auth {
     async fn request<T: Request + DeserializeOwned>(
         client: &Client,
         req: RequestBuilder,
-        #[cfg(feature = "tower")] middleware: Option<&Mutex<crate::internal::tower::Middleware>>,
+        #[cfg(feature = "tower")] middleware: Option<
+            &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+        >,
     ) -> Result<T> {
         let built_req = req.build()?;
         let url = built_req.url().to_string();

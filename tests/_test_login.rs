@@ -1,3 +1,4 @@
+#![allow(clippy::bool_assert_comparison)]
 /// Begins with an underscore because this must be the first file to be called
 mod utils;
 
@@ -8,12 +9,18 @@ use std::env;
 async fn login_with_credentials() {
     let email = env::var("EMAIL").expect("'EMAIL' environment variable not found");
     let password = env::var("PASSWORD").expect("'PASSWORD' environment variable not found");
+    let is_premium = env::var("IS_PREMIUM")
+        .ok()
+        .map(|e| e.parse::<bool>().unwrap());
 
     let crunchy = Crunchyroll::builder()
         .login_with_credentials(email, password)
         .await;
 
     assert_result!(crunchy);
+    if let Some(is_premium) = is_premium {
+        assert_eq!(crunchy.as_ref().unwrap().premium().await, is_premium)
+    }
 
     if !utils::session::has_session() {
         utils::session::set_session(crunchy.unwrap()).await.unwrap()
@@ -24,12 +31,18 @@ async fn login_with_credentials() {
 async fn login_with_refresh_token() {
     let refresh_token =
         env::var("REFRESH_TOKEN").expect("'REFRESH_TOKEN' environment variable not found");
+    let is_premium = env::var("IS_PREMIUM")
+        .ok()
+        .map(|e| e.parse::<bool>().unwrap());
 
     let crunchy = Crunchyroll::builder()
         .login_with_refresh_token(refresh_token)
         .await;
 
     assert_result!(crunchy);
+    if let Some(is_premium) = is_premium {
+        assert_eq!(crunchy.as_ref().unwrap().premium().await, is_premium)
+    }
 
     if !utils::session::has_session() {
         utils::session::set_session(crunchy.unwrap()).await.unwrap()
@@ -39,10 +52,16 @@ async fn login_with_refresh_token() {
 #[tokio::test]
 async fn login_with_etp_rt() {
     let etp_rt = env::var("ETP_RT").expect("'ETP_RT' environment variable not found");
+    let is_premium = env::var("IS_PREMIUM")
+        .ok()
+        .map(|e| e.parse::<bool>().unwrap());
 
     let crunchy = Crunchyroll::builder().login_with_etp_rt(etp_rt).await;
 
     assert_result!(crunchy);
+    if let Some(is_premium) = is_premium {
+        assert_eq!(crunchy.as_ref().unwrap().premium().await, is_premium)
+    }
 
     if !utils::session::has_session() {
         utils::session::set_session(crunchy.unwrap()).await.unwrap()
@@ -54,6 +73,7 @@ async fn login_anonymously() {
     let crunchy = Crunchyroll::builder().login_anonymously().await;
 
     assert_result!(crunchy);
+    assert_eq!(crunchy.as_ref().unwrap().premium().await, false);
 
     if !utils::session::has_session() {
         utils::session::set_session(crunchy.unwrap()).await.unwrap()

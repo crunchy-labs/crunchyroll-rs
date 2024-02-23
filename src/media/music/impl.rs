@@ -35,7 +35,7 @@ macro_rules! impl_media_music {
 
                 /// Check if the music video / concert can be watched.
                 pub async fn available(&self) -> bool {
-                    self.executor.details.premium || !self.is_premium_only
+                    self.executor.premium().await || !self.is_premium_only
                 }
             }
         )*

@@ -9,7 +9,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  ETP_RT: ${{ secrets.ETP_RT }}
 
 jobs:
   test-login:
@@ -48,6 +47,8 @@ jobs:
           default: true
 
       - name: Test
+        env:
+          ETP_RT: ${{ secrets.ETP_RT }}
         uses: actions-rs/cargo@v1
         with:
           command: test
@@ -80,6 +81,9 @@ jobs:
           default: true
 
       - name: Test
+        env:
+          ETP_RT: ${{ secrets.ETP_RT }}
+          IS_PREMIUM: ${{ secrets.IS_PREMIUM }}
         uses: actions-rs/cargo@v1
         with:
           command: test

@@ -297,7 +297,7 @@ macro_rules! impl_media_video {
 
                 /// Check if the episode / movie can be watched.
                 pub async fn available(&self) -> bool {
-                    self.executor.details.premium || !self.is_premium_only
+                    self.executor.premium().await || !self.is_premium_only
                 }
 
                 /// Get time _in seconds_ when the episode / movie intro begins and ends.
