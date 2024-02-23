@@ -60,6 +60,7 @@ pub struct Episode {
     pub season_slug_title: String,
     #[serde(default)]
     pub season_tags: Vec<String>,
+    pub season_sequence_number: f32,
 
     pub series_id: String,
     pub series_title: String,

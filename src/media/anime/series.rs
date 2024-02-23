@@ -6,6 +6,18 @@ use crate::{Crunchyroll, Locale, MusicVideo, Result, Season};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+/// Information about a series which was nominated for the Crunchyroll Anime Awards.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct SeriesAward {
+    pub icon_url: String,
+    pub text: String,
+
+    pub is_current_award: bool,
+    pub is_winner: bool,
+}
+
 /// Metadata for a series.
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -60,6 +72,8 @@ pub struct Series {
     pub mature_blocked: bool,
 
     pub availability_notes: String,
+
+    pub awards: Option<Vec<SeriesAward>>,
 
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
