@@ -37,10 +37,10 @@ struct VideoIntroResult {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SkipEventsEvent {
-    /// Start of the event.
+    /// Start of the event in seconds.
     pub start: u32,
-    /// End of the event.
-    pub stop: u32,
+    /// End of the event in seconds.
+    pub end: u32,
 
     #[cfg(feature = "__test_strict")]
     approver_id: crate::StrictValue,
