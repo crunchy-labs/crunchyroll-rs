@@ -86,3 +86,9 @@ async fn episode_versions() {
 
     assert_result!(episode.versions().await)
 }
+
+#[tokio::test]
+async fn episode_skip_events() {
+    let episode = START_EPISODE.get().await.unwrap();
+    episode.skip_events().await.unwrap();
+}

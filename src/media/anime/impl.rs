@@ -2,8 +2,8 @@ use crate::common::{PaginationBulkResultMeta, Request};
 use crate::media::Media;
 use crate::{Episode, MediaCollection, Movie, MovieListing, Result, Season, Series};
 use chrono::{DateTime, Utc};
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::de::{DeserializeOwned, Error, IntoDeserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Information about the intro of an [`Episode`] or [`Movie`].
 #[allow(dead_code)]
@@ -30,6 +30,78 @@ struct VideoIntroResult {
 
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     last_updated: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct SkipEventsEvent {
+    /// Start of the event.
+    pub start: u32,
+    /// End of the event.
+    pub stop: u32,
+
+    #[cfg(feature = "__test_strict")]
+    approver_id: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    distribution_number: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    title: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    series_id: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    new: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    r#type: crate::StrictValue,
+}
+
+/// Information about skippable events like an intro or credits.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(remote = "Self")]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct SkipEvents {
+    #[serde(default)]
+    pub recap: Option<SkipEventsEvent>,
+    #[serde(default)]
+    pub intro: Option<SkipEventsEvent>,
+    #[serde(default)]
+    pub credits: Option<SkipEventsEvent>,
+    #[serde(default)]
+    pub preview: Option<SkipEventsEvent>,
+
+    #[cfg(feature = "__test_strict")]
+    media_id: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    last_updated: crate::StrictValue,
+}
+
+impl<'de> Deserialize<'de> for SkipEvents {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut as_map = serde_json::Map::deserialize(deserializer)?;
+
+        let objects_to_check = ["recap", "intro", "credits", "preview"];
+        for object in objects_to_check {
+            let Some(obj) = as_map.get(object) else {
+                continue;
+            };
+            if obj.as_object().map_or(false, |o| o.is_empty()) {
+                as_map.remove(object);
+            }
+        }
+
+        SkipEvents::deserialize(
+            serde_json::to_value(as_map)
+                .map_err(|e| Error::custom(e.to_string()))?
+                .into_deserializer(),
+        )
+        .map_err(|e| Error::custom(e.to_string()))
+    }
 }
 
 /// Media related to the media which queried this struct.
@@ -70,13 +142,11 @@ pub struct PlayheadInformation {
 macro_rules! impl_manual_media_deserialize {
     ($($media:ident = $metadata:literal)*) => {
         $(
-            impl<'de> serde::Deserialize<'de> for $media {
-                fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+            impl<'de> Deserialize<'de> for $media {
+                fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
                 where
-                    D: serde::Deserializer<'de>,
+                    D: Deserializer<'de>,
                 {
-                    use serde::de::{Error, IntoDeserializer};
-
                     let mut as_map = serde_json::Map::deserialize(deserializer)?;
 
                     if let Some(mut metadata) = as_map.remove($metadata) {
@@ -300,7 +370,26 @@ macro_rules! impl_media_video {
                     self.executor.premium().await || !self.is_premium_only
                 }
 
+                /// Get skippable events like intro or credits.
+                pub async fn skip_events(&self) -> Result<SkipEvents> {
+                    let endpoint = format!(
+                        "https://static.crunchyroll.com/skip-events/production/{}.json",
+                        self.id
+                    );
+                    let raw_result = self.executor.get(endpoint)
+                        .request_raw()
+                        .await?;
+                    let result = String::from_utf8_lossy(raw_result.as_slice());
+                    if result.contains("</Error>") {
+                        // sometimes crunchyroll just returns a xml error instead of an empty result
+                        return Ok(SkipEvents::default())
+                    } else {
+                        return Ok(serde_json::from_str(&result)?)
+                    }
+                }
+
                 /// Get time _in seconds_ when the episode / movie intro begins and ends.
+                #[deprecated(since = "0.8.4", note = "Use the `skip_events` method instead")]
                 pub async fn intro(&self) -> Result<Option<(f64, f64)>> {
                     let endpoint = format!(
                         "https://static.crunchyroll.com/datalab-intro-v2/{}.json",
