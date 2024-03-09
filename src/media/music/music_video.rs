@@ -55,7 +55,7 @@ pub struct MusicVideo {
     #[serde(alias = "durationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
-    #[default(Duration::milliseconds(0))]
+    #[default(Duration::try_milliseconds(0).unwrap())]
     pub duration: Duration,
 
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]

@@ -82,7 +82,7 @@ pub(crate) fn deserialize_millis_to_duration<'de, D>(deserializer: D) -> Result<
 where
     D: Deserializer<'de>,
 {
-    Ok(Duration::milliseconds(i64::deserialize(deserializer)?))
+    Ok(Duration::try_milliseconds(i64::deserialize(deserializer)?).unwrap())
 }
 
 pub(crate) fn serialize_duration_to_millis<S>(

@@ -36,7 +36,7 @@ pub struct Movie {
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
-    #[default(Duration::milliseconds(0))]
+    #[default(Duration::try_milliseconds(0).unwrap())]
     pub duration: Duration,
 
     pub images: ThumbnailImages,

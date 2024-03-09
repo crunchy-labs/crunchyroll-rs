@@ -81,12 +81,12 @@ pub struct Artist {
     #[serde(alias = "totalConcertDurationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
-    #[default(Duration::milliseconds(0))]
+    #[default(Duration::try_milliseconds(0).unwrap())]
     pub total_concert_duration: Duration,
     #[serde(alias = "totalVideoDurationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
-    #[default(Duration::milliseconds(0))]
+    #[default(Duration::try_milliseconds(0).unwrap())]
     pub total_video_duration: Duration,
 
     pub images: PosterImages,
