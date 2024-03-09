@@ -302,7 +302,7 @@ mod auth {
                     SessionToken::Anonymous => SessionToken::Anonymous,
                 };
                 new_config.session_expire =
-                    Utc::now().add(Duration::seconds(login_response.expires_in as i64));
+                    Utc::now().add(Duration::try_seconds(login_response.expires_in as i64).unwrap());
 
                 *config = new_config;
             }
@@ -854,7 +854,7 @@ mod auth {
                         access_token: login_response.access_token,
                         session_token,
                         session_expire: Utc::now()
-                            .add(Duration::seconds(login_response.expires_in as i64)),
+                            .add(Duration::try_seconds(login_response.expires_in as i64).unwrap()),
                     }),
                     details: ExecutorDetails {
                         locale: self.locale,
