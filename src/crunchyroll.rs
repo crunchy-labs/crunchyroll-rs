@@ -301,8 +301,8 @@ mod auth {
                     }
                     SessionToken::Anonymous => SessionToken::Anonymous,
                 };
-                new_config.session_expire =
-                    Utc::now().add(Duration::try_seconds(login_response.expires_in as i64).unwrap());
+                new_config.session_expire = Utc::now()
+                    .add(Duration::try_seconds(login_response.expires_in as i64).unwrap());
 
                 *config = new_config;
             }
