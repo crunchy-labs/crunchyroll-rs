@@ -4,6 +4,7 @@ use crate::{Episode, MediaCollection, Movie, MovieListing, Result, Season, Serie
 use chrono::{DateTime, Utc};
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 
 /// Information about the intro of an [`Episode`] or [`Movie`].
 #[allow(dead_code)]
@@ -90,7 +91,13 @@ impl<'de> Deserialize<'de> for SkipEvents {
             let Some(obj) = as_map.get(object) else {
                 continue;
             };
-            if obj.as_object().map_or(false, |o| o.is_empty()) {
+            if obj.as_object().map_or(false, |o| o.is_empty())
+                // crunchyroll sometimes has a skip events, but it's lacking start or end times.
+                // this is just abstracted away since an event without a start or end doesn't make
+                // sense to be wrapped in e.g. an Option
+                || obj.get("start").unwrap_or(&Value::Null).is_null()
+                || obj.get("end").unwrap_or(&Value::Null).is_null()
+            {
                 as_map.remove(object);
             }
         }
