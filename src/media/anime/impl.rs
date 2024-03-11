@@ -39,9 +39,9 @@ struct VideoIntroResult {
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct SkipEventsEvent {
     /// Start of the event in seconds.
-    pub start: u32,
+    pub start: f32,
     /// End of the event in seconds.
-    pub end: u32,
+    pub end: f32,
 
     #[cfg(feature = "__test_strict")]
     approver_id: crate::StrictValue,
