@@ -136,6 +136,11 @@ impl Crunchyroll {
         self.executor.client.clone()
     }
 
+    pub async fn get_access_token(&self) -> (String, String) {
+        let config = self.executor.config.read().await;
+        (config.token_type.clone(), config.access_token.clone())
+    }
+
     /// Check if the current used account has premium.
     pub async fn premium(&self) -> bool {
         self.executor.premium().await
