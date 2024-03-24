@@ -350,26 +350,11 @@ macro_rules! impl_media_video {
     ($($media_video:ident)*) => {
         $(
             impl $media_video {
-                /// Streams for this episode / movie. Crunchyroll has a newer endpoint to request
-                /// streams (available via [`Episode::alternative_stream`] /
-                /// [`Movie::alternative_stream`]) but it has some kind of rate limiting. Because of
-                /// this, this function utilizes the older endpoint which doesn't have a rate limit.
-                /// But because this is an older endpoint it could happen that it stops working at
-                /// any time.
+                /// Streams for this episode / movie.
+                /// All streams are drm encrypted, decryption is not handled in this crate, so you
+                /// must do this yourself.
                 pub async fn stream(&self) -> Result<$crate::media::Stream> {
-                    $crate::media::Stream::from_legacy_url(self.executor.clone(), &self.stream_id).await
-                }
-
-                /// Streams for this episode / movie. This endpoint triggers a rate limiting if
-                /// requested too much over a short time period (the rate limiting may occur as an
-                /// error, Crunchyroll doesn't give a hint that a ratelimit is hit). If you need to
-                /// query many streams in a short time, consider using [`Episode::stream`] /
-                /// [`Movie::stream`].
-                /// Note: It seems that Crunchyroll removed the non-drm endpoints for the results of this method, so the
-                /// [`crate::media::Stream::dash_streaming_data`] and [`crate::media::Stream::hls_streaming_data`]
-                /// functions will always error.
-                pub async fn alternative_stream(&self) -> Result<$crate::media::Stream> {
-                    $crate::media::Stream::from_url(self.executor.clone(), "https://www.crunchyroll.com/content/v2/cms/videos", &self.stream_id).await
+                    $crate::media::Stream::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, &self.id, None).await
                 }
 
                 /// Check if the episode / movie can be watched.
@@ -384,7 +369,7 @@ macro_rules! impl_media_video {
                         self.id
                     );
                     let raw_result = self.executor.get(endpoint)
-                        .request_raw()
+                        .request_raw(true)
                         .await?;
                     let result = String::from_utf8_lossy(raw_result.as_slice());
                     if result.contains("</Error>") {
@@ -403,7 +388,7 @@ macro_rules! impl_media_video {
                         self.id
                     );
                     let raw_result = self.executor.get(endpoint)
-                        .request_raw()
+                        .request_raw(true)
                         .await?;
                     let result = String::from_utf8_lossy(raw_result.as_slice());
                     if result.contains("</Error>") {

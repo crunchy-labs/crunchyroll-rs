@@ -28,14 +28,8 @@ async fn episode_from_id() {
 async fn episode_stream() {
     let episode = START_EPISODE.get().await.unwrap();
 
-    assert_result!(episode.stream().await)
-}
-
-#[tokio::test]
-async fn episode_alternative_stream() {
-    let episode = START_EPISODE.get().await.unwrap();
-
-    assert_result!(episode.alternative_stream().await)
+    let stream = episode.stream().await.unwrap();
+    stream.invalidate().await.unwrap()
 }
 
 #[tokio::test]

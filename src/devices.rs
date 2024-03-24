@@ -72,7 +72,7 @@ impl Device {
             "https://www.crunchyroll.com/accounts/v1/{}/devices/{}/deactivate",
             self.account_id, self.device_id
         );
-        self.executor.post(endpoint).request_raw().await?;
+        self.executor.post(endpoint).request_raw(true).await?;
 
         self.deactivated = true;
 
@@ -102,7 +102,7 @@ impl Crunchyroll {
         self.executor
             .post(endpoint)
             .json(&json!({ "user_code": code }))
-            .request_raw()
+            .request_raw(true)
             .await?;
         Ok(())
     }
@@ -113,7 +113,7 @@ impl Crunchyroll {
             "https://www.crunchyroll.com/accounts/v1/{}/devices/deactivate",
             self.executor.details.account_id.clone()?
         );
-        self.executor.post(endpoint).request_raw().await?;
+        self.executor.post(endpoint).request_raw(true).await?;
         Ok(())
     }
 }

@@ -19,10 +19,6 @@ async fn movie_from_id() {
 
 #[tokio::test]
 async fn movie_stream() {
-    assert_result!(MOVIE.get().await.unwrap().stream().await)
-}
-
-#[tokio::test]
-async fn movie_alternative_stream() {
-    assert_result!(MOVIE.get().await.unwrap().alternative_stream().await)
+    let stream = MOVIE.get().await.unwrap().stream().await.unwrap();
+    stream.invalidate().await.unwrap()
 }

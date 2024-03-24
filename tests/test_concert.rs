@@ -18,5 +18,6 @@ async fn concert_from_id() {
 
 #[tokio::test]
 async fn concert_stream() {
-    assert_result!(CONCERT.get().await.unwrap().stream().await)
+    let stream = CONCERT.get().await.unwrap().stream().await.unwrap();
+    stream.invalidate().await.unwrap()
 }

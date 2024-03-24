@@ -5,8 +5,6 @@ mod media_collection;
 mod music;
 mod shared;
 mod stream;
-#[cfg(any(feature = "hls-stream", feature = "dash-stream"))]
-mod streaming;
 mod util;
 
 pub use anime::*;
@@ -14,8 +12,6 @@ pub use media_collection::*;
 pub use music::*;
 pub use shared::*;
 pub use stream::*;
-#[cfg(any(feature = "hls-stream", feature = "dash-stream"))]
-pub use streaming::*;
 
 use crate::{Crunchyroll, Result};
 

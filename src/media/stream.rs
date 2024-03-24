@@ -1,169 +1,157 @@
-use crate::common::V2BulkResult;
-use crate::error::Error;
-use crate::{Executor, Locale, Request, Result};
+use crate::error::{is_request_error, Error};
+use crate::{Crunchyroll, Executor, Locale, Request, Result};
+use dash_mpd::MPD;
+use reqwest::multipart::Form;
+use reqwest::StatusCode;
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::Value;
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 use std::io::Write;
+use std::iter;
 use std::sync::Arc;
+use std::time::Duration;
 
-fn deserialize_streams<'de, D: Deserializer<'de>>(
+fn deserialize_hardsubs<'de, D: Deserializer<'de>>(
     deserializer: D,
-) -> Result<HashMap<Locale, Variants>, D::Error> {
-    let as_map: HashMap<String, HashMap<Locale, Value>> = HashMap::deserialize(deserializer)?;
-
-    let mut raw: HashMap<Locale, HashMap<String, Value>> = HashMap::new();
-    for (key, value) in as_map {
-        // always empty
-        if key == "urls" {
-            continue;
-        }
-
-        for (mut locale, data) in value {
-            if locale == Locale::Custom(":".to_string()) {
-                locale = Locale::Custom("".to_string());
-            }
-
-            // check only for errors and not use the `Ok(...)` result in `raw` because `Variant`
-            // then must implement `serde::Serialize`
-            if let Err(e) = Variant::deserialize(&data) {
-                return Err(serde::de::Error::custom(e.to_string()));
-            }
-
-            if let Some(entry) = raw.get_mut(&locale) {
-                entry.insert(key.clone(), data.clone());
-            } else {
-                raw.insert(locale, HashMap::from([(key.clone(), data)]));
-            }
-        }
+) -> Result<HashMap<Locale, String>, D::Error> {
+    #[derive(Deserialize)]
+    struct HardSub {
+        url: String,
     }
 
-    let as_value =
-        serde_json::to_value(raw).map_err(|e| serde::de::Error::custom(e.to_string()))?;
-    serde_json::from_value(as_value).map_err(|e| serde::de::Error::custom(e.to_string()))
+    Ok(HashMap::<String, HardSub>::deserialize(deserializer)?
+        .into_iter()
+        .map(|(l, hs)| (Locale::from(l), hs.url))
+        .collect())
 }
 
-#[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-struct StreamVersion {
-    #[serde(rename = "guid")]
-    id: String,
-    #[serde(rename = "media_guid")]
-    media_id: String,
-    #[serde(rename = "season_guid")]
-    season_id: String,
-
-    audio_locale: Locale,
-
-    is_premium_only: bool,
-    original: bool,
-
-    variant: String,
-}
-
-/// A video stream.
-#[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[request(executor(subtitles))]
+#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Stream {
     #[serde(skip)]
-    pub(crate) executor: Arc<Executor>,
+    executor: Arc<Executor>,
 
-    pub media_id: String,
-    /// Audio locale of the stream.
+    pub url: String,
     pub audio_locale: Locale,
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_empty_pre_string_to_none")]
+    pub burned_in_locale: Option<Locale>,
+
+    #[serde(deserialize_with = "deserialize_hardsubs")]
+    pub hard_subs: HashMap<Locale, String>,
+
     /// All subtitles.
     pub subtitles: HashMap<Locale, Subtitle>,
-    pub closed_captions: HashMap<Locale, Subtitle>,
+    pub captions: HashMap<Locale, Subtitle>,
 
-    /// All stream variants.
-    /// One stream has multiple variants how it can be delivered. At the time of writing,
-    /// all variants are either [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming)
-    /// or [MPEG-DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP) streams.
-    ///
-    /// The data is stored in a map where the key represents the data's hardsub locale (-> subtitles
-    /// are "burned" into the video) and the value all stream variants.
-    /// If you want no hardsub at all, use the `Locale::Custom("".into())` map entry.
-    #[serde(deserialize_with = "deserialize_streams")]
-    #[cfg_attr(not(feature = "__test_strict"), default(HashMap::new()))]
-    pub variants: HashMap<Locale, Variants>,
+    pub token: String,
+    pub session: StreamSession,
 
     /// Might be null, for music videos and concerts mostly.
     #[serde(skip_serializing)]
     versions: Option<Vec<StreamVersion>>,
-    /// When requesting versions from [`Stream::versions`] this url is required as multiple paths
-    /// exists which can lead to the [`Stream`] struct.
+
     #[serde(skip)]
-    version_request_url: Option<String>,
+    id: String,
+    #[serde(skip)]
+    optional_media_type: Option<String>,
 
     #[cfg(feature = "__test_strict")]
-    captions: crate::StrictValue,
+    asset_id: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    playback_type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     bifs: crate::StrictValue,
 }
 
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StreamSession {
+    renew_seconds: u32,
+    no_network_retry_interval_seconds: u32,
+    no_network_timeout_seconds: u32,
+    maximum_pause_seconds: u32,
+    end_of_video_unload_seconds: u32,
+    session_expiration_seconds: u32,
+    uses_stream_limits: bool,
+}
+
 impl Stream {
-    pub(crate) async fn from_url<S: AsRef<str>>(
-        executor: Arc<Executor>,
-        base: S,
-        id: S,
-    ) -> Result<Stream> {
-        let endpoint = format!("{}/{}/streams", base.as_ref(), id.as_ref());
-        let mut data = executor
+    pub async fn from_id(
+        crunchyroll: &Crunchyroll,
+        id: impl AsRef<str>,
+        optional_media_type: Option<String>,
+    ) -> Result<Self> {
+        let endpoint = format!(
+            "https://cr-play-service.prd.crunchyrollsvc.com/v1/{}{}/web/chrome/play",
+            optional_media_type
+                .as_ref()
+                .map(|omt| format!("{omt}/"))
+                .unwrap_or_default(),
+            id.as_ref()
+        );
+
+        let mut stream = crunchyroll
+            .executor
             .get(endpoint)
-            .apply_preferred_audio_locale_query()
-            .apply_locale_query()
-            .request::<V2BulkResult<serde_json::Map<String, Value>>>()
+            .request::<Stream>()
             .await?;
-
-        let mut map = data.meta.clone();
-        map.insert("variants".to_string(), data.data.remove(0).into());
-
-        let mut stream: Stream = serde_json::from_value(Value::Object(map))?;
-        stream.executor = executor;
-        stream.version_request_url = Some(base.as_ref().to_string());
+        stream.executor = crunchyroll.executor.clone();
+        stream.id = id.as_ref().to_string();
+        stream.optional_media_type = optional_media_type;
 
         Ok(stream)
     }
 
-    pub(crate) async fn from_legacy_url<S: AsRef<str>>(
-        executor: Arc<Executor>,
-        id: S,
-    ) -> Result<Stream> {
+    /// Requests all available video and audio streams. Returns [`None`] if the requested hardsub
+    /// isn't available. The first [`Vec<StreamData>`] contains only video streams, the second only
+    /// audio streams.
+    /// You will run into an error when requesting this function too often without invalidating the
+    /// data. Crunchyroll only allows a certain amount of stream data to be requested at the same
+    /// time, typically the exact amount depends on the type of (premium) subscription you have. You
+    /// can use [`Stream::invalidate`] to invalidate all stream data for this stream.
+    pub async fn stream_data(
+        &self,
+        hardsub: Option<Locale>,
+    ) -> Result<Option<(Vec<StreamData>, Vec<StreamData>)>> {
+        if let Some(hardsub) = hardsub {
+            let Some(url) = self
+                .hard_subs
+                .iter()
+                .find_map(|(locale, url)| (locale == &hardsub).then_some(url))
+            else {
+                return Ok(None);
+            };
+            Ok(Some(
+                StreamData::from_url(self.executor.clone(), url, &self.token, &self.id).await?,
+            ))
+        } else {
+            Ok(Some(
+                StreamData::from_url(self.executor.clone(), &self.url, &self.token, &self.id)
+                    .await?,
+            ))
+        }
+    }
+
+    /// Invalidates all the stream data which may be obtained from [`Stream::stream_data`].
+    pub async fn invalidate(self) -> Result<()> {
         let endpoint = format!(
-            "https://www.crunchyroll.com/cms/v2/{}/videos/{}/streams",
-            executor.details.bucket,
-            id.as_ref()
+            "https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{}/{}/delete",
+            self.id, self.token
         );
-        let mut data = executor
-            .get(endpoint)
-            .query(&[
-                ("Signature".to_string(), executor.details.signature.clone()),
-                ("Policy".to_string(), executor.details.policy.clone()),
-                (
-                    "Key-Pair-Id".to_string(),
-                    executor.details.key_pair_id.clone(),
-                ),
-            ])
-            .apply_preferred_audio_locale_query()
-            .apply_locale_query()
-            .request::<serde_json::Map<String, Value>>()
+
+        self.executor
+            .post(endpoint)
+            .multipart(Form::new().text(
+                "jwtToken",
+                self.executor.config.read().await.access_token.clone(),
+            ))
+            .request_raw(false)
             .await?;
 
-        let variants = data
-            .remove("streams")
-            .map_or(serde_json::Map::new().into(), |s| s);
-        data.insert("variants".to_string(), variants);
-
-        let mut stream: Stream = serde_json::from_value(Value::Object(data))?;
-        stream.executor = executor;
-
-        Ok(stream)
+        Ok(())
     }
 
     pub fn available_versions(&self) -> Vec<Locale> {
@@ -192,11 +180,16 @@ impl Stream {
 
         let mut result = vec![];
         for id in version_ids {
-            result.push(if let Some(request_url) = &self.version_request_url {
-                Stream::from_url(self.executor.clone(), request_url, &id).await?
-            } else {
-                Stream::from_legacy_url(self.executor.clone(), &id).await?
-            });
+            result.push(
+                Self::from_id(
+                    &Crunchyroll {
+                        executor: self.executor.clone(),
+                    },
+                    id,
+                    self.optional_media_type.clone(),
+                )
+                .await?,
+            )
         }
         Ok(result)
     }
@@ -207,19 +200,44 @@ impl Stream {
             .clone()
             .unwrap_or_default()
             .iter()
-            .map(|v| v.media_id.clone())
+            .map(|v| v.id.clone())
             .collect::<Vec<String>>();
 
         let mut result = vec![];
         for id in version_ids {
-            result.push(if let Some(request_url) = &self.version_request_url {
-                Stream::from_url(self.executor.clone(), request_url, &id).await?
-            } else {
-                Stream::from_legacy_url(self.executor.clone(), &id).await?
-            })
+            result.push(
+                Self::from_id(
+                    &Crunchyroll {
+                        executor: self.executor.clone(),
+                    },
+                    id,
+                    self.optional_media_type.clone(),
+                )
+                .await?,
+            )
         }
         Ok(result)
     }
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Debug, Default, Deserialize, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+struct StreamVersion {
+    #[serde(rename = "guid")]
+    id: String,
+    #[serde(rename = "media_guid")]
+    media_id: String,
+    #[serde(rename = "season_guid")]
+    season_id: String,
+
+    audio_locale: Locale,
+
+    is_premium_only: bool,
+    original: bool,
+
+    variant: String,
 }
 
 /// Subtitle for streams.
@@ -230,14 +248,16 @@ pub struct Subtitle {
     #[serde(skip)]
     executor: Arc<Executor>,
 
+    #[serde(rename = "language")]
     pub locale: Locale,
     pub url: String,
+    /// Subtitle format. `ass` or `vtt` at the time of writing.
     pub format: String,
 }
 
 impl Subtitle {
     pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        let resp = self.executor.get(self.url).request_raw().await?;
+        let resp = self.executor.get(self.url).request_raw(false).await?;
         w.write_all(resp.as_ref()).map_err(|e| Error::Input {
             message: e.to_string(),
         })?;
@@ -245,40 +265,285 @@ impl Subtitle {
     }
 }
 
-/// A [`Stream`] variant.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct Variant {
-    /// Language of this variant.
-    pub hardsub_locale: Locale,
-    /// Url to the actual stream.
-    /// Usually a [HLS](https://en.wikipedia.org/wiki/HTTP_Live_Streaming)
-    /// or [MPEG-DASH](https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP) stream.
-    pub url: String,
+#[derive(Clone, Debug, Serialize, Request)]
+pub struct StreamData {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    pub bandwidth: u64,
+    pub codecs: String,
+
+    pub info: StreamDataInfo,
+
+    pub pssh: String,
+    pub token: String,
+    pub watch_id: String,
+
+    #[serde(skip_serializing)]
+    representation_id: String,
+    #[serde(skip_serializing)]
+    segment_start: u32,
+    #[serde(skip_serializing)]
+    segment_lengths: Vec<u32>,
+    #[serde(skip_serializing)]
+    segment_base_url: String,
+    #[serde(skip_serializing)]
+    segment_init_url: String,
+    #[serde(skip_serializing)]
+    segment_media_url: String,
 }
 
-/// Stream variants for a [`Stream`].
-#[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct Variants {
-    pub adaptive_dash: Option<Variant>,
-    pub adaptive_hls: Option<Variant>,
-    pub download_dash: Option<Variant>,
-    pub download_hls: Option<Variant>,
-    pub drm_adaptive_dash: Option<Variant>,
-    pub drm_adaptive_hls: Option<Variant>,
-    pub drm_download_dash: Option<Variant>,
-    pub drm_download_hls: Option<Variant>,
-    pub drm_multitrack_adaptive_hls_v2: Option<Variant>,
-    pub multitrack_adaptive_hls_v2: Option<Variant>,
-    pub vo_adaptive_dash: Option<Variant>,
-    pub vo_adaptive_hls: Option<Variant>,
-    pub vo_drm_adaptive_dash: Option<Variant>,
-    pub vo_drm_adaptive_hls: Option<Variant>,
+#[derive(Clone, Debug, Serialize, Request)]
+pub enum StreamDataInfo {
+    Audio { sampling_rate: u32 },
+    Video { resolution: Resolution, fps: f64 },
+}
 
-    #[cfg(feature = "__test_strict")]
-    urls: Option<crate::StrictValue>,
+impl StreamData {
+    async fn from_url(
+        executor: Arc<Executor>,
+        url: impl AsRef<str>,
+        token: impl AsRef<str>,
+        watch_id: impl AsRef<str>,
+    ) -> Result<(Vec<StreamData>, Vec<StreamData>)> {
+        let mut video = vec![];
+        let mut audio = vec![];
+
+        let err_fn = |msg: &str| Error::Request {
+            message: msg.to_string(),
+            status: None,
+            url: url.as_ref().to_string(),
+        };
+
+        let raw_mpd = executor
+            .get(url.as_ref())
+            .query(&[
+                (
+                    "accountid",
+                    executor
+                        .details
+                        .account_id
+                        .clone()
+                        .unwrap_or_default()
+                        .as_str(),
+                ),
+                ("playbackGuid", token.as_ref()),
+            ])
+            .request_raw(true)
+            .await?;
+        // if the response is json and not xml it should always be an error
+        if let Ok(json) = serde_json::from_slice(&raw_mpd) {
+            is_request_error(json, url.as_ref(), &StatusCode::FORBIDDEN)?;
+        }
+        let mut mpd: MPD =
+            dash_mpd::parse(&String::from_utf8_lossy(&raw_mpd)).map_err(|e| Error::Decode {
+                message: e.to_string(),
+                content: raw_mpd,
+                url: url.as_ref().to_string(),
+            })?;
+        let period = mpd.periods.remove(0);
+
+        for adaption in period.adaptations {
+            let segment_template = adaption
+                .SegmentTemplate
+                .ok_or("no segment template found")
+                .map_err(err_fn)?;
+            let segment_lengths = segment_template
+                .SegmentTimeline
+                .as_ref()
+                .ok_or("no segment timeline found")
+                .map_err(err_fn)?
+                .segments
+                .iter()
+                .flat_map(|s| {
+                    iter::repeat(s.d as u32)
+                        .take(s.r.unwrap_or_default() as usize + 1)
+                        .collect::<Vec<u32>>()
+                })
+                .collect::<Vec<u32>>();
+            let segment_init_url = segment_template
+                .initialization
+                .ok_or("no init url found")
+                .map_err(err_fn)?;
+            let segment_media_url = segment_template
+                .media
+                .ok_or("no media url found")
+                .map_err(err_fn)?;
+            let pssh = adaption
+                .ContentProtection
+                .into_iter()
+                .find_map(|cp| {
+                    cp.cenc_pssh
+                        .first()
+                        .map(|pssh| pssh.clone().content.expect("pssh"))
+                })
+                .ok_or("no pssh found")
+                .map_err(err_fn)?;
+
+            if adaption.maxWidth.is_some() || adaption.maxHeight.is_some() {
+                for representation in adaption.representations {
+                    let (Some(width), Some(height)) = (representation.width, representation.height)
+                    else {
+                        return Err(err_fn("invalid resolution"));
+                    };
+                    let resolution = Resolution { width, height };
+
+                    let frame_rate = representation
+                        .frameRate
+                        .ok_or("no fps found")
+                        .map_err(err_fn)?;
+                    let Some((l, r)) = frame_rate.split_once('/') else {
+                        return Err(err_fn("invalid fps"));
+                    };
+                    let left = l.parse().unwrap_or(0f64);
+                    let right = r.parse().unwrap_or(0f64);
+                    let fps = if left != 0f64 && right != 0f64 {
+                        left / right
+                    } else {
+                        return Err(err_fn("null fps"));
+                    };
+
+                    video.push(Self {
+                        executor: executor.clone(),
+                        bandwidth: representation
+                            .bandwidth
+                            .ok_or("no bandwidth found")
+                            .map_err(err_fn)?,
+                        codecs: representation
+                            .codecs
+                            .ok_or("no codecs found")
+                            .map_err(err_fn)?,
+                        info: StreamDataInfo::Video { resolution, fps },
+                        pssh: pssh.clone(),
+                        token: token.as_ref().to_string(),
+                        watch_id: watch_id.as_ref().to_string(),
+                        representation_id: representation
+                            .id
+                            .ok_or("no representation id found")
+                            .map_err(err_fn)?,
+                        segment_start: segment_template
+                            .startNumber
+                            .ok_or("no start number found")
+                            .map_err(err_fn)? as u32,
+                        segment_lengths: segment_lengths.clone(),
+                        segment_base_url: representation
+                            .BaseURL
+                            .first()
+                            .ok_or("no base url found")
+                            .map_err(err_fn)?
+                            .base
+                            .clone(),
+                        segment_init_url: segment_init_url.clone(),
+                        segment_media_url: segment_media_url.clone(),
+                    })
+                }
+            } else {
+                for representation in adaption.representations {
+                    let sampling_rate = representation
+                        .audioSamplingRate
+                        .ok_or("no audio sampling rate found")
+                        .map_err(err_fn)?
+                        .parse::<u32>()
+                        .map_err(|e| err_fn(&e.to_string()))?;
+
+                    audio.push(Self {
+                        executor: executor.clone(),
+                        bandwidth: representation
+                            .bandwidth
+                            .ok_or("no bandwith found")
+                            .map_err(err_fn)?,
+                        codecs: representation
+                            .codecs
+                            .ok_or("no codecs found")
+                            .map_err(err_fn)?,
+                        info: StreamDataInfo::Audio { sampling_rate },
+                        pssh: pssh.clone(),
+                        token: token.as_ref().to_string(),
+                        watch_id: watch_id.as_ref().to_string(),
+                        representation_id: representation
+                            .id
+                            .ok_or("no representation id found")
+                            .map_err(err_fn)?,
+                        segment_start: segment_template
+                            .startNumber
+                            .ok_or("no start number found")
+                            .map_err(err_fn)? as u32,
+                        segment_lengths: segment_lengths.clone(),
+                        segment_base_url: representation
+                            .BaseURL
+                            .first()
+                            .ok_or("no base url found")
+                            .map_err(err_fn)?
+                            .base
+                            .clone(),
+                        segment_init_url: segment_init_url.clone(),
+                        segment_media_url: segment_media_url.clone(),
+                    })
+                }
+            }
+        }
+
+        Ok((video, audio))
+    }
+
+    /// Returns all segment this stream is made of.
+    pub fn segments(&self) -> Vec<StreamSegment> {
+        let mut segments = vec![StreamSegment {
+            executor: self.executor.clone(),
+            url: format!(
+                "{}{}",
+                self.segment_base_url,
+                self.segment_init_url
+                    .replace("$RepresentationID$", &self.representation_id)
+            ),
+            length: Duration::from_secs(0),
+        }];
+
+        for (i, number) in (self.segment_start..self.segment_lengths.len() as u32).enumerate() {
+            segments.push(StreamSegment {
+                executor: self.executor.clone(),
+                url: format!(
+                    "{}{}",
+                    self.segment_base_url,
+                    self.segment_media_url
+                        .replace("$RepresentationID$", &self.representation_id)
+                        .replace("$Number$", &number.to_string())
+                ),
+                length: Duration::from_millis(*self.segment_lengths.get(i).unwrap() as u64),
+            })
+        }
+
+        segments
+    }
+}
+
+/// Video resolution.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Resolution {
+    pub width: u64,
+    pub height: u64,
+}
+
+impl std::fmt::Display for Resolution {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}x{}", self.width, self.height)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Request)]
+pub struct StreamSegment {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    /// Url to the actual data.
+    pub url: String,
+    /// Video length of this segment.
+    pub length: Duration,
+}
+
+impl StreamSegment {
+    /// Get the raw data for the current segment.
+    pub async fn data(&self) -> Result<Vec<u8>> {
+        self.executor.get(&self.url).request_raw(false).await
+    }
 }

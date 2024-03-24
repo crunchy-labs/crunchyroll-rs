@@ -18,7 +18,8 @@ async fn music_video_from_id() {
 
 #[tokio::test]
 async fn music_video_stream() {
-    assert_result!(MUSIC_VIDEO.get().await.unwrap().stream().await)
+    let stream = MUSIC_VIDEO.get().await.unwrap().stream().await.unwrap();
+    stream.invalidate().await.unwrap()
 }
 
 #[tokio::test]

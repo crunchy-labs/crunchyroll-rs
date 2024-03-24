@@ -132,7 +132,7 @@ impl From<reqwest::Error> for Error {
     }
 }
 
-pub(crate) fn is_request_error(value: Value, url: &String, status: &StatusCode) -> Result<()> {
+pub(crate) fn is_request_error(value: Value, url: &str, status: &StatusCode) -> Result<()> {
     #[derive(Debug, Deserialize)]
     struct CodeFieldContext {
         code: String,
@@ -162,6 +162,13 @@ pub(crate) fn is_request_error(value: Value, url: &String, status: &StatusCode) 
         code: String,
         context: Vec<ConstraintsErrorContext>,
     }
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct TooManyStreamsError {
+        error: String,
+        #[allow(dead_code)]
+        active_streams: Value,
+    }
 
     if let Ok(err) = serde_json::from_value::<MessageType>(value.clone()) {
         return Err(Error::Request {
@@ -189,7 +196,7 @@ pub(crate) fn is_request_error(value: Value, url: &String, status: &StatusCode) 
                 url: url.to_string(),
             })
         };
-    } else if let Ok(err) = serde_json::from_value::<ConstraintsError>(value) {
+    } else if let Ok(err) = serde_json::from_value::<ConstraintsError>(value.clone()) {
         let details = err
             .context
             .iter()
@@ -208,6 +215,12 @@ pub(crate) fn is_request_error(value: Value, url: &String, status: &StatusCode) 
 
         return Err(Error::Request {
             message: format!("{}: {}", err.code, details.join(", ")),
+            status: Some(*status),
+            url: url.to_string(),
+        });
+    } else if let Ok(err) = serde_json::from_value::<TooManyStreamsError>(value) {
+        return Err(Error::Request {
+            message: err.error,
             status: Some(*status),
             url: url.to_string(),
         });

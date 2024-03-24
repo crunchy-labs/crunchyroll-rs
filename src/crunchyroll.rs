@@ -141,6 +141,12 @@ impl Crunchyroll {
         self.executor.premium().await
     }
 
+    /// Return the access token used to make requests. The token changes every 5 minutes, so you
+    /// might have to re-call this function if you have a long-living session where you need it.
+    pub async fn access_token(&self) -> String {
+        self.executor.config.read().await.access_token.clone()
+    }
+
     /// Return the current session token. It can be used to log-in later with
     /// [`CrunchyrollBuilder::login_with_refresh_token`] or [`CrunchyrollBuilder::login_with_etp_rt`].
     pub async fn session_token(&self) -> SessionToken {
@@ -152,6 +158,7 @@ mod auth {
     use crate::error::{check_request, Error};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
+    use reqwest::multipart::Form;
     use reqwest::{header, Client, ClientBuilder, IntoUrl, RequestBuilder};
     use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
@@ -265,6 +272,26 @@ mod auth {
             self: &Arc<Self>,
             mut req: RequestBuilder,
         ) -> Result<T> {
+            req = self.auth_req(req).await?;
+            req = req.header(header::CONTENT_TYPE, "application/json");
+
+            let mut resp: T = request(
+                &self.client,
+                req,
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
+            )
+            .await?;
+
+            resp.__set_executor(self.clone()).await;
+
+            Ok(resp)
+        }
+
+        pub(crate) async fn auth_req(
+            self: &Arc<Self>,
+            mut req: RequestBuilder,
+        ) -> Result<RequestBuilder> {
             let mut config = self.config.write().await;
             if config.session_expire <= Utc::now() {
                 let login_response = match config.session_token.clone() {
@@ -311,23 +338,7 @@ mod auth {
                 header::AUTHORIZATION,
                 format!("Bearer {}", config.access_token),
             );
-            req = req.header(header::CONTENT_TYPE, "application/json");
-
-            let mut resp: T = request(
-                &self.client,
-                req,
-                #[cfg(feature = "tower")]
-                self.middleware.as_ref(),
-            )
-            .await?;
-
-            // drop config here explicitly as `__set_executor` can call this function recursively
-            // which would lead to a deadlock
-            drop(config);
-
-            resp.__set_executor(self.clone()).await;
-
-            Ok(resp)
+            Ok(req)
         }
 
         pub(crate) async fn premium(&self) -> bool {
@@ -525,11 +536,21 @@ mod auth {
             self
         }
 
+        pub(crate) fn multipart(mut self, form: Form) -> ExecutorRequestBuilder {
+            self.builder = self.builder.multipart(form);
+
+            self
+        }
+
         pub(crate) async fn request<T: Request + DeserializeOwned>(self) -> Result<T> {
             self.executor.request(self.builder).await
         }
 
-        pub(crate) async fn request_raw(self) -> Result<Vec<u8>> {
+        pub(crate) async fn request_raw(mut self, auth: bool) -> Result<Vec<u8>> {
+            if auth {
+                self.builder = self.executor.auth_req(self.builder).await?;
+            }
+
             #[cfg(feature = "tower")]
             if let Some(middleware) = &self.executor.middleware {
                 return Ok(middleware
