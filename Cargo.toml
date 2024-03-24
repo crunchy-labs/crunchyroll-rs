@@ -1,6 +1,6 @@
 [package]
 name = "crunchyroll-rs"
-version = "0.8.6"
+version = "0.9.0"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2021"
 description = "Pure Rust implementation of the crunchyroll api."
@@ -28,11 +28,11 @@ async-trait = "0.1"
 chrono = { version = ">=0.4.35", features = ["serde"] }
 dash-mpd = { version = "0.15", default-features = false }
 futures-util = { version = "0.3", features = ["std"], default-features = false }
-jsonwebtoken = { version = "9.2", default-features = false }
+jsonwebtoken = { version = "9.3", default-features = false }
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
-reqwest = { version = "0.11.25", features = ["cookies", "json", "multipart", "rustls-tls"], default-features = false }
-rustls = { version = "0.21.6", features = ["dangerous_configuration"] }
+reqwest = { version = "0.12.1", features = ["cookies", "json", "multipart", "rustls-tls"], default-features = false }
+rustls = "0.22.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
@@ -40,7 +40,7 @@ smart-default = "0.7"
 tokio = { version = "1.36", features = ["sync"] }
 webpki-roots = "0.26"
 
-crunchyroll-rs-internal = { version = "0.8.6", path = "internal" }
+crunchyroll-rs-internal = { version = "0.9.0", path = "internal" }
 
 lazy_static = { version = "1.4", optional = true }
 regex = { version = "1.10", default-features = false, features = ["std"], optional = true }

@@ -608,21 +608,20 @@ mod auth {
         /// to configure the behavior of the download client. Use [`CrunchyrollBuilder::client`] or
         /// to set your built client.
         pub fn predefined_client_builder() -> ClientBuilder {
-            let mut root_store = rustls::RootCertStore::empty();
-            root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
-                rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
-                    ta.subject.to_vec(),
-                    ta.subject_public_key_info.to_vec(),
-                    ta.name_constraints.clone().map(|nc| nc.to_vec()),
-                )
-            }));
-            let tls_config = rustls::ClientConfig::builder()
-                .with_cipher_suites(rustls::DEFAULT_CIPHER_SUITES)
-                .with_kx_groups(&[&rustls::kx_group::X25519])
-                .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
-                .unwrap()
-                .with_root_certificates(root_store)
-                .with_no_client_auth();
+            let tls_config = rustls::ClientConfig::builder_with_provider(
+                rustls::crypto::CryptoProvider {
+                    cipher_suites: rustls::crypto::ring::DEFAULT_CIPHER_SUITES.to_vec(),
+                    kx_groups: vec![rustls::crypto::ring::kx_group::X25519],
+                    ..rustls::crypto::ring::default_provider()
+                }
+                .into(),
+            )
+            .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
+            .unwrap()
+            .with_root_certificates(rustls::RootCertStore {
+                roots: webpki_roots::TLS_SERVER_ROOTS.into(),
+            })
+            .with_no_client_auth();
 
             Client::builder()
                 .https_only(true)
