@@ -81,9 +81,8 @@ pub struct StreamSession {
 }
 
 impl Stream {
-    /// Uses the endpoint which is also used in the Chrome browser to receive streams. This endpoint
-    /// always returns DRM encrypted streams.
-    pub async fn drm_from_id(
+    /// Requests a stream from an id with is always DRM encrypted.
+    pub async fn from_id_drm(
         crunchyroll: &Crunchyroll,
         id: impl AsRef<str>,
         optional_media_type: Option<String>,
@@ -91,10 +90,10 @@ impl Stream {
         Self::from_id(crunchyroll, id, "web", "chrome", optional_media_type).await
     }
 
-    /// Uses the endpoint which is also used in the Nintendo Switch to receive streams. At the time
-    /// of writing, this is the only known endpoint that still delivers streams without DRM, but
-    /// this might change at any time (hence the "mabye" in the function name).
-    pub async fn maybe_without_drm_from_id(
+    /// Requests a stream from an id with is maybe DRM free. Check
+    /// [`Stream::session::uses_stream_limits`], if its `true`, the stream is DRM encrypted, if
+    /// `false` not.
+    pub async fn from_id_maybe_without_drm(
         crunchyroll: &Crunchyroll,
         id: impl AsRef<str>,
         optional_media_type: Option<String>,
@@ -133,10 +132,11 @@ impl Stream {
     /// Requests all available video and audio streams. Returns [`None`] if the requested hardsub
     /// isn't available. The first [`Vec<StreamData>`] contains only video streams, the second only
     /// audio streams.
-    /// You will run into an error when requesting this function too often without invalidating the
-    /// data. Crunchyroll only allows a certain amount of stream data to be requested at the same
-    /// time, typically the exact amount depends on the type of (premium) subscription you have. You
-    /// can use [`Stream::invalidate`] to invalidate all stream data for this stream.
+    /// If the stream is DRM encrypted ([`Stream::session::uses_stream_limit`] is `true` if the
+    /// streams are encrypted) you will run into an error when requesting this function too often
+    /// without invalidating the data. Crunchyroll only allows a certain amount of stream data to be
+    /// requested at the same time, typically the exact amount depends on the type of (premium)
+    /// subscription you have. You  can use [`Stream::invalidate`] to invalidate all stream data for this stream.
     pub async fn stream_data(
         &self,
         hardsub: Option<Locale>,
@@ -213,7 +213,7 @@ impl Stream {
         for id in version_ids {
             if self.session.uses_stream_limits {
                 result.push(
-                    Self::drm_from_id(
+                    Self::from_id_drm(
                         &Crunchyroll {
                             executor: self.executor.clone(),
                         },
@@ -224,7 +224,7 @@ impl Stream {
                 )
             } else {
                 result.push(
-                    Self::maybe_without_drm_from_id(
+                    Self::from_id_maybe_without_drm(
                         &Crunchyroll {
                             executor: self.executor.clone(),
                         },
@@ -251,7 +251,7 @@ impl Stream {
         for id in version_ids {
             if self.session.uses_stream_limits {
                 result.push(
-                    Self::drm_from_id(
+                    Self::from_id_drm(
                         &Crunchyroll {
                             executor: self.executor.clone(),
                         },
@@ -262,7 +262,7 @@ impl Stream {
                 )
             } else {
                 result.push(
-                    Self::maybe_without_drm_from_id(
+                    Self::from_id_maybe_without_drm(
                         &Crunchyroll {
                             executor: self.executor.clone(),
                         },
