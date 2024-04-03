@@ -47,6 +47,8 @@ pub struct Stream {
     pub captions: HashMap<Locale, Subtitle>,
 
     pub token: String,
+    /// If [`StreamSession::uses_stream_limits`] is `true`, this means that the stream data will be
+    /// DRM encrypted, if `false` it isn't.
     pub session: StreamSession,
 
     /// Might be null, for music videos and concerts mostly.
@@ -69,23 +71,46 @@ pub struct Stream {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StreamSession {
-    renew_seconds: u32,
-    no_network_retry_interval_seconds: u32,
-    no_network_timeout_seconds: u32,
-    maximum_pause_seconds: u32,
-    end_of_video_unload_seconds: u32,
-    session_expiration_seconds: u32,
-    uses_stream_limits: bool,
+    pub renew_seconds: u32,
+    pub no_network_retry_interval_seconds: u32,
+    pub no_network_timeout_seconds: u32,
+    pub maximum_pause_seconds: u32,
+    pub end_of_video_unload_seconds: u32,
+    pub session_expiration_seconds: u32,
+    pub uses_stream_limits: bool,
 }
 
 impl Stream {
-    pub async fn from_id(
+    /// Uses the endpoint which is also used in the Chrome browser to receive streams. This endpoint
+    /// always returns DRM encrypted streams.
+    pub async fn drm_from_id(
         crunchyroll: &Crunchyroll,
         id: impl AsRef<str>,
         optional_media_type: Option<String>,
     ) -> Result<Self> {
+        Self::from_id(crunchyroll, id, "web", "chrome", optional_media_type).await
+    }
+
+    /// Uses the endpoint which is also used in the Nintendo Switch to receive streams. At the time
+    /// of writing, this is the only known endpoint that still delivers streams without DRM, but
+    /// this might change at any time (hence the "mabye" in the function name).
+    pub async fn maybe_without_drm_from_id(
+        crunchyroll: &Crunchyroll,
+        id: impl AsRef<str>,
+        optional_media_type: Option<String>,
+    ) -> Result<Self> {
+        Self::from_id(crunchyroll, id, "console", "switch", optional_media_type).await
+    }
+
+    async fn from_id(
+        crunchyroll: &Crunchyroll,
+        id: impl AsRef<str>,
+        device: &str,
+        platform: &str,
+        optional_media_type: Option<String>,
+    ) -> Result<Self> {
         let endpoint = format!(
-            "https://cr-play-service.prd.crunchyrollsvc.com/v1/{}{}/web/chrome/play",
+            "https://cr-play-service.prd.crunchyrollsvc.com/v1/{}{}/{device}/{platform}/play",
             optional_media_type
                 .as_ref()
                 .map(|omt| format!("{omt}/"))
@@ -135,8 +160,14 @@ impl Stream {
         }
     }
 
-    /// Invalidates all the stream data which may be obtained from [`Stream::stream_data`].
+    /// Invalidates all the stream data which may be obtained from [`Stream::stream_data`]. Only
+    /// required if the stream has DRM (if [`Stream::session::uses_stream_limits`] is `true`, stream
+    /// data is DRM encrypted, if `false` not).
     pub async fn invalidate(self) -> Result<()> {
+        if !self.session.uses_stream_limits {
+            return Ok(());
+        }
+
         let endpoint = format!(
             "https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{}/{}/delete",
             self.id, self.token
@@ -180,16 +211,29 @@ impl Stream {
 
         let mut result = vec![];
         for id in version_ids {
-            result.push(
-                Self::from_id(
-                    &Crunchyroll {
-                        executor: self.executor.clone(),
-                    },
-                    id,
-                    self.optional_media_type.clone(),
+            if self.session.uses_stream_limits {
+                result.push(
+                    Self::drm_from_id(
+                        &Crunchyroll {
+                            executor: self.executor.clone(),
+                        },
+                        id,
+                        self.optional_media_type.clone(),
+                    )
+                    .await?,
                 )
-                .await?,
-            )
+            } else {
+                result.push(
+                    Self::maybe_without_drm_from_id(
+                        &Crunchyroll {
+                            executor: self.executor.clone(),
+                        },
+                        id,
+                        self.optional_media_type.clone(),
+                    )
+                    .await?,
+                )
+            }
         }
         Ok(result)
     }
@@ -205,16 +249,29 @@ impl Stream {
 
         let mut result = vec![];
         for id in version_ids {
-            result.push(
-                Self::from_id(
-                    &Crunchyroll {
-                        executor: self.executor.clone(),
-                    },
-                    id,
-                    self.optional_media_type.clone(),
+            if self.session.uses_stream_limits {
+                result.push(
+                    Self::drm_from_id(
+                        &Crunchyroll {
+                            executor: self.executor.clone(),
+                        },
+                        id,
+                        self.optional_media_type.clone(),
+                    )
+                    .await?,
                 )
-                .await?,
-            )
+            } else {
+                result.push(
+                    Self::maybe_without_drm_from_id(
+                        &Crunchyroll {
+                            executor: self.executor.clone(),
+                        },
+                        id,
+                        self.optional_media_type.clone(),
+                    )
+                    .await?,
+                )
+            }
         }
         Ok(result)
     }
@@ -274,9 +331,10 @@ pub struct StreamData {
     pub codecs: String,
 
     pub info: StreamDataInfo,
+    /// If [`Some`], the stream data is DRM encrypted and the struct contains all data needed for
+    /// you to decrypted it. If [`None`], the stream data is not DRM encrypted.
+    pub drm: Option<StreamDataDRM>,
 
-    pub pssh: String,
-    pub token: String,
     pub watch_id: String,
 
     #[serde(skip_serializing)]
@@ -291,6 +349,12 @@ pub struct StreamData {
     segment_init_url: String,
     #[serde(skip_serializing)]
     segment_media_url: String,
+}
+
+#[derive(Clone, Debug, Serialize, Request)]
+pub struct StreamDataDRM {
+    pub pssh: String,
+    pub token: String,
 }
 
 #[derive(Clone, Debug, Serialize, Request)]
@@ -369,16 +433,11 @@ impl StreamData {
                 .media
                 .ok_or("no media url found")
                 .map_err(err_fn)?;
-            let pssh = adaption
-                .ContentProtection
-                .into_iter()
-                .find_map(|cp| {
-                    cp.cenc_pssh
-                        .first()
-                        .map(|pssh| pssh.clone().content.expect("pssh"))
-                })
-                .ok_or("no pssh found")
-                .map_err(err_fn)?;
+            let pssh = adaption.ContentProtection.into_iter().find_map(|cp| {
+                cp.cenc_pssh
+                    .first()
+                    .map(|pssh| pssh.clone().content.expect("pssh"))
+            });
 
             if adaption.maxWidth.is_some() || adaption.maxHeight.is_some() {
                 for representation in adaption.representations {
@@ -414,8 +473,10 @@ impl StreamData {
                             .ok_or("no codecs found")
                             .map_err(err_fn)?,
                         info: StreamDataInfo::Video { resolution, fps },
-                        pssh: pssh.clone(),
-                        token: token.as_ref().to_string(),
+                        drm: pssh.as_ref().map(|pssh| StreamDataDRM {
+                            pssh: pssh.clone(),
+                            token: token.as_ref().to_string(),
+                        }),
                         watch_id: watch_id.as_ref().to_string(),
                         representation_id: representation
                             .id
@@ -457,8 +518,10 @@ impl StreamData {
                             .ok_or("no codecs found")
                             .map_err(err_fn)?,
                         info: StreamDataInfo::Audio { sampling_rate },
-                        pssh: pssh.clone(),
-                        token: token.as_ref().to_string(),
+                        drm: pssh.as_ref().map(|pssh| StreamDataDRM {
+                            pssh: pssh.clone(),
+                            token: token.as_ref().to_string(),
+                        }),
                         watch_id: watch_id.as_ref().to_string(),
                         representation_id: representation
                             .id
