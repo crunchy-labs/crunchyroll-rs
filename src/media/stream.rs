@@ -549,6 +549,36 @@ impl StreamData {
         Ok((video, audio))
     }
 
+    /// Returns the streams' audio sampling rate. Only [`Some`] if the stream is an audio stream
+    /// (check [`StreamData::info`]).
+    pub fn sampling_rate(&self) -> Option<u32> {
+        if let StreamDataInfo::Audio { sampling_rate } = &self.info {
+            Some(*sampling_rate)
+        } else {
+            None
+        }
+    }
+
+    /// Returns the streams' video resolution. Only [`Some`] if the stream is a video stream (check
+    /// [`StreamData::info`]).
+    pub fn resolution(&self) -> Option<Resolution> {
+        if let StreamDataInfo::Video { resolution, .. } = &self.info {
+            Some(resolution.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Returns the streams' video fps. Only [`Some`] if the stream is a video stream (check
+    /// [`StreamData::info`]).
+    pub fn fps(&self) -> Option<f64> {
+        if let StreamDataInfo::Video { fps, .. } = &self.info {
+            Some(*fps)
+        } else {
+            None
+        }
+    }
+
     /// Returns all segment this stream is made of.
     pub fn segments(&self) -> Vec<StreamSegment> {
         let mut segments = vec![StreamSegment {
