@@ -387,25 +387,6 @@ macro_rules! impl_media_video {
                     }
                 }
 
-                /// Get time _in seconds_ when the episode / movie intro begins and ends.
-                #[deprecated(since = "0.8.4", note = "Use the `skip_events` method instead")]
-                pub async fn intro(&self) -> Result<Option<(f64, f64)>> {
-                    let endpoint = format!(
-                        "https://static.crunchyroll.com/datalab-intro-v2/{}.json",
-                        self.id
-                    );
-                    let raw_result = self.executor.get(endpoint)
-                        .request_raw(true)
-                        .await?;
-                    let result = String::from_utf8_lossy(raw_result.as_slice());
-                    if result.contains("</Error>") {
-                        Ok(None)
-                    } else {
-                        let video_intro_result: VideoIntroResult = serde_json::from_str(&result)?;
-                        Ok(Some((video_intro_result.start_time, video_intro_result.end_time)))
-                    }
-                }
-
                 /// Return the previous episode / movie. Is [`None`] if the current media is the
                 /// first in its season / has no previous media.
                 pub async fn previous(&self) -> Result<Option<RelatedMedia<$media_video>>> {
