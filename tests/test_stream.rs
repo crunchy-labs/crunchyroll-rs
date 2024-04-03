@@ -95,6 +95,11 @@ async fn process_segments_drm() {
 }
 
 #[tokio::test]
+async fn stream_versions_drm() {
+    assert_result!(STREAM_DRM.get().await.unwrap().versions().await)
+}
+
+#[tokio::test]
 async fn stream_from_id_maybe_without_drm() {
     assert_result!(STREAM_MAYBE_WITHOUT_DRM.get().await)
 }
