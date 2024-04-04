@@ -592,7 +592,7 @@ impl StreamData {
             length: Duration::from_secs(0),
         }];
 
-        for (i, number) in (self.segment_start..self.segment_lengths.len() as u32).enumerate() {
+        for i in 0..self.segment_lengths.len() {
             segments.push(StreamSegment {
                 executor: self.executor.clone(),
                 url: format!(
@@ -600,9 +600,9 @@ impl StreamData {
                     self.segment_base_url,
                     self.segment_media_url
                         .replace("$RepresentationID$", &self.representation_id)
-                        .replace("$Number$", &number.to_string())
+                        .replace("$Number$", &(self.segment_start + i as u32).to_string())
                 ),
-                length: Duration::from_millis(*self.segment_lengths.get(i).unwrap() as u64),
+                length: Duration::from_millis(self.segment_lengths[i] as u64),
             })
         }
 
