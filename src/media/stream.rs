@@ -408,6 +408,11 @@ impl StreamData {
         let period = mpd.periods.remove(0);
 
         for adaption in period.adaptations {
+            // skip subtitles that are embedded in the mpd manifest for now
+            if adaption.contentType.is_some_and(|ct| ct == "text") {
+                continue;
+            }
+
             let segment_template = adaption
                 .SegmentTemplate
                 .ok_or("no segment template found")
