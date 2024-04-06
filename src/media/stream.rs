@@ -456,15 +456,18 @@ impl StreamData {
                         .frameRate
                         .ok_or("no fps found")
                         .map_err(err_fn)?;
-                    let Some((l, r)) = frame_rate.split_once('/') else {
-                        return Err(err_fn("invalid fps"));
-                    };
-                    let left = l.parse().unwrap_or(0f64);
-                    let right = r.parse().unwrap_or(0f64);
-                    let fps = if left != 0f64 && right != 0f64 {
+                    let fps: f64 = if let Some((l, r)) = frame_rate.split_once('/') {
+                        let left = l
+                            .parse::<f64>()
+                            .map_err(|_| err_fn(&format!("invalid (left) fps: {l}")))?;
+                        let right = r
+                            .parse::<f64>()
+                            .map_err(|_| err_fn(&format!("invalid (right) fps: {l}")))?;
                         left / right
                     } else {
-                        return Err(err_fn("null fps"));
+                        frame_rate
+                            .parse()
+                            .map_err(|_| err_fn(&format!("invalid fps: {frame_rate}")))?
                     };
 
                     video.push(Self {
