@@ -1,6 +1,6 @@
 //! # crunchyroll-rs
 //!
-//! A easy-to-use, batteries-included library for the undocumented
+//! An easy-to-use, batteries-included library for the undocumented
 //! [Crunchyroll](https://www.crunchyroll.com/) api, completely written in Rust.
 //!
 //! You can use a premium account as well as a non-premium account to use this library, but you
@@ -61,38 +61,38 @@
 //! [`media::Stream`] has all required information to access the streams.
 //!
 //! ```
-//! let streams = episode
-//!     .streams()
+//! let stream = episode
+//!     .stream()
 //!     .await?;
 //! ```
 //!
-//! Crunchyroll uses the [HLS] and [DASH] video streaming formats to distribute their streams. The
-//! logic to work with this formats is already implemented
-//! into this crate.
-//!
-//! The feature `hls-stream` and / or `dash-stream` must be activated to get streams. `hls-stream`
-//! is activated by default and should be used if you want to get the video + audio combined
-//! ([`media::Stream::hls_streaming_data`]). `dash-stream` should be used if you want to get
-//! the audio and video streams separately ([`media::Stream::dash_streaming_data`]).
+//! Crunchyroll uses the [DASH] video streaming format to distribute their streams. The logic to
+//! work with this formats is already implemented into this crate.
 //!
 //! ```
-//! let streaming_data = streams
-//!     .hls_streaming_data(None)
-//!     .await?;
+//! let (video_streams, audio_streams) = stream
+//!     .stream_data(None)
+//!     .await?
+//!     .unwrap();
 //!
-//! // sort the streams to get the stream with the best resolution at first
-//! streaming_data.sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width).reverse());
+//!  // sort the streams to get the stream with the best resolution / bitrate at first
+//! video_streams.sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
+//! audio_streams.sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
 //!
 //! let sink = &mut std::io::sink();
 //!
 //! // get the segments / video chunks of the first stream (which is the best after it got sorted
 //! // above)
-//! let segments = streaming_data[0].segments().await?;
+//! let video_segments = video_streams[0].segments();
+//! let audio_segments = audio_streams[0].segments();
 //! // iterate through every segment and write it to the provided writer (which is a sink in this
 //! // case; it drops its input immediately). writer can be anything which implements `std::io::Write`
 //! // like a file, a pipe, ...
-//! for segment in segments {
-//!     segment.write_to(sink).await?;
+//! for video_segment in video_segments {
+//!     video_segment.write_to(sink).await?;
+//! }
+//! for audio_segment in audio_segments {
+//!     audio_segments.write_to(sink).await?;
 //! }
 //! ```
 //!
@@ -117,8 +117,6 @@
 //!
 //! # Features
 //!
-//! - **hls-stream** *(enabled by default)*: Enables processing of [HLS] video streams.
-//! - **dash-stream**: Enables processing of [DASH] video streams.
 //! - **parse** *(enabled by default)*: Enables url parsing.
 //! - **tower**: Enables the usage of a [tower](https://docs.rs/tower) compatible middleware.
 //! - **experimental-stabilizations**: Provides some functions to maybe fix broken api results. See
@@ -130,7 +128,6 @@
 //! that no fields were added or removed from an api response, otherwise the associated test will
 //! fail.
 //!
-//! [HLS]: https://en.wikipedia.org/wiki/HTTP_Live_Streaming
 //! [DASH]: https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
