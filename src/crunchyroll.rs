@@ -371,6 +371,7 @@ mod auth {
                 .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic Y3Jfd2ViOg==")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header("ETP-Anonymous-ID", uuid::Uuid::new_v4().to_string())
                 .body(
                     serde_urlencoded::to_string([
                         ("grant_type", "client_id"),
