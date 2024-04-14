@@ -51,6 +51,9 @@ pub struct Season {
     pub keywords: Vec<String>,
     #[serde(default)]
     pub season_tags: Vec<String>,
+    /// Descriptors about the season episodes' content, e.g. 'Violence' or 'Sexualized Imagery'.
+    #[serde(default)]
+    pub content_descriptors: Vec<String>,
 
     pub is_subbed: bool,
     pub is_dubbed: bool,

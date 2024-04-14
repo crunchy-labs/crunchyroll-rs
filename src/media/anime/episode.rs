@@ -87,6 +87,10 @@ pub struct Episode {
     pub recent_audio_locale: Option<Locale>,
     pub subtitle_locales: Vec<Locale>,
 
+    /// Descriptors about the episode content, e.g. 'Violence' or 'Sexualized Imagery'.
+    #[serde(default)]
+    pub content_descriptors: Vec<String>,
+
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]

@@ -41,6 +41,10 @@ pub struct Movie {
 
     pub images: ThumbnailImages,
 
+    /// Descriptors about the movie content, e.g. 'Violence' or 'Sexualized Imagery'.
+    #[serde(default)]
+    pub content_descriptors: Vec<String>,
+
     #[default(DateTime::< Utc >::from(std::time::SystemTime::UNIX_EPOCH))]
     pub free_available_date: DateTime<Utc>,
     #[default(DateTime::< Utc >::from(std::time::SystemTime::UNIX_EPOCH))]

@@ -3,6 +3,7 @@ use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
 use crate::media::{Media, PosterImages};
 use crate::{Crunchyroll, Locale, MusicVideo, Result, Season};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -16,6 +17,26 @@ pub struct SeriesAward {
 
     pub is_current_award: bool,
     pub is_winner: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct SeriesLivestream {
+    pub countdown_visibility: u32,
+
+    pub episode_id: String,
+
+    pub images: PosterImages,
+
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    pub start_date: DateTime<Utc>,
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    pub end_date: DateTime<Utc>,
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    pub episode_start_date: DateTime<Utc>,
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    pub episode_end_date: DateTime<Utc>,
 }
 
 /// Metadata for a series.
@@ -49,6 +70,9 @@ pub struct Series {
 
     #[serde(default)]
     pub season_tags: Vec<String>,
+    /// Descriptors about the series episodes' content, e.g. 'Violence' or 'Sexualized Imagery'.
+    #[serde(default)]
+    pub content_descriptors: Vec<String>,
 
     pub is_subbed: bool,
     pub is_dubbed: bool,
@@ -73,7 +97,10 @@ pub struct Series {
 
     pub availability_notes: String,
 
+    /// Awards for which this anime was nominated at the Crunchyroll Anime Awards.
     pub awards: Option<Vec<SeriesAward>>,
+    /// Information about the livestream of an episode. The livestream may be already over.
+    pub livestream: Option<SeriesLivestream>,
 
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
