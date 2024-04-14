@@ -3,7 +3,7 @@
 use reqwest::{Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::fmt::{Debug, Display, Formatter};
 
 pub(crate) type Result<T, E = Error> = core::result::Result<T, E>;
@@ -134,98 +134,69 @@ impl From<reqwest::Error> for Error {
 
 pub(crate) fn is_request_error(value: Value, url: &str, status: &StatusCode) -> Result<()> {
     #[derive(Debug, Deserialize)]
-    struct CodeFieldContext {
-        code: String,
-        field: String,
+    #[serde(untagged)]
+    enum ErrorTypes {
+        MessageTypeError {
+            message: String,
+            r#type: String,
+        },
+        CodeError {
+            code: String,
+            context: Vec<CodeErrorContext>,
+            #[serde(alias = "error")]
+            message: Option<String>,
+        },
+        GenericError {
+            error: String,
+            #[serde(flatten)]
+            other: Map<String, Value>,
+        },
     }
 
     #[derive(Debug, Deserialize)]
-    struct MessageType {
-        message: String,
-        #[serde(rename = "type")]
-        error_type: String,
-    }
-    #[derive(Debug, Deserialize)]
-    struct CodeContextError {
+    struct CodeErrorContext {
         code: String,
-        context: Vec<CodeFieldContext>,
-        #[serde(alias = "error")]
-        message: Option<String>,
-    }
-    #[derive(Debug, Deserialize)]
-    struct ConstraintsErrorContext {
-        code: String,
-        violated_constraints: Vec<(String, String)>,
-    }
-    #[derive(Debug, Deserialize)]
-    struct ConstraintsError {
-        code: String,
-        context: Vec<ConstraintsErrorContext>,
-    }
-    #[derive(Debug, Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct TooManyStreamsError {
-        error: String,
-        #[allow(dead_code)]
-        active_streams: Value,
+        #[serde(flatten)]
+        other: Map<String, Value>,
     }
 
-    if let Ok(err) = serde_json::from_value::<MessageType>(value.clone()) {
-        return Err(Error::Request {
-            message: format!("{} - {}", err.error_type, err.message),
-            status: Some(*status),
-            url: url.to_string(),
-        });
-    } else if let Ok(err) = serde_json::from_value::<CodeContextError>(value.clone()) {
-        let mut details: Vec<String> = vec![];
-
-        for item in err.context.iter() {
-            details.push(format!("{}: {}", item.field, item.code))
+    let error_msg = match serde_json::from_value::<ErrorTypes>(value) {
+        Ok(ErrorTypes::MessageTypeError { message, r#type }) => {
+            format!("{} - {}", r#type, message)
         }
-
-        return if let Some(message) = err.message {
-            Err(Error::Request {
-                message: format!("{} ({}) - {}", message, err.code, details.join(", ")),
-                status: Some(*status),
-                url: url.to_string(),
-            })
-        } else {
-            Err(Error::Request {
-                message: format!("({}) - {}", err.code, details.join(", ")),
-                status: Some(*status),
-                url: url.to_string(),
-            })
-        };
-    } else if let Ok(err) = serde_json::from_value::<ConstraintsError>(value.clone()) {
-        let details = err
-            .context
-            .iter()
-            .map(|e| {
-                format!(
-                    "{}: ({})",
-                    e.code,
-                    e.violated_constraints
-                        .iter()
-                        .map(|(key, value)| format!("{key}: {value}"))
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                )
-            })
-            .collect::<Vec<String>>();
-
-        return Err(Error::Request {
-            message: format!("{}: {}", err.code, details.join(", ")),
-            status: Some(*status),
-            url: url.to_string(),
-        });
-    } else if let Ok(err) = serde_json::from_value::<TooManyStreamsError>(value) {
-        return Err(Error::Request {
-            message: err.error,
-            status: Some(*status),
-            url: url.to_string(),
-        });
-    }
-    Ok(())
+        Ok(ErrorTypes::CodeError {
+            code,
+            context,
+            message,
+        }) => {
+            let mut msg = if let Some(message) = message {
+                format!("{message} - {code}")
+            } else {
+                code
+            };
+            if !context.is_empty() {
+                let details: Vec<String> = context
+                    .into_iter()
+                    .map(|c| format!("{}: {}", c.code, serde_json::to_string(&c.other).unwrap()))
+                    .collect();
+                msg += &format!(" ({})", details.join(", "))
+            }
+            msg
+        }
+        Ok(ErrorTypes::GenericError { error, other }) => {
+            let mut msg = error;
+            if !other.is_empty() {
+                msg += &format!(" ({})", serde_json::to_string(&other).unwrap())
+            }
+            msg
+        }
+        Err(_) => return Ok(()),
+    };
+    Err(Error::Request {
+        message: error_msg,
+        status: Some(*status),
+        url: url.to_string(),
+    })
 }
 
 pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Response) -> Result<T> {
