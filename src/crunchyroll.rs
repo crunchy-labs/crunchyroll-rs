@@ -369,7 +369,7 @@ mod auth {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
             let resp = client
                 .post(endpoint)
-                .header(header::AUTHORIZATION, "Basic Y3Jfd2ViOg==")
+                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .header("ETP-Anonymous-ID", uuid::Uuid::new_v4().to_string())
                 .body(
@@ -406,7 +406,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic bm12anNoZmtueW14eGtnN2ZiaDk6WllJVnJCV1VQYmNYRHRiRDIyVlNMYTZiNFdRb3Mzelg=")
+                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
@@ -434,7 +434,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic bm12anNoZmtueW14eGtnN2ZiaDk6WllJVnJCV1VQYmNYRHRiRDIyVlNMYTZiNFdRb3Mzelg=")
+                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
@@ -783,12 +783,16 @@ mod auth {
             self.post_login(login_response, session_token).await
         }
 
-        /// Logs in with a etp rt cookie and returns a new `Crunchyroll` instance.
+        /// Logs in with an etp rt cookie and returns a new `Crunchyroll` instance.
         /// This cookie can be extracted if you copy the `etp_rt` cookie from your browser.
         /// Note: Even though the tokens used in [`CrunchyrollBuilder::login_with_etp_rt`] and
         /// [`CrunchyrollBuilder::login_with_refresh_token`] are having the same syntax, Crunchyroll
         /// internal they're different. I had issues when I tried to log in with the `etp_rt`
         /// cookie on [`CrunchyrollBuilder::login_with_refresh_token`] and vice versa.
+        ///
+        /// *Note*: When using this method to login, any request to
+        /// [`crate::Episode::stream_maybe_without_drm`] / [`crate::Movie::stream_maybe_without_drm`]
+        /// will fail.
         pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
