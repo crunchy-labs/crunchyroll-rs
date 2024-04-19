@@ -1,6 +1,6 @@
 [package]
 name = "crunchyroll-rs-internal"
-version = "0.10.7"
+version = "0.10.8"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2021"
 description = "Internal crate for crunchyroll-rs. Do not use."
