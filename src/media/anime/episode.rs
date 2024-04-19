@@ -81,6 +81,7 @@ pub struct Episode {
     pub sequence_number: f32,
 
     pub season_number: u32,
+    pub season_display_number: String,
 
     pub audio_locale: Locale,
     /// Only populated if [`Episode`] got generated via [`Season::episodes`].
