@@ -37,10 +37,10 @@
 //!
 //! ```
 //! // get the series with the id 'GY8VEQ95Y'
-//! let series = Series::from_id(crunchy, "GY8VEQ95Y").await?;
+//! let series: Series = crunchy.media_from_id("GY8VEQ95Y").await?;
 //!
 //! // get the episode with the id 'GRDKJZ81Y'
-//! let episode = Episode::from_id(crunchy, "GRDKJZ81Y").await?;
+//! let episode: Episode = crunchy.media_from_id("GY8VEQ95Y").await?;
 //!
 //! ```
 //!
@@ -57,8 +57,9 @@
 //! ## Streaming
 //!
 //! This crate allows you to get the actual video streams behind episodes and movies. With
-//! [`Episode::stream`] and [`Movie::stream`] you get access to the streams. The returning struct
-//! [`media::Stream`] has all required information to access the streams.
+//! [`Episode::stream_maybe_without_drm`] and [`Movie::stream_maybe_without_drm`] you get access to
+//! the streams. At the time of writing these streams are DRM free but this might change at any time.
+//! The returning struct [`media::Stream`] has all required information to access the streams.
 //!
 //! ```
 //! let stream = episode
@@ -67,10 +68,10 @@
 //! ```
 //!
 //! Crunchyroll uses the [DASH] video streaming format to distribute their streams. The logic to
-//! work with this formats is already implemented into this crate.
+//! work with these formats is already implemented into this crate.
 //!
 //! ```
-//! let (video_streams, audio_streams) = stream
+//! let (mut video_streams, mut audio_streams) = stream
 //!     .stream_data(None)
 //!     .await?
 //!     .unwrap();
@@ -89,10 +90,10 @@
 //! // case; it drops its input immediately). writer can be anything which implements `std::io::Write`
 //! // like a file, a pipe, ...
 //! for video_segment in video_segments {
-//!     video_segment.write_to(sink).await?;
+//!     sink.write_all(&video_segment.data().await?)?;
 //! }
 //! for audio_segment in audio_segments {
-//!     audio_segments.write_to(sink).await?;
+//!     sink.write_all(&audio_segment.data().await?)?;
 //! }
 //! ```
 //!
