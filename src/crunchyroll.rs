@@ -356,6 +356,12 @@ mod auth {
             let token = executor_config.access_token.as_str();
             let key = jsonwebtoken::DecodingKey::from_rsa_components("", "").unwrap();
             let mut validation = jsonwebtoken::Validation::default();
+            // the jwt might be expired when calling this function. but there is no really need to
+            // refresh it if this case happens. sure, it might be that the premium status of the
+            // user changes when re-requesting the token but the possibility of this is tiny
+            validation.validate_exp = false;
+            // we just want the jwt claims, no need to check the signature. spoofing the jwt cannot
+            // do anything harmful in this function anyway
             validation.insecure_disable_signature_validation();
 
             jsonwebtoken::decode::<AccessTokenClaims>(token, &key, &validation)
