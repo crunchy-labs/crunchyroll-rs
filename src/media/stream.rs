@@ -6,7 +6,6 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
-use std::io::Write;
 use std::iter;
 use std::sync::Arc;
 use std::time::Duration;

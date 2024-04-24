@@ -135,6 +135,7 @@ impl From<reqwest::Error> for Error {
 pub(crate) fn is_request_error(value: Value, url: &str, status: &StatusCode) -> Result<()> {
     #[derive(Debug, Deserialize)]
     #[serde(untagged)]
+    #[allow(clippy::enum_variant_names)]
     enum ErrorTypes {
         MessageTypeError {
             message: String,
