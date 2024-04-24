@@ -1,6 +1,6 @@
 [package]
 name = "crunchyroll-rs"
-version = "0.10.8"
+version = "0.10.9"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2021"
 description = "Pure Rust implementation of the crunchyroll api."
@@ -41,7 +41,7 @@ tokio = { version = "1.37", features = ["sync"] }
 uuid = { version = "1.8", features = ["v4"] }
 webpki-roots = "0.26"
 
-crunchyroll-rs-internal = { version = "0.10.8", path = "internal" }
+crunchyroll-rs-internal = { version = "0.10.9", path = "internal" }
 
 lazy_static = { version = "1.4", optional = true }
 regex = { version = "1.10", default-features = false, features = ["std"], optional = true }
