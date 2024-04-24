@@ -313,15 +313,6 @@ pub struct Subtitle {
 }
 
 impl Subtitle {
-    #[deprecated(since = "0.10.9", note = "Use `Subtitle::data` instead")]
-    pub async fn write_to(self, w: &mut impl Write) -> Result<()> {
-        let resp = self.executor.get(self.url).request_raw(false).await?;
-        w.write_all(resp.as_ref()).map_err(|e| Error::Input {
-            message: e.to_string(),
-        })?;
-        Ok(())
-    }
-
     /// Get the subtitle as bytes.
     pub async fn data(&self) -> Result<Vec<u8>> {
         self.executor.get(&self.url).request_raw(false).await
