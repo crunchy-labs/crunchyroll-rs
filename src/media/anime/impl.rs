@@ -6,33 +6,7 @@ use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
-/// Information about the intro of an [`Episode`] or [`Movie`].
-#[allow(dead_code)]
-#[derive(Clone, Debug, Deserialize, smart_default::SmartDefault, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-struct VideoIntroResult {
-    media_id: String,
-
-    #[serde(rename = "startTime")]
-    start_time: f64,
-    #[serde(rename = "endTime")]
-    end_time: f64,
-    duration: f64,
-
-    /// Id of the next episode.
-    #[serde(rename = "comparedWith")]
-    compared_with: String,
-
-    /// It seems that this represents the episode number relative to the season the episode is part
-    /// of. But in a weird way. It is, for example, '0003.00' instead of simply 3 if it's the third
-    /// episode in a season.
-    ordering: String,
-
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    last_updated: DateTime<Utc>,
-}
-
+/// Skippable event like intro or credits.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -97,6 +71,9 @@ impl<'de> Deserialize<'de> for SkipEvents {
                 // sense to be wrapped in e.g. an Option
                 || obj.get("start").unwrap_or(&Value::Null).is_null()
                 || obj.get("end").unwrap_or(&Value::Null).is_null()
+                // it might also be the case that the end of an event is lower than its start. this
+                // logic error is also abstracted away
+                || obj.get("start").unwrap().as_f64().unwrap() > obj.get("end").unwrap().as_f64().unwrap()
             {
                 as_map.remove(object);
             }
