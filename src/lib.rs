@@ -137,7 +137,7 @@ pub mod account;
 pub mod categories;
 pub mod common;
 pub mod crunchyroll;
-mod devices;
+pub mod devices;
 pub mod error;
 pub mod feed;
 pub mod list;
