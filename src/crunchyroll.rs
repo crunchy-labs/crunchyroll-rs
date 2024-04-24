@@ -341,33 +341,42 @@ mod auth {
             Ok(req)
         }
 
-        pub(crate) async fn premium(&self) -> bool {
+        pub(crate) async fn jwt_claim<T: DeserializeOwned>(
+            &self,
+            claim: &str,
+        ) -> Result<Option<T>> {
             let executor_config = self.config.read().await;
-
-            if matches!(executor_config.session_token, SessionToken::Anonymous) {
-                return false;
-            }
-
-            #[derive(Deserialize)]
-            struct AccessTokenClaims {
-                benefits: Vec<String>,
-            }
 
             let token = executor_config.access_token.as_str();
             let key = jsonwebtoken::DecodingKey::from_rsa_components("", "").unwrap();
             let mut validation = jsonwebtoken::Validation::default();
             // the jwt might be expired when calling this function. but there is no really need to
-            // refresh it if this case happens. sure, it might be that the premium status of the
-            // user changes when re-requesting the token but the possibility of this is tiny
+            // refresh it if this case happens. sure, it might be that something has changed when
+            // re-requesting the token but the possibility of this is tiny
             validation.validate_exp = false;
-            // we just want the jwt claims, no need to check the signature. spoofing the jwt cannot
-            // do anything harmful in this function anyway
+            // we just want the jwt claims, no need to check the signature. no safety critical
+            // processes rely on the jwt internally
             validation.insecure_disable_signature_validation();
 
-            jsonwebtoken::decode::<AccessTokenClaims>(token, &key, &validation)
+            let mut claims = jsonwebtoken::decode::<serde_json::Map<String, serde_json::Value>>(
+                token,
+                &key,
+                &validation,
+            )
+            .unwrap()
+            .claims;
+            if let Some(claim) = claims.remove(claim) {
+                Ok(serde_json::from_value(claim)?)
+            } else {
+                Ok(None)
+            }
+        }
+
+        pub(crate) async fn premium(&self) -> bool {
+            self.jwt_claim::<Vec<String>>("benefits")
+                .await
                 .unwrap()
-                .claims
-                .benefits
+                .unwrap_or_default()
                 .contains(&"cr_premium".to_string())
         }
 
@@ -403,7 +412,7 @@ mod auth {
                 ("username", email.as_ref()),
                 ("password", password.as_ref()),
                 ("grant_type", "password"),
-                ("scope", "offline_access"),
+                ("scope", "offline_access mp"),
             ];
             if let Some(d_id) = &device_id {
                 body.extend_from_slice(&[("device_id", d_id)])
@@ -431,7 +440,37 @@ mod auth {
             let mut body = vec![
                 ("refresh_token", refresh_token.as_str()),
                 ("grant_type", "refresh_token"),
+                ("scope", "offline_access mp"),
+            ];
+            if let Some(d_id) = &device_id {
+                body.extend_from_slice(&[("device_id", d_id)])
+            }
+            if let Some(d_type) = &device_type {
+                body.extend_from_slice(&[("device_type", d_type)])
+            }
+            let resp = client.post(endpoint)
+                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(serde_urlencoded::to_string(body).unwrap())
+                .send()
+                .await?;
+
+            check_request(endpoint.to_string(), resp).await
+        }
+
+        async fn auth_with_refresh_token_profile_id(
+            client: &Client,
+            refresh_token: String,
+            profile_id: String,
+            device_id: Option<String>,
+            device_type: Option<String>,
+        ) -> Result<AuthResponse> {
+            let endpoint = "https://www.crunchyroll.com/auth/v1/token";
+            let mut body = vec![
+                ("refresh_token", refresh_token.as_str()),
+                ("grant_type", "refresh_token_profile_id"),
                 ("scope", "offline_access"),
+                ("profile_id", profile_id.as_str()),
             ];
             if let Some(d_id) = &device_id {
                 body.extend_from_slice(&[("device_id", d_id)])
@@ -775,6 +814,38 @@ mod auth {
             let login_response = Executor::auth_with_refresh_token(
                 &self.client,
                 refresh_token.as_ref().to_string(),
+                self.device_identifier
+                    .as_ref()
+                    .map(|(device_id, _)| device_id.clone()),
+                self.device_identifier
+                    .as_ref()
+                    .map(|(_, device_type)| device_type.clone()),
+            )
+            .await?;
+            let session_token =
+                SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
+
+            self.post_login(login_response, session_token).await
+        }
+
+        /// Just like [`CrunchyrollBuilder::login_with_refresh_token`] but with the addition that
+        /// the id of a [`crate::profile::Profile`] is given too. The resulting [`Crunchyroll`]
+        /// session will settings that are specific to the given [`crate::profile::Profile`] id.
+        ///
+        /// *Note*: When using this login method, some endpoints aren't available / will return an
+        /// error. Idk why, but these endpoints can only be used if the authentication is anything
+        /// other than [`CrunchyrollBuilder::login_with_refresh_token_profile_id`].
+        pub async fn login_with_refresh_token_profile_id<S: AsRef<str>>(
+            self,
+            refresh_token: S,
+            profile_id: S,
+        ) -> Result<Crunchyroll> {
+            self.pre_login().await?;
+
+            let login_response = Executor::auth_with_refresh_token_profile_id(
+                &self.client,
+                refresh_token.as_ref().to_string(),
+                profile_id.as_ref().to_string(),
                 self.device_identifier
                     .as_ref()
                     .map(|(device_id, _)| device_id.clone()),

@@ -50,6 +50,30 @@ async fn login_with_refresh_token() {
 }
 
 #[tokio::test]
+async fn login_with_refresh_token_profile_id() {
+    let refresh_token =
+        env::var("REFRESH_TOKEN").expect("'REFRESH_TOKEN' environment variable not found");
+    let profile_id = env::var("PROFILE_ID").expect("'PROFILE_ID' environment variable not found");
+    let is_premium = env::var("IS_PREMIUM")
+        .ok()
+        .map(|e| e.parse::<bool>().unwrap());
+
+    let crunchy = Crunchyroll::builder()
+        .login_with_refresh_token_profile_id(&refresh_token, &profile_id)
+        .await;
+
+    assert_result!(crunchy);
+    assert_eq!(crunchy.as_ref().unwrap().profile_id().await, profile_id);
+    if let Some(is_premium) = is_premium {
+        assert_eq!(crunchy.as_ref().unwrap().premium().await, is_premium)
+    }
+
+    if !utils::session::has_session() {
+        utils::session::set_session(crunchy.unwrap()).await.unwrap()
+    }
+}
+
+#[tokio::test]
 async fn login_with_etp_rt() {
     let etp_rt = env::var("ETP_RT").expect("'ETP_RT' environment variable not found");
     let is_premium = env::var("IS_PREMIUM")

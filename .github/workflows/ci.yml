@@ -87,4 +87,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_credentials --skip login_with_refresh_token
+          args: --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_credentials --skip login_with_refresh_token --skip login_with_refresh_token_profile_id --skip profiles --skip modify_profile

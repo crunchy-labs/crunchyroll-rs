@@ -145,6 +145,7 @@ pub mod media;
 #[cfg(feature = "parse")]
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub mod parse;
+pub mod profile;
 pub mod rating;
 pub mod search;
 
