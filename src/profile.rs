@@ -1,3 +1,5 @@
+//! Multiprofiles.
+
 use crate::crunchyroll::MaturityRating;
 use crate::macros::options;
 use crate::{Crunchyroll, Executor, Locale, Result};

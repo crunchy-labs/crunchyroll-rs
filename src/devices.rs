@@ -1,3 +1,5 @@
+//! Device management.
+
 use crate::common::BulkResult;
 use crate::crunchyroll::Executor;
 use crate::macros::enum_values;
