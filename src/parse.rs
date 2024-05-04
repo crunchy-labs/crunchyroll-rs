@@ -32,9 +32,9 @@ pub enum UrlType {
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
     lazy_static::lazy_static! {
-        static ref SERIES_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?(?P<type>series|movie_listing)/(?P<id>.+)/.*$").unwrap();
-        static ref EPISODE_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?watch/(?P<id>[^/]+)/[^/]*$").unwrap();
-        static ref MUSIC_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?watch/(?P<music_type>musicvideo|concert)/(?P<id>.+)/.*$").unwrap();
+        static ref SERIES_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?(?P<type>series|movie_listing)/(?P<id>[^/]+).*$").unwrap();
+        static ref MUSIC_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?watch/(?P<music_type>musicvideo|concert)/(?P<id>[^/]+).*$").unwrap();
+        static ref EPISODE_REGEX: Regex = Regex::new(r"^https?://((beta|www)\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?watch/(?P<id>[^/]+).*$").unwrap();
     }
 
     #[allow(clippy::manual_map)]
@@ -45,10 +45,6 @@ pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
             "movie_listing" => Some(UrlType::MovieListing(id)),
             _ => unreachable!(),
         }
-    } else if let Some(capture) = EPISODE_REGEX.captures(url.as_ref()) {
-        Some(UrlType::EpisodeOrMovie(
-            capture.name("id").unwrap().as_str().to_string(),
-        ))
     } else if let Some(capture) = MUSIC_REGEX.captures(url.as_ref()) {
         match capture.name("music_type").unwrap().as_str() {
             "musicvideo" => Some(UrlType::MusicVideo(
@@ -59,6 +55,10 @@ pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
             )),
             _ => unreachable!(),
         }
+    } else if let Some(capture) = EPISODE_REGEX.captures(url.as_ref()) {
+        Some(UrlType::EpisodeOrMovie(
+            capture.name("id").unwrap().as_str().to_string(),
+        ))
     } else {
         None
     }
