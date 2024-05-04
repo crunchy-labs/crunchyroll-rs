@@ -161,10 +161,10 @@ pub struct Profiles {
 }
 
 impl Profiles {
-    /// Creates a new profile. It is not checked if the maximum amount of profiles is already
-    /// reached. Use [`Profiles::max_profiles`] and the length of [`Profiles::profiles`] to check it
+    /// Creates a new profile. It is not check if the maximum amount of profiles is already reached.
+    /// Use [`Profiles::max_profiles`] and the length of [`Profiles::profiles`] to check it
     /// manually.
-    pub async fn new(&self, profile_name: String, username: String) -> Result<Self> {
+    pub async fn new(&self, profile_name: String, username: String) -> Result<Profile> {
         let endpoint = "https://www.crunchyroll.com/accounts/v1/me/multiprofile";
         self.executor
             .post(endpoint)
