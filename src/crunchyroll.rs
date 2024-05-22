@@ -665,7 +665,7 @@ mod auth {
             Client::builder()
                 .https_only(true)
                 .cookie_store(true)
-                .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.67a")
+                .user_agent("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27")
                 .use_preconfigured_tls(tls_config)
         }
 
