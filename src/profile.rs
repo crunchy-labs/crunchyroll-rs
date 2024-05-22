@@ -164,7 +164,16 @@ impl Profiles {
     /// Creates a new profile. It is not check if the maximum amount of profiles is already reached.
     /// Use [`Profiles::max_profiles`] and the length of [`Profiles::profiles`] to check it
     /// manually.
+    #[allow(clippy::new_ret_no_self)]
+    #[deprecated(since = "0.11.3", note = "Use `new_profile` instead")]
     pub async fn new(&self, profile_name: String, username: String) -> Result<Profile> {
+        self.new_profile(profile_name, username).await
+    }
+
+    /// Creates a new profile. It is not check if the maximum amount of profiles is already reached.
+    /// Use [`Profiles::max_profiles`] and the length of [`Profiles::profiles`] to check it
+    /// manually.
+    pub async fn new_profile(&self, profile_name: String, username: String) -> Result<Profile> {
         let endpoint = "https://www.crunchyroll.com/accounts/v1/me/multiprofile";
         self.executor
             .post(endpoint)
