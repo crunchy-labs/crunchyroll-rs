@@ -158,7 +158,6 @@ mod auth {
     use crate::error::{check_request, Error};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
-    use reqwest::multipart::Form;
     use reqwest::{header, Client, ClientBuilder, IntoUrl, RequestBuilder};
     use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
@@ -578,12 +577,6 @@ mod auth {
 
         pub(crate) fn json<T: Serialize + ?Sized>(mut self, json: &T) -> ExecutorRequestBuilder {
             self.builder = self.builder.json(json);
-
-            self
-        }
-
-        pub(crate) fn multipart(mut self, form: Form) -> ExecutorRequestBuilder {
-            self.builder = self.builder.multipart(form);
 
             self
         }

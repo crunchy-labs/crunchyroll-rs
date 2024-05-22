@@ -1,7 +1,6 @@
 use crate::error::{is_request_error, Error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use dash_mpd::MPD;
-use reqwest::multipart::Form;
 use reqwest::StatusCode;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
@@ -131,11 +130,10 @@ impl Stream {
     /// Requests all available video and audio streams. Returns [`None`] if the requested hardsub
     /// isn't available. The first [`Vec<StreamData>`] contains only video streams, the second only
     /// audio streams.
-    /// If the stream is DRM encrypted ([`Stream::session::uses_stream_limit`] is `true` if the
-    /// streams are encrypted) you will run into an error when requesting this function too often
-    /// without invalidating the data. Crunchyroll only allows a certain amount of stream data to be
-    /// requested at the same time, typically the exact amount depends on the type of (premium)
-    /// subscription you have. You  can use [`Stream::invalidate`] to invalidate all stream data for this stream.
+    /// You will run into an error when requesting this function too often without invalidating the
+    /// data. Crunchyroll only allows a certain amount of stream data to be requested at the same
+    /// time, typically the exact amount depends on the type of (premium) subscription you have. You
+    /// can use [`Stream::invalidate`] to invalidate all stream data for this stream.
     pub async fn stream_data(
         &self,
         hardsub: Option<Locale>,
@@ -159,27 +157,19 @@ impl Stream {
         }
     }
 
-    /// Invalidates all the stream data which may be obtained from [`Stream::stream_data`]. Only
-    /// required if the stream has DRM (if [`Stream::session::uses_stream_limits`] is `true`, stream
-    /// data is DRM encrypted, if `false` not).
+    /// Invalidates all the stream data which may be obtained from [`Stream::stream_data`]. You will
+    /// run into errors if you request multiple [`Stream::stream_data`]s without invalidating them.
     pub async fn invalidate(self) -> Result<()> {
         if !self.session.uses_stream_limits {
             return Ok(());
         }
 
         let endpoint = format!(
-            "https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{}/{}/delete",
+            "https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{}/{}",
             self.id, self.token
         );
 
-        self.executor
-            .post(endpoint)
-            .multipart(Form::new().text(
-                "jwtToken",
-                self.executor.config.read().await.access_token.clone(),
-            ))
-            .request_raw(false)
-            .await?;
+        self.executor.delete(endpoint).request_raw(true).await?;
 
         Ok(())
     }
