@@ -383,7 +383,7 @@ mod auth {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
             let resp = client
                 .post(endpoint)
-                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
+                .header(header::AUTHORIZATION, "Basic YWNmYWZtNTE3aGtpZWt4Yl93bWU6MDluclZfejBUNWxVdjRyRHp5ZlJYZk0wVmlIRHQyQV8=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .header("ETP-Anonymous-ID", uuid::Uuid::new_v4().to_string())
                 .body(
@@ -420,7 +420,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
+                .header(header::AUTHORIZATION, "Basic YWNmYWZtNTE3aGtpZWt4Yl93bWU6MDluclZfejBUNWxVdjRyRHp5ZlJYZk0wVmlIRHQyQV8=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
@@ -448,7 +448,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
+                .header(header::AUTHORIZATION, "Basic YWNmYWZtNTE3aGtpZWt4Yl93bWU6MDluclZfejBUNWxVdjRyRHp5ZlJYZk0wVmlIRHQyQV8=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
@@ -478,7 +478,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
+                .header(header::AUTHORIZATION, "Basic YWNmYWZtNTE3aGtpZWt4Yl93bWU6MDluclZfejBUNWxVdjRyRHp5ZlJYZk0wVmlIRHQyQV8=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
