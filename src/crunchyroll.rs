@@ -1017,7 +1017,7 @@ mod auth {
 
         #[cfg(not(feature = "__test_strict"))]
         {
-            Ok(check_request(url, resp).await?)
+            check_request(url, resp).await
         }
         #[cfg(feature = "__test_strict")]
         {
