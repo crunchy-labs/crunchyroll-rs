@@ -174,6 +174,7 @@ impl Stream {
         Ok(())
     }
 
+    /// Show in which audios this [`Stream`] is also available.
     pub fn available_versions(&self) -> Vec<Locale> {
         self.versions
             .clone()
@@ -183,6 +184,11 @@ impl Stream {
             .collect()
     }
 
+    /// Get the versions of this [`Stream`] which have the specified audio locale(s). Use
+    /// [`Stream::available_versions`] to see all supported locale.
+    /// This method might throw a too many active streams error. In this case, make sure to
+    /// have less/no active other [`Stream`]s open (through this crate or as stream in the browser
+    /// or app).
     pub async fn version(&self, audio_locales: Vec<Locale>) -> Result<Vec<Stream>> {
         let version_ids = self
             .versions
@@ -227,6 +233,12 @@ impl Stream {
         Ok(result)
     }
 
+    /// Get all available other versions (same [`Stream`] but different audio locale) for this
+    /// [`Stream`].
+    /// This method might throw a too many active streams error. In this case, either make sure to
+    /// have less/no active other [`Stream`]s open (through this crate or as stream in the browser
+    /// or app), or try to use [`Stream::version`] to get only a specific version (requesting too
+    /// many [`Stream`]s at once will always result in said error).
     pub async fn versions(&self) -> Result<Vec<Stream>> {
         let version_ids = self
             .versions
