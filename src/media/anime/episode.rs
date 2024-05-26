@@ -279,8 +279,17 @@ impl Media for Episode {
                 split.next().unwrap_or_default(),
             );
 
-            if let Ok(season_num) = season.trim_start_matches('S').parse() {
-                self.season_number = season_num
+            if let Some(maybe_number) = season.strip_prefix('S') {
+                let mut num_string = String::new();
+                for c in maybe_number.chars() {
+                    if c.to_string().parse::<u32>().is_err() {
+                        break;
+                    }
+                    num_string.push(c)
+                }
+                if !num_string.is_empty() {
+                    self.season_number = num_string.parse::<u32>().unwrap()
+                }
             }
         }
     }
