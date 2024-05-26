@@ -1,4 +1,4 @@
-use crate::common::Image;
+use crate::common::{Image, Request};
 use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
 use crate::media::Media;
@@ -7,24 +7,40 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub(crate) struct EpisodeVersion {
+pub struct EpisodeVersion {
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
+
     #[serde(rename = "guid")]
-    pub(crate) id: String,
+    pub id: String,
     #[serde(rename = "media_guid")]
-    media_id: String,
+    pub media_id: String,
     #[serde(rename = "season_guid")]
-    season_id: String,
+    pub season_id: String,
 
-    pub(crate) audio_locale: Locale,
+    pub audio_locale: Locale,
 
-    is_premium_only: bool,
-    original: bool,
+    pub is_premium_only: bool,
+    pub original: bool,
 
-    variant: String,
+    #[cfg(feature = "__test_strict")]
+    variant: crate::StrictValue,
+}
+
+impl EpisodeVersion {
+    /// Requests an actual [`Episode`] from this version.
+    pub async fn episode(&self) -> Result<Episode> {
+        Episode::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
+    }
 }
 
 /// Metadata for an episode.
@@ -132,9 +148,8 @@ pub struct Episode {
 
     pub eligible_region: String,
 
-    #[serde(default)]
-    #[serde(skip_serializing)]
-    pub(crate) versions: Option<Vec<EpisodeVersion>>,
+    /// Alternative versions of this episode (same episode but other language).
+    pub versions: Vec<EpisodeVersion>,
 
     #[cfg(feature = "__test_strict")]
     media_type: Option<crate::StrictValue>,
@@ -195,6 +210,38 @@ impl Episode {
             .await?
             .remove(0))
     }
+
+    /// Show in which audios this [`Episode`] is also available.
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
+    pub async fn available_versions(&mut self) -> Result<Vec<Locale>> {
+        Ok(self
+            .versions
+            .iter()
+            .map(|v| v.audio_locale.clone())
+            .collect())
+    }
+
+    /// Get the versions of this [`Episode`] which have the specified audio locale(s). Use [`Episode::available_versions`] to see all supported locale.
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
+    pub async fn version(&mut self, audio_locales: Vec<Locale>) -> Result<Vec<Episode>> {
+        let mut result = vec![];
+        for version in &self.versions {
+            if audio_locales.contains(&version.audio_locale) {
+                result.push(version.episode().await?)
+            }
+        }
+        Ok(result)
+    }
+
+    /// Get all available other versions (same [`Episode`] but different audio locale) for this [`Episode`].
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
+    pub async fn versions(&mut self) -> Result<Vec<Episode>> {
+        let mut result = vec![];
+        for version in &self.versions {
+            result.push(version.episode().await?)
+        }
+        Ok(result)
+    }
 }
 
 #[async_trait::async_trait]
@@ -209,6 +256,13 @@ impl Media for Episode {
         )
         .await?
         .remove(0))
+    }
+
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        self.executor = executor;
+        for version in &mut self.versions {
+            version.__set_executor(self.executor.clone()).await
+        }
     }
 
     #[cfg(feature = "experimental-stabilizations")]

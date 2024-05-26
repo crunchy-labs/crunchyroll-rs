@@ -163,13 +163,23 @@ impl Media for Series {
         .remove(0))
     }
 
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        self.executor = executor;
+    }
+
     #[cfg(feature = "experimental-stabilizations")]
     async fn __apply_experimental_stabilizations(&mut self) {
         if self.executor.fixes.locale_name_parsing {
             if let Ok(seasons) = self.seasons().await {
                 let mut locales = vec![];
-                for mut season in seasons {
-                    locales.extend(season.available_versions().await.unwrap_or_default());
+                for season in seasons {
+                    locales.extend(
+                        season
+                            .versions
+                            .iter()
+                            .map(|v| v.audio_locale.clone())
+                            .collect::<Vec<Locale>>(),
+                    );
                     locales.extend(season.audio_locales)
                 }
                 crate::media::anime::util::real_dedup_vec(&mut locales);

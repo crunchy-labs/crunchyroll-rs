@@ -1,3 +1,4 @@
+use crate::common::Request;
 use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
 use crate::media::Media;
@@ -5,19 +6,35 @@ use crate::{Crunchyroll, Episode, Locale, Result, Series};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub(crate) struct SeasonVersion {
+pub struct SeasonVersion {
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
+
     #[serde(rename = "guid")]
-    pub(crate) id: String,
+    pub id: String,
 
-    pub(crate) audio_locale: Locale,
+    pub audio_locale: Locale,
 
-    original: bool,
+    pub original: bool,
 
-    variant: String,
+    #[cfg(feature = "__test_strict")]
+    variant: crate::StrictValue,
+}
+
+impl SeasonVersion {
+    /// Requests an actual [`Season`] from this version.
+    pub async fn season(&self) -> Result<Season> {
+        Season::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
+    }
 }
 
 /// Metadata for a season.
@@ -74,9 +91,8 @@ pub struct Season {
     /// If the season is not available this might contain some information why.
     pub availability_notes: String,
 
-    #[serde(default)]
-    #[serde(skip_serializing)]
-    pub(crate) versions: Option<Vec<SeasonVersion>>,
+    /// Alternative versions of this season (same season but other language).
+    pub versions: Vec<SeasonVersion>,
 
     #[cfg(feature = "__test_strict")]
     // currently empty (on all of my tests) but its might be filled in the future
@@ -111,6 +127,38 @@ impl Season {
         );
         request_media(self.executor.clone(), endpoint).await
     }
+
+    /// Show in which audios this [`Season`] is also available.
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
+    pub async fn available_versions(&mut self) -> Result<Vec<Locale>> {
+        Ok(self
+            .versions
+            .iter()
+            .map(|v| v.audio_locale.clone())
+            .collect())
+    }
+
+    /// Get the versions of this [`Season`] which have the specified audio locale(s). Use [`Season::available_versions`] to see all supported locale.
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
+    pub async fn version(&mut self, audio_locales: Vec<Locale>) -> Result<Vec<Season>> {
+        let mut result = vec![];
+        for version in &self.versions {
+            if audio_locales.contains(&version.audio_locale) {
+                result.push(version.season().await?)
+            }
+        }
+        Ok(result)
+    }
+
+    /// Get all available other versions (same [`Season`] but different audio locale) for this [`Season`].
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
+    pub async fn versions(&mut self) -> Result<Vec<Season>> {
+        let mut result = vec![];
+        for version in &self.versions {
+            result.push(version.season().await?)
+        }
+        Ok(result)
+    }
 }
 
 #[async_trait::async_trait]
@@ -125,6 +173,13 @@ impl Media for Season {
         )
         .await?
         .remove(0))
+    }
+
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        self.executor = executor;
+        for version in &mut self.versions {
+            version.__set_executor(self.executor.clone()).await
+        }
     }
 
     async fn __apply_fixes(&mut self) {

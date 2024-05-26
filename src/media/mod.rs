@@ -11,8 +11,10 @@ pub use anime::*;
 pub use media_collection::*;
 pub use music::*;
 pub use shared::*;
+use std::sync::Arc;
 pub use stream::*;
 
+use crate::crunchyroll::Executor;
 use crate::{Crunchyroll, Result};
 
 crate::enum_values! {
@@ -30,6 +32,8 @@ pub trait Media {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self>
     where
         Self: Sized;
+
+    async fn __set_executor(&mut self, executor: Arc<Executor>);
 
     #[doc(hidden)]
     async fn __apply_fixes(&mut self) {}

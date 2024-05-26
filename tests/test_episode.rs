@@ -75,13 +75,6 @@ async fn episode_none_next() {
 }
 
 #[tokio::test]
-async fn episode_versions() {
-    let mut episode = END_EPISODE.get().await.unwrap().clone();
-
-    assert_result!(episode.versions().await)
-}
-
-#[tokio::test]
 async fn episode_skip_events() {
     let episode = START_EPISODE.get().await.unwrap();
     episode.skip_events().await.unwrap();

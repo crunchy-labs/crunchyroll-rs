@@ -107,4 +107,8 @@ impl Media for Concert {
             .await?
             .remove(0))
     }
+
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        self.executor = executor
+    }
 }

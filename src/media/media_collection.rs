@@ -113,15 +113,17 @@ impl<'de> Deserialize<'de> for MediaCollection {
 impl Request for MediaCollection {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         match self {
-            MediaCollection::Series(series) => series.__set_executor(executor).await,
-            MediaCollection::Season(season) => season.__set_executor(executor).await,
-            MediaCollection::Episode(episode) => episode.__set_executor(executor).await,
+            MediaCollection::Series(series) => Request::__set_executor(series, executor).await,
+            MediaCollection::Season(season) => Request::__set_executor(season, executor).await,
+            MediaCollection::Episode(episode) => Request::__set_executor(episode, executor).await,
             MediaCollection::MovieListing(movie_listing) => {
-                movie_listing.__set_executor(executor).await
+                Request::__set_executor(movie_listing, executor).await
             }
-            MediaCollection::Movie(movie) => movie.__set_executor(executor).await,
-            MediaCollection::MusicVideo(music_video) => music_video.__set_executor(executor).await,
-            MediaCollection::Concert(concert) => concert.__set_executor(executor).await,
+            MediaCollection::Movie(movie) => Request::__set_executor(movie, executor).await,
+            MediaCollection::MusicVideo(music_video) => {
+                Request::__set_executor(music_video, executor).await
+            }
+            MediaCollection::Concert(concert) => Request::__set_executor(concert, executor).await,
         }
     }
 }

@@ -1,4 +1,5 @@
 use crate::categories::Category;
+use crate::common::Request;
 use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
 use crate::media::{Media, PosterImages};
@@ -7,19 +8,35 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub(crate) struct MovieListingVersion {
+pub struct MovieListingVersion {
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
+
     #[serde(rename = "guid")]
-    pub(crate) id: String,
+    pub id: String,
 
-    pub(crate) audio_locale: Locale,
+    pub audio_locale: Locale,
 
-    original: bool,
+    pub original: bool,
 
-    variant: String,
+    #[cfg(feature = "__test_strict")]
+    variant: crate::StrictValue,
+}
+
+impl MovieListingVersion {
+    /// Requests an actual [`MovieListing`] from this version.
+    pub async fn movie_listing(&self) -> Result<MovieListing> {
+        MovieListing::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+        )
+        .await
+    }
 }
 
 /// Metadata for a movie listing.
@@ -80,9 +97,8 @@ pub struct MovieListing {
     pub available_offline: bool,
     pub availability_notes: String,
 
-    #[serde(default)]
-    #[serde(skip_serializing)]
-    pub(crate) versions: Option<Vec<MovieListingVersion>>,
+    /// Alternative versions of this movie listing (same movie listing but other language).
+    pub versions: Vec<MovieListingVersion>,
 
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
@@ -130,6 +146,38 @@ impl MovieListing {
         );
         request_media(self.executor.clone(), endpoint).await
     }
+
+    /// Show in which audios this [`MovieListing`] is also available.
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
+    pub async fn available_versions(&mut self) -> Result<Vec<Locale>> {
+        Ok(self
+            .versions
+            .iter()
+            .map(|v| v.audio_locale.clone())
+            .collect())
+    }
+
+    /// Get the versions of this [`MovieListing`] which have the specified audio locale(s). Use [`MovieListing::available_versions`] to see all supported locale.
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
+    pub async fn version(&mut self, audio_locales: Vec<Locale>) -> Result<Vec<MovieListing>> {
+        let mut result = vec![];
+        for version in &self.versions {
+            if audio_locales.contains(&version.audio_locale) {
+                result.push(version.movie_listing().await?)
+            }
+        }
+        Ok(result)
+    }
+
+    /// Get all available other versions (same [`MovieListing`] but different audio locale) for this [`MovieListing`].
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
+    pub async fn versions(&mut self) -> Result<Vec<MovieListing>> {
+        let mut result = vec![];
+        for version in &self.versions {
+            result.push(version.movie_listing().await?)
+        }
+        Ok(result)
+    }
 }
 
 #[async_trait::async_trait]
@@ -144,5 +192,12 @@ impl Media for MovieListing {
         )
         .await?
         .remove(0))
+    }
+
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        self.executor = executor;
+        for version in &mut self.versions {
+            version.__set_executor(self.executor.clone()).await
+        }
     }
 }

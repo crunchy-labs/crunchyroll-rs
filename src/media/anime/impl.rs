@@ -186,8 +186,7 @@ macro_rules! impl_media_request {
             #[async_trait::async_trait]
             impl $crate::common::Request for $media {
                 async fn __set_executor(&mut self, executor: std::sync::Arc<$crate::Executor>) {
-                    self.executor = executor;
-
+                    crate::media::Media::__set_executor(self, executor).await;
                     self.__apply_fixes().await;
                     #[cfg(feature = "experimental-stabilizations")]
                     self.__apply_experimental_stabilizations().await;
@@ -215,80 +214,6 @@ macro_rules! media_eq {
 
 media_eq! {
     Series Season Episode MovieListing Movie
-}
-
-macro_rules! media_version {
-    ($(#[doc=$available_versions_doc:literal] #[doc=$version_doc:literal] #[doc=$versions_doc:literal] $media:ident = $endpoint:literal)*) => {
-        $(
-            impl $media {
-                /// Some requests doesn't populate the `versions` field (e.g. [`Crunchyroll::browse`]).
-                /// Every function which interacts with versions calls this function first to assert
-                /// that the `versions` field contains valid data. If not, the current media is
-                /// re-requested (`from_id` calls are containing the valid `versions` field) and the
-                /// `versions` field is updated with the version of the re-requested struct.
-                async fn assert_versions(&mut self) -> Result<()> {
-                    if self.versions.is_none() {
-                        let re_requested = $media::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, &self.id).await?;
-                        // if the versions are still `None`, no other versions exist
-                        self.versions = re_requested.versions.map_or(Some(vec![]), |v| Some(v))
-                    }
-                    // remove version id which references to the caller struct
-                    if let Some(pos) = self.versions.as_ref().unwrap().iter().position(|v| v.id == self.id) {
-                        self.versions.as_mut().unwrap().remove(pos);
-                    }
-                    Ok(())
-                }
-
-                #[doc=$available_versions_doc]
-                pub async fn available_versions(&mut self) -> Result<Vec<$crate::Locale>> {
-                    self.assert_versions().await?;
-                    Ok(self.versions.as_ref().unwrap().iter().map(|v| v.audio_locale.clone()).collect())
-                }
-
-                #[doc=$version_doc]
-                pub async fn version(&mut self, audio_locales: Vec<$crate::Locale>) -> Result<Vec<$media>> {
-                    self.assert_versions().await?;
-                    let version_ids = self.versions.as_ref().unwrap()
-                        .iter()
-                        .filter_map(|v| if audio_locales.contains(&v.audio_locale) { Some(v.id.clone()) } else { None } )
-                        .collect::<Vec<String>>();
-
-                    let mut result = vec![];
-                    for id in version_ids {
-                        result.push($media::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, id).await?)
-                    }
-                    Ok(result)
-                }
-
-                #[doc=$versions_doc]
-                pub async fn versions(&mut self) -> Result<Vec<$media>> {
-                    self.assert_versions().await?;
-                    let version_ids = self.versions.as_ref().unwrap().iter().map(|v| v.id.clone()).collect::<Vec<String>>();
-
-                    let mut result = vec![];
-                    for id in version_ids {
-                        result.push($media::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, id).await?)
-                    }
-                    Ok(result)
-                }
-            }
-        )*
-    }
-}
-
-media_version! {
-    #[doc="Show in which audios this [`Season`] is also available."]
-    #[doc="Get the versions of this [`Season`] which have the specified audio locale(s). Use [`Season::available_versions`] to see all supported locale."]
-    #[doc="Get all available other versions (same [`Season`] but different audio locale) for this [`Season`]."]
-    Season = "https://www.crunchyroll.com/content/v2/cms/seasons"
-    #[doc="Show in which audios this [`Episode`] is also available."]
-    #[doc="Get the versions of this [`Episode`] which have the specified audio locale(s). Use [`Episode::available_versions`] to see all supported locale."]
-    #[doc="Get all available other versions (same [`Episode`] but different audio locale) for this [`Episode`]."]
-    Episode = "https://www.crunchyroll.com/content/v2/cms/episodes"
-    #[doc="Show in which audios this [`MovieListing`] is also available."]
-    #[doc="Get the versions of this [`MovieListing`] which have the specified audio locale(s). Use [`MovieListing::available_versions`] to see all supported locale."]
-    #[doc="Get all available other versions (same [`MovieListing`] but different audio locale) for this [`MovieListing`]"]
-    MovieListing = "https://www.crunchyroll.com/content/v2/cms/movie_listings"
 }
 
 macro_rules! impl_media_video_collection {
