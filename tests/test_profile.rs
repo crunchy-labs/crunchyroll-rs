@@ -26,7 +26,7 @@ async fn modify_profile() {
     let profiles = PROFILES.get().await.unwrap();
 
     let new_profile = profiles
-        .new(
+        .new_profile(
             rand::thread_rng()
                 .sample_iter(&Alphanumeric)
                 .take(16)
