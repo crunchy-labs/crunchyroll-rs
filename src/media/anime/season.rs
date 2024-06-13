@@ -91,7 +91,7 @@ pub struct Season {
     /// If the season is not available this might contain some information why.
     pub availability_notes: String,
 
-    /// Alternative versions of this season (same season but other language).
+    /// All versions of this season (same season but each entry has a different language).
     pub versions: Vec<SeasonVersion>,
 
     #[cfg(feature = "__test_strict")]

@@ -23,8 +23,69 @@ fn deserialize_hardsubs<'de, D: Deserializer<'de>>(
         .collect())
 }
 
+#[allow(dead_code)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct StreamVersion {
+    #[serde(skip)]
+    pub(crate) executor: Arc<Executor>,
+    #[serde(skip)]
+    device: String,
+    #[serde(skip)]
+    platform: String,
+    #[serde(skip)]
+    optional_media_type: Option<String>,
+
+    #[serde(rename = "guid")]
+    pub id: String,
+    #[serde(rename = "media_guid")]
+    pub media_id: String,
+    #[serde(rename = "season_guid")]
+    pub season_id: String,
+
+    pub audio_locale: Locale,
+
+    pub is_premium_only: bool,
+    pub original: bool,
+
+    #[cfg(feature = "__test_strict")]
+    variant: crate::StrictValue,
+}
+
+impl StreamVersion {
+    /// Requests an actual [`Stream`] from this version.
+    /// This method might throw a too many active streams error. In this case, make sure to
+    /// have less/no active other [`Stream`]s open (through this crate or as stream in the browser
+    /// or app).
+    pub async fn stream(&self) -> Result<Stream> {
+        Stream::from_id(
+            &Crunchyroll {
+                executor: self.executor.clone(),
+            },
+            &self.id,
+            &self.device,
+            &self.platform,
+            self.optional_media_type.clone(),
+        )
+        .await
+    }
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StreamSession {
+    pub renew_seconds: u32,
+    pub no_network_retry_interval_seconds: u32,
+    pub no_network_timeout_seconds: u32,
+    pub maximum_pause_seconds: u32,
+    pub end_of_video_unload_seconds: u32,
+    pub session_expiration_seconds: u32,
+    pub uses_stream_limits: bool,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
-#[request(executor(subtitles))]
+#[request(executor(versions))]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -49,9 +110,8 @@ pub struct Stream {
     /// DRM encrypted, if `false` it isn't.
     pub session: StreamSession,
 
-    /// Might be null, for music videos and concerts mostly.
-    #[serde(skip_serializing)]
-    versions: Option<Vec<StreamVersion>>,
+    /// All versions of this stream (same stream but each entry has a different language).
+    pub versions: Vec<StreamVersion>,
 
     #[serde(skip)]
     id: String,
@@ -64,18 +124,6 @@ pub struct Stream {
     playback_type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     bifs: crate::StrictValue,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StreamSession {
-    pub renew_seconds: u32,
-    pub no_network_retry_interval_seconds: u32,
-    pub no_network_timeout_seconds: u32,
-    pub maximum_pause_seconds: u32,
-    pub end_of_video_unload_seconds: u32,
-    pub session_expiration_seconds: u32,
-    pub uses_stream_limits: bool,
 }
 
 impl Stream {
@@ -120,9 +168,17 @@ impl Stream {
             .get(endpoint)
             .request::<Stream>()
             .await?;
-        stream.executor = crunchyroll.executor.clone();
+        stream.__set_executor(crunchyroll.executor.clone()).await;
         stream.id = id.as_ref().to_string();
         stream.optional_media_type = optional_media_type;
+
+        for version in &mut stream.versions {
+            version.device = device.to_string();
+            version.platform = platform.to_string();
+            version
+                .optional_media_type
+                .clone_from(&stream.optional_media_type)
+        }
 
         Ok(stream)
     }
@@ -175,10 +231,9 @@ impl Stream {
     }
 
     /// Show in which audios this [`Stream`] is also available.
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
     pub fn available_versions(&self) -> Vec<Locale> {
         self.versions
-            .clone()
-            .unwrap_or_default()
             .iter()
             .map(|v| v.audio_locale.clone())
             .collect()
@@ -189,45 +244,12 @@ impl Stream {
     /// This method might throw a too many active streams error. In this case, make sure to
     /// have less/no active other [`Stream`]s open (through this crate or as stream in the browser
     /// or app).
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
     pub async fn version(&self, audio_locales: Vec<Locale>) -> Result<Vec<Stream>> {
-        let version_ids = self
-            .versions
-            .clone()
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|v| {
-                if audio_locales.contains(&v.audio_locale) {
-                    Some(v.media_id.clone())
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<String>>();
-
         let mut result = vec![];
-        for id in version_ids {
-            if self.session.uses_stream_limits {
-                result.push(
-                    Self::from_id_drm(
-                        &Crunchyroll {
-                            executor: self.executor.clone(),
-                        },
-                        id,
-                        self.optional_media_type.clone(),
-                    )
-                    .await?,
-                )
-            } else {
-                result.push(
-                    Self::from_id_maybe_without_drm(
-                        &Crunchyroll {
-                            executor: self.executor.clone(),
-                        },
-                        id,
-                        self.optional_media_type.clone(),
-                    )
-                    .await?,
-                )
+        for version in &self.versions {
+            if audio_locales.contains(&version.audio_locale) {
+                result.push(version.stream().await?)
             }
         }
         Ok(result)
@@ -239,63 +261,14 @@ impl Stream {
     /// have less/no active other [`Stream`]s open (through this crate or as stream in the browser
     /// or app), or try to use [`Stream::version`] to get only a specific version (requesting too
     /// many [`Stream`]s at once will always result in said error).
+    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
     pub async fn versions(&self) -> Result<Vec<Stream>> {
-        let version_ids = self
-            .versions
-            .clone()
-            .unwrap_or_default()
-            .iter()
-            .map(|v| v.id.clone())
-            .collect::<Vec<String>>();
-
         let mut result = vec![];
-        for id in version_ids {
-            if self.session.uses_stream_limits {
-                result.push(
-                    Self::from_id_drm(
-                        &Crunchyroll {
-                            executor: self.executor.clone(),
-                        },
-                        id,
-                        self.optional_media_type.clone(),
-                    )
-                    .await?,
-                )
-            } else {
-                result.push(
-                    Self::from_id_maybe_without_drm(
-                        &Crunchyroll {
-                            executor: self.executor.clone(),
-                        },
-                        id,
-                        self.optional_media_type.clone(),
-                    )
-                    .await?,
-                )
-            }
+        for version in &self.versions {
+            result.push(version.stream().await?)
         }
         Ok(result)
     }
-}
-
-#[allow(dead_code)]
-#[derive(Clone, Debug, Default, Deserialize, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-struct StreamVersion {
-    #[serde(rename = "guid")]
-    id: String,
-    #[serde(rename = "media_guid")]
-    media_id: String,
-    #[serde(rename = "season_guid")]
-    season_id: String,
-
-    audio_locale: Locale,
-
-    is_premium_only: bool,
-    original: bool,
-
-    variant: String,
 }
 
 /// Subtitle for streams.

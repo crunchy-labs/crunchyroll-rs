@@ -148,7 +148,7 @@ pub struct Episode {
 
     pub eligible_region: String,
 
-    /// Alternative versions of this episode (same episode but other language).
+    /// All versions of this episode (same episode but each entry has a different language).
     pub versions: Vec<EpisodeVersion>,
 
     #[cfg(feature = "__test_strict")]

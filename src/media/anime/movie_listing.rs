@@ -97,7 +97,7 @@ pub struct MovieListing {
     pub available_offline: bool,
     pub availability_notes: String,
 
-    /// Alternative versions of this movie listing (same movie listing but other language).
+    /// All versions of this movie listing (same movie listing but each entry has a different language).
     pub versions: Vec<MovieListingVersion>,
 
     #[cfg(feature = "__test_strict")]
