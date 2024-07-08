@@ -11,11 +11,11 @@ pub use anime::*;
 pub use media_collection::*;
 pub use music::*;
 pub use shared::*;
-use std::sync::Arc;
 pub use stream::*;
 
 use crate::crunchyroll::Executor;
 use crate::{Crunchyroll, Result};
+use std::sync::Arc;
 
 crate::enum_values! {
     /// Type of media.

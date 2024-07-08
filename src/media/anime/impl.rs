@@ -1,4 +1,5 @@
 use crate::common::{PaginationBulkResultMeta, Request};
+use crate::macros::enum_values;
 use crate::media::Media;
 use crate::{Episode, MediaCollection, Movie, MovieListing, Result, Season, Series};
 use chrono::{DateTime, Utc};
@@ -123,6 +124,59 @@ pub struct PlayheadInformation {
     pub last_modified: DateTime<Utc>,
 }
 
+enum_values! {
+    /// Starts a rating can have. Crunchyroll does not use simple numbers which would be much easier
+    /// to work with but own names for every star.
+    pub enum RatingStar {
+        OneStar = "1s"
+        TwoStars = "2s"
+        ThreeStars = "3s"
+        FourStars = "4s"
+        FiveStars = "5s"
+    }
+}
+
+/// Details about a star rating of [`crate::media::rating::Rating`].
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct RatingStarDetails {
+    /// The amount of user ratings.
+    pub displayed: String,
+    /// If [`crate::media::rating::RatingStarDetails::displayed`] is > 1000 it gets converted from a normal integer to a
+    /// float. E.g. 1700 becomes 1.7. [`crate::media::rating::RatingStarDetails::unit`] is then `K` (= representing
+    /// a thousand). If its < 1000, [`crate::media::rating::RatingStarDetails::unit`] is just an empty string.
+    pub unit: String,
+
+    /// How many percent of user voted this star. Only populated if this struct is obtained via
+    /// [`crate::media::rating::Rating`].
+    pub percentage: Option<u8>,
+}
+
+/// Overview about rating statistics for a series or movie listing.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct Rating {
+    #[serde(alias = "1s")]
+    pub one_star: RatingStarDetails,
+    #[serde(alias = "2s")]
+    pub two_stars: RatingStarDetails,
+    #[serde(alias = "3s")]
+    pub three_stars: RatingStarDetails,
+    #[serde(alias = "4s")]
+    pub four_stars: RatingStarDetails,
+    #[serde(alias = "5s")]
+    pub five_stars: RatingStarDetails,
+
+    pub total: u32,
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_try_from_string")]
+    pub average: f64,
+
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_empty_pre_string_to_none")]
+    pub rating: Option<RatingStar>,
+}
+
 macro_rules! impl_manual_media_deserialize {
     ($($media:ident = $metadata:literal)*) => {
         $(
@@ -217,7 +271,7 @@ media_eq! {
 }
 
 macro_rules! impl_media_video_collection {
-    ($($media_video:ident)*) => {
+    ($($media_video:ident = $endpoint:literal)*) => {
         $(
             impl $media_video {
                 /// Similar series or movie listing to the current item.
@@ -239,13 +293,33 @@ macro_rules! impl_media_video_collection {
                         .boxed()
                     }, self.executor.clone(), None, Some(vec![("id", self.id.clone())]))
                 }
+
+                pub async fn rating(&self) -> Result<Rating> {
+                    let endpoint = format!(
+                        "https://www.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
+                        self.executor.details.account_id.clone()?, $endpoint, self.id
+                    );
+                    self.executor.get(endpoint).request().await
+                }
+
+                pub async fn rate(&self, stars: RatingStar) -> Result<Rating> {
+                    let endpoint = format!(
+                        "https://www.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
+                        self.executor.details.account_id.clone()?, $endpoint, self.id
+                    );
+                    self.executor.put(endpoint)
+                        .json(&serde_json::json!({"rating": stars}))
+                        .request()
+                        .await
+                }
             }
         )*
     }
 }
 
 impl_media_video_collection! {
-    Series MovieListing
+    Series = "series"
+    MovieListing = "movie_listing"
 }
 
 macro_rules! impl_media_video {
