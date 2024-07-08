@@ -74,6 +74,10 @@ pub struct MovieListing {
 
     pub images: PosterImages,
 
+    /// Descriptors about the movie listing content, e.g. 'Violence' or 'Sexualized Imagery'.
+    #[serde(default)]
+    pub content_descriptors: Vec<String>,
+
     #[serde(default)]
     pub keywords: Vec<String>,
     #[serde(default)]

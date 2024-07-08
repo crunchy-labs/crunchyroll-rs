@@ -80,7 +80,7 @@ pub struct SeriesFeed {
     pub ids: Vec<String>,
 }
 
-/// A feed containing a id to a series or episode, depending on what you've watched in the past.
+/// A feed containing an id to a series or episode, depending on what you've watched in the past.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct SimilarFeed {
     pub title: String,
@@ -89,6 +89,15 @@ pub struct SimilarFeed {
 
     #[serde(skip)]
     pub similar_id: String,
+}
+
+/// A feed containing information about a game with a link to it.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct GameFeed {
+    pub title: String,
+    pub description: String,
+    pub images: FeedBannerImages,
+    pub link: String,
 }
 
 /// Items which can be shown on the home feed.
@@ -127,6 +136,7 @@ pub enum HomeFeed {
     /// Results similar to a series. Get the series struct via [`SimilarFeed::similar_id`] and call
     /// [`Series::similar`] to get similar series.
     SimilarTo(SimilarFeed),
+    Game(GameFeed),
     /// Crunchyroll may update their feed / add new items. This field catches everything which is
     /// unknown / not implemented in the library.
     Unknown(serde_json::Map<String, serde_json::Value>),
@@ -273,6 +283,12 @@ impl<'de> Deserialize<'de> for HomeFeed {
                     _ => Ok(HomeFeed::Unknown(as_map)),
                 }
             }
+            "game" => Ok(Self::Game(
+                serde_json::from_value(
+                    get_value("game").map_err(|_| type_error("game", "object"))?,
+                )
+                .map_err(map_serde_error)?,
+            )),
             #[cfg(feature = "__test_strict")]
             _ => Err(Error::custom(format!(
                 "cannot parse home feed resource type '{}' ({})",

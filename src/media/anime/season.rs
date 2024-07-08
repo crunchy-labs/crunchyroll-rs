@@ -4,8 +4,28 @@ use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_ver
 use crate::media::util::request_media;
 use crate::media::Media;
 use crate::{Crunchyroll, Episode, Locale, Result, Series};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct SeasonVersionRestrictionWindow {
+    pub audio_locale: Locale,
+
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    pub watch_start: DateTime<Utc>,
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    pub watch_end: DateTime<Utc>,
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    pub list_start: DateTime<Utc>,
+    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
+    pub list_end: DateTime<Utc>,
+
+    pub level: Vec<String>,
+    pub geo: Vec<String>,
+}
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -20,6 +40,8 @@ pub struct SeasonVersion {
     pub audio_locale: Locale,
 
     pub original: bool,
+    #[serde(default)]
+    pub restriction_windows: Vec<SeasonVersionRestrictionWindow>,
 
     #[cfg(feature = "__test_strict")]
     pub(crate) variant: crate::StrictValue,

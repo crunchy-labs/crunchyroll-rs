@@ -58,6 +58,7 @@ pub(crate) fn fix_empty_season_versions(season: &mut Season) {
                 .unwrap_or(&Locale::ja_JP)
                 .clone(),
             original: true,
+            restriction_windows: vec![],
             #[cfg(feature = "__test_strict")]
             variant: StrictValue::default(),
         })
