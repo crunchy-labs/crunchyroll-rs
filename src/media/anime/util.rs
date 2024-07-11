@@ -1,3 +1,8 @@
+#[cfg(feature = "__test_strict")]
+use crate::internal::strict::StrictValue;
+use crate::media::{EpisodeVersion, SeasonVersion};
+use crate::{Episode, Locale, Season};
+
 #[cfg(feature = "experimental-stabilizations")]
 pub(crate) fn parse_locale_from_slug_title<S: AsRef<str>>(slug_title: S) -> crate::Locale {
     split_locale_from_slug_title(slug_title).1
@@ -40,4 +45,37 @@ pub(crate) fn real_dedup_vec<T: Clone + Eq>(input: &mut Vec<T>) {
         }
     }
     *input = dedup
+}
+
+pub(crate) fn fix_empty_season_versions(season: &mut Season) {
+    if season.versions.is_empty() {
+        season.versions.push(SeasonVersion {
+            executor: season.executor.clone(),
+            id: season.id.clone(),
+            audio_locale: season
+                .audio_locales
+                .first()
+                .unwrap_or(&Locale::ja_JP)
+                .clone(),
+            original: true,
+            #[cfg(feature = "__test_strict")]
+            variant: StrictValue::default(),
+        })
+    }
+}
+
+pub(crate) fn fix_empty_episode_versions(episode: &mut Episode) {
+    if episode.versions.is_empty() {
+        episode.versions.push(EpisodeVersion {
+            executor: episode.executor.clone(),
+            id: episode.id.clone(),
+            media_id: String::new(),
+            audio_locale: episode.audio_locale.clone(),
+            season_id: episode.season_id.clone(),
+            is_premium_only: episode.is_premium_only,
+            original: true,
+            #[cfg(feature = "__test_strict")]
+            variant: StrictValue::default(),
+        })
+    }
 }

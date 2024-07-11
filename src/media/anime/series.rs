@@ -1,5 +1,6 @@
 use crate::categories::Category;
 use crate::crunchyroll::Executor;
+use crate::media::anime::util::fix_empty_season_versions;
 use crate::media::util::request_media;
 use crate::media::{Media, PosterImages};
 use crate::{Crunchyroll, Locale, MusicVideo, Result, Season};
@@ -136,7 +137,11 @@ impl Series {
             "https://www.crunchyroll.com/content/v2/cms/series/{}/seasons",
             self.id
         );
-        request_media(self.executor.clone(), endpoint).await
+        let mut seasons: Vec<Season> = request_media(self.executor.clone(), endpoint).await?;
+        for season in &mut seasons {
+            fix_empty_season_versions(season);
+        }
+        Ok(seasons)
     }
 
     /// Get music videos which are related to this series.

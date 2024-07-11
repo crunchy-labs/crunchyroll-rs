@@ -1,5 +1,6 @@
 use crate::common::{Image, Request};
 use crate::crunchyroll::Executor;
+use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
 use crate::media::Media;
 use crate::{Crunchyroll, Locale, Result, Season, Series};
@@ -27,7 +28,7 @@ pub struct EpisodeVersion {
     pub original: bool,
 
     #[cfg(feature = "__test_strict")]
-    variant: crate::StrictValue,
+    pub(crate) variant: crate::StrictValue,
 }
 
 impl EpisodeVersion {
@@ -149,6 +150,7 @@ pub struct Episode {
     pub eligible_region: String,
 
     /// All versions of this episode (same episode but each entry has a different language).
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     pub versions: Vec<EpisodeVersion>,
 
     #[cfg(feature = "__test_strict")]
@@ -206,9 +208,11 @@ impl Episode {
             "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
             self.season_id
         );
-        Ok(request_media(self.executor.clone(), endpoint)
+        let mut season: Season = request_media::<Season>(self.executor.clone(), endpoint)
             .await?
-            .remove(0))
+            .remove(0);
+        fix_empty_season_versions(&mut season);
+        Ok(season)
     }
 
     /// Show in which audios this [`Episode`] is also available.
@@ -247,7 +251,7 @@ impl Episode {
 #[async_trait::async_trait]
 impl Media for Episode {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
-        Ok(request_media(
+        let mut episode: Episode = request_media(
             crunchyroll.executor.clone(),
             format!(
                 "https://www.crunchyroll.com/content/v2/cms/episodes/{}",
@@ -255,7 +259,9 @@ impl Media for Episode {
             ),
         )
         .await?
-        .remove(0))
+        .remove(0);
+        fix_empty_episode_versions(&mut episode);
+        Ok(episode)
     }
 
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
