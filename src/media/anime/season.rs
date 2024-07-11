@@ -1,5 +1,6 @@
 use crate::common::Request;
 use crate::crunchyroll::Executor;
+use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
 use crate::media::Media;
 use crate::{Crunchyroll, Episode, Locale, Result, Series};
@@ -21,7 +22,7 @@ pub struct SeasonVersion {
     pub original: bool,
 
     #[cfg(feature = "__test_strict")]
-    variant: crate::StrictValue,
+    pub(crate) variant: crate::StrictValue,
 }
 
 impl SeasonVersion {
@@ -92,6 +93,7 @@ pub struct Season {
     pub availability_notes: String,
 
     /// All versions of this season (same season but each entry has a different language).
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     pub versions: Vec<SeasonVersion>,
 
     #[cfg(feature = "__test_strict")]
@@ -125,7 +127,11 @@ impl Season {
             "https://www.crunchyroll.com/content/v2/cms/seasons/{}/episodes",
             self.id
         );
-        request_media(self.executor.clone(), endpoint).await
+        let mut episodes: Vec<Episode> = request_media(self.executor.clone(), endpoint).await?;
+        for episode in &mut episodes {
+            fix_empty_episode_versions(episode);
+        }
+        Ok(episodes)
     }
 
     /// Show in which audios this [`Season`] is also available.
@@ -164,7 +170,7 @@ impl Season {
 #[async_trait::async_trait]
 impl Media for Season {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
-        Ok(request_media(
+        let mut season: Season = request_media(
             crunchyroll.executor.clone(),
             format!(
                 "https://www.crunchyroll.com/content/v2/cms/seasons/{}",
@@ -172,7 +178,9 @@ impl Media for Season {
             ),
         )
         .await?
-        .remove(0))
+        .remove(0);
+        fix_empty_season_versions(&mut season);
+        Ok(season)
     }
 
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
