@@ -37,7 +37,7 @@ impl CrunchylistEntry {
         self.executor
             .delete(endpoint)
             .apply_locale_query()
-            .request()
+            .request_raw(true)
             .await?;
         Ok(())
     }

@@ -196,7 +196,7 @@ impl Account {
                 "current_password": current_password,
                 "new_email": new_email,
             }))
-            .request()
+            .request_raw(true)
             .await?;
         Ok(())
     }
@@ -207,7 +207,7 @@ impl Account {
         self.executor
             .patch(endpoint)
             .json(&json!({"wallpaper": &wallpaper.name}))
-            .request()
+            .request_raw(true)
             .await?;
         self.wallpaper = wallpaper;
         Ok(())
