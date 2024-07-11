@@ -56,10 +56,10 @@
 //!
 //! ## Streaming
 //!
-//! This crate allows you to get the actual video streams behind episodes and movies. With
-//! [`Episode::stream_maybe_without_drm`] and [`Movie::stream_maybe_without_drm`] you get access to
-//! the streams. At the time of writing these streams are DRM free but this might change at any time.
-//! The returning struct [`media::Stream`] has all required information to access the streams.
+//! _All streams are DRM protected. The library does not contain logic to decrypt it, so if you want
+//! to do this, you have to implement it yourself._
+//!
+//! This crate allows you to get the actual video streams behind episodes and movies.
 //!
 //! ```
 //! let stream = episode

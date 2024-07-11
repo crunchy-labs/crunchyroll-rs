@@ -127,24 +127,13 @@ pub struct Stream {
 }
 
 impl Stream {
-    /// Requests a stream from an id with is always DRM encrypted.
-    pub async fn from_id_drm(
+    /// Requests a stream from an id via the chrome endpoint.
+    pub async fn from_id_web_chrome(
         crunchyroll: &Crunchyroll,
         id: impl AsRef<str>,
         optional_media_type: Option<String>,
     ) -> Result<Self> {
         Self::from_id(crunchyroll, id, "web", "chrome", optional_media_type).await
-    }
-
-    /// Requests a stream from an id with is maybe DRM free. Check
-    /// [`Stream::session::uses_stream_limits`], if its `true`, the stream is DRM encrypted, if
-    /// `false` not.
-    pub async fn from_id_maybe_without_drm(
-        crunchyroll: &Crunchyroll,
-        id: impl AsRef<str>,
-        optional_media_type: Option<String>,
-    ) -> Result<Self> {
-        Self::from_id(crunchyroll, id, "console", "switch", optional_media_type).await
     }
 
     async fn from_id(

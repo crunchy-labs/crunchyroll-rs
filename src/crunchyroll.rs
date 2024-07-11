@@ -383,7 +383,7 @@ mod auth {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
             let resp = client
                 .post(endpoint)
-                .header(header::AUTHORIZATION, "Basic YWNmYWZtNTE3aGtpZWt4Yl93bWU6MDluclZfejBUNWxVdjRyRHp5ZlJYZk0wVmlIRHQyQV8=")
+                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .header("ETP-Anonymous-ID", uuid::Uuid::new_v4().to_string())
                 .body(
@@ -411,7 +411,7 @@ mod auth {
                 ("username", email.as_ref()),
                 ("password", password.as_ref()),
                 ("grant_type", "password"),
-                ("scope", "offline_access mp"),
+                ("scope", "offline_access"),
             ];
             if let Some(d_id) = &device_id {
                 body.extend_from_slice(&[("device_id", d_id)])
@@ -420,7 +420,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic YWNmYWZtNTE3aGtpZWt4Yl93bWU6MDluclZfejBUNWxVdjRyRHp5ZlJYZk0wVmlIRHQyQV8=")
+                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
@@ -448,7 +448,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic YWNmYWZtNTE3aGtpZWt4Yl93bWU6MDluclZfejBUNWxVdjRyRHp5ZlJYZk0wVmlIRHQyQV8=")
+                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
@@ -478,7 +478,7 @@ mod auth {
                 body.extend_from_slice(&[("device_type", d_type)])
             }
             let resp = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic YWNmYWZtNTE3aGtpZWt4Yl93bWU6MDluclZfejBUNWxVdjRyRHp5ZlJYZk0wVmlIRHQyQV8=")
+                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .send()
@@ -859,10 +859,6 @@ mod auth {
         /// [`CrunchyrollBuilder::login_with_refresh_token`] are having the same syntax, Crunchyroll
         /// internal they're different. I had issues when I tried to log in with the `etp_rt`
         /// cookie on [`CrunchyrollBuilder::login_with_refresh_token`] and vice versa.
-        ///
-        /// *Note*: When using this method to login, any request to
-        /// [`crate::Episode::stream_maybe_without_drm`] / [`crate::Movie::stream_maybe_without_drm`]
-        /// will fail.
         pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
