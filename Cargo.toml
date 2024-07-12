@@ -31,19 +31,19 @@ futures-util = { version = "0.3", features = ["std"], default-features = false }
 jsonwebtoken = { version = "9.3", default-features = false }
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
-reqwest = { version = "0.12.4", features = ["cookies", "json", "multipart", "rustls-tls"] }
-rustls = "0.22.2"
+reqwest = { version = "0.12.5", features = ["cookies", "json", "multipart", "rustls-tls"] }
+rustls = "0.23.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 smart-default = "0.7"
 tokio = { version = "1.38", features = ["sync"] }
-uuid = { version = "1.8", features = ["v4"] }
+uuid = { version = "1.10", features = ["v4"] }
 webpki-roots = "0.26"
 
 crunchyroll-rs-internal = { version = "0.11.4", path = "internal" }
 
-lazy_static = { version = "1.4", optional = true }
+lazy_static = { version = "1.5", optional = true }
 regex = { version = "1.10", default-features = false, features = ["std"], optional = true }
 tower-service = { version = "0.3", optional = true }
 
