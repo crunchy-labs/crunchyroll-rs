@@ -254,46 +254,6 @@ impl Stream {
 
         Ok(())
     }
-
-    /// Show in which audios this [`Stream`] is also available.
-    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
-    pub fn available_versions(&self) -> Vec<Locale> {
-        self.versions
-            .iter()
-            .map(|v| v.audio_locale.clone())
-            .collect()
-    }
-
-    /// Get the versions of this [`Stream`] which have the specified audio locale(s). Use
-    /// [`Stream::available_versions`] to see all supported locale.
-    /// This method might throw a too many active streams error. In this case, make sure to
-    /// have less/no active other [`Stream`]s open (through this crate or as stream in the browser
-    /// or app).
-    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
-    pub async fn version(&self, audio_locales: Vec<Locale>) -> Result<Vec<Stream>> {
-        let mut result = vec![];
-        for version in &self.versions {
-            if audio_locales.contains(&version.audio_locale) {
-                result.push(version.stream().await?)
-            }
-        }
-        Ok(result)
-    }
-
-    /// Get all available other versions (same [`Stream`] but different audio locale) for this
-    /// [`Stream`].
-    /// This method might throw a too many active streams error. In this case, either make sure to
-    /// have less/no active other [`Stream`]s open (through this crate or as stream in the browser
-    /// or app), or try to use [`Stream::version`] to get only a specific version (requesting too
-    /// many [`Stream`]s at once will always result in said error).
-    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
-    pub async fn versions(&self) -> Result<Vec<Stream>> {
-        let mut result = vec![];
-        for version in &self.versions {
-            result.push(version.stream().await?)
-        }
-        Ok(result)
-    }
 }
 
 /// Subtitle for streams.

@@ -214,38 +214,6 @@ impl Episode {
         fix_empty_season_versions(&mut season);
         Ok(season)
     }
-
-    /// Show in which audios this [`Episode`] is also available.
-    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
-    pub async fn available_versions(&mut self) -> Result<Vec<Locale>> {
-        Ok(self
-            .versions
-            .iter()
-            .map(|v| v.audio_locale.clone())
-            .collect())
-    }
-
-    /// Get the versions of this [`Episode`] which have the specified audio locale(s). Use [`Episode::available_versions`] to see all supported locale.
-    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
-    pub async fn version(&mut self, audio_locales: Vec<Locale>) -> Result<Vec<Episode>> {
-        let mut result = vec![];
-        for version in &self.versions {
-            if audio_locales.contains(&version.audio_locale) {
-                result.push(version.episode().await?)
-            }
-        }
-        Ok(result)
-    }
-
-    /// Get all available other versions (same [`Episode`] but different audio locale) for this [`Episode`].
-    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
-    pub async fn versions(&mut self) -> Result<Vec<Episode>> {
-        let mut result = vec![];
-        for version in &self.versions {
-            result.push(version.episode().await?)
-        }
-        Ok(result)
-    }
 }
 
 #[async_trait::async_trait]

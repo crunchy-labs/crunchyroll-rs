@@ -150,38 +150,6 @@ impl MovieListing {
         );
         request_media(self.executor.clone(), endpoint).await
     }
-
-    /// Show in which audios this [`MovieListing`] is also available.
-    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
-    pub async fn available_versions(&mut self) -> Result<Vec<Locale>> {
-        Ok(self
-            .versions
-            .iter()
-            .map(|v| v.audio_locale.clone())
-            .collect())
-    }
-
-    /// Get the versions of this [`MovieListing`] which have the specified audio locale(s). Use [`MovieListing::available_versions`] to see all supported locale.
-    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
-    pub async fn version(&mut self, audio_locales: Vec<Locale>) -> Result<Vec<MovieListing>> {
-        let mut result = vec![];
-        for version in &self.versions {
-            if audio_locales.contains(&version.audio_locale) {
-                result.push(version.movie_listing().await?)
-            }
-        }
-        Ok(result)
-    }
-
-    /// Get all available other versions (same [`MovieListing`] but different audio locale) for this [`MovieListing`].
-    #[deprecated(since = "0.11.4", note = "Use the `.versions` field directly")]
-    pub async fn versions(&mut self) -> Result<Vec<MovieListing>> {
-        let mut result = vec![];
-        for version in &self.versions {
-            result.push(version.movie_listing().await?)
-        }
-        Ok(result)
-    }
 }
 
 #[async_trait::async_trait]
