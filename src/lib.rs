@@ -71,21 +71,21 @@
 //! work with these formats is already implemented into this crate.
 //!
 //! ```
-//! let (mut video_streams, mut audio_streams) = stream
+//! let mut stream_data = stream
 //!     .stream_data(None)
 //!     .await?
 //!     .unwrap();
 //!
 //!  // sort the streams to get the stream with the best resolution / bitrate at first
-//! video_streams.sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
-//! audio_streams.sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
+//! stream_data.video.sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
+//! stream_data.audio.sort_by(|a, b| a.bandwidth.cmp(&b.bandwidth).reverse());
 //!
 //! let sink = &mut std::io::sink();
 //!
 //! // get the segments / video chunks of the first stream (which is the best after it got sorted
 //! // above)
-//! let video_segments = video_streams[0].segments();
-//! let audio_segments = audio_streams[0].segments();
+//! let video_segments = stream_data.video[0].segments();
+//! let audio_segments = stream_data.audio[0].segments();
 //! // iterate through every segment and write it to the provided writer (which is a sink in this
 //! // case; it drops its input immediately). writer can be anything which implements `std::io::Write`
 //! // like a file, a pipe, ...

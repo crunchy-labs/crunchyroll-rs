@@ -13,10 +13,10 @@ async fn main() -> Result<()> {
         .await?;
 
     let episode: Episode = crunchyroll.media_from_id("GRDKJZ81Y").await?;
-    let stream = episode.stream_maybe_without_drm().await?;
-    let (mut video_streams, _audio_streams) = stream.stream_data(None).await?.unwrap();
+    let stream = episode.stream().await?;
+    let mut stream_data = stream.stream_data(None).await?.unwrap();
     // sort after resolutions; best to worst
-    video_streams.sort_by(|a, b| {
+    stream_data.video.sort_by(|a, b| {
         a.resolution()
             .unwrap()
             .width
@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     });
 
     // get video segments of the stream with the best available resolution
-    let segments = video_streams[0].segments();
+    let segments = stream_data.video[0].segments();
 
     let sink = &mut std::io::sink();
     for (i, segment) in segments.iter().enumerate() {

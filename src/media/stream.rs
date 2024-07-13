@@ -209,16 +209,12 @@ impl Stream {
     }
 
     /// Requests all available video and audio streams. Returns [`None`] if the requested hardsub
-    /// isn't available. The first [`Vec<StreamData>`] contains only video streams, the second only
-    /// audio streams.
+    /// isn't available.
     /// You will run into an error when requesting this function too often without invalidating the
     /// data. Crunchyroll only allows a certain amount of stream data to be requested at the same
     /// time, typically the exact amount depends on the type of (premium) subscription you have. You
     /// can use [`Stream::invalidate`] to invalidate all stream data for this stream.
-    pub async fn stream_data(
-        &self,
-        hardsub: Option<Locale>,
-    ) -> Result<Option<(Vec<StreamData>, Vec<StreamData>)>> {
+    pub async fn stream_data(&self, hardsub: Option<Locale>) -> Result<Option<StreamData>> {
         if let Some(hardsub) = hardsub {
             let Some(url) = self
                 .hard_subs
@@ -228,12 +224,25 @@ impl Stream {
                 return Ok(None);
             };
             Ok(Some(
-                StreamData::from_url(self.executor.clone(), url, &self.token, &self.id).await?,
+                StreamData::from_url(
+                    self.executor.clone(),
+                    url,
+                    &self.token,
+                    &self.id,
+                    &self.audio_locale,
+                )
+                .await?,
             ))
         } else {
             Ok(Some(
-                StreamData::from_url(self.executor.clone(), &self.url, &self.token, &self.id)
-                    .await?,
+                StreamData::from_url(
+                    self.executor.clone(),
+                    &self.url,
+                    &self.token,
+                    &self.id,
+                    &self.audio_locale,
+                )
+                .await?,
             ))
         }
     }
@@ -278,45 +287,11 @@ impl Subtitle {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Request)]
+#[derive(Clone, Debug, Serialize)]
 pub struct StreamData {
-    #[serde(skip)]
-    executor: Arc<Executor>,
-
-    pub bandwidth: u64,
-    pub codecs: String,
-
-    pub info: StreamDataInfo,
-    /// If [`Some`], the stream data is DRM encrypted and the struct contains all data needed for
-    /// you to decrypted it. If [`None`], the stream data is not DRM encrypted.
-    pub drm: Option<StreamDataDRM>,
-
-    pub watch_id: String,
-
-    #[serde(skip_serializing)]
-    representation_id: String,
-    #[serde(skip_serializing)]
-    segment_start: u32,
-    #[serde(skip_serializing)]
-    segment_lengths: Vec<u32>,
-    #[serde(skip_serializing)]
-    segment_base_url: String,
-    #[serde(skip_serializing)]
-    segment_init_url: String,
-    #[serde(skip_serializing)]
-    segment_media_url: String,
-}
-
-#[derive(Clone, Debug, Serialize, Request)]
-pub struct StreamDataDRM {
-    pub pssh: String,
-    pub token: String,
-}
-
-#[derive(Clone, Debug, Serialize, Request)]
-pub enum StreamDataInfo {
-    Audio { sampling_rate: u32 },
-    Video { resolution: Resolution, fps: f64 },
+    pub audio: Vec<MediaStream>,
+    pub video: Vec<MediaStream>,
+    pub subtitle: Option<Subtitle>,
 }
 
 impl StreamData {
@@ -325,9 +300,11 @@ impl StreamData {
         url: impl AsRef<str>,
         token: impl AsRef<str>,
         watch_id: impl AsRef<str>,
-    ) -> Result<(Vec<StreamData>, Vec<StreamData>)> {
+        audio_locale: &Locale,
+    ) -> Result<Self> {
         let mut video = vec![];
         let mut audio = vec![];
+        let mut subtitle = None;
 
         let err_fn = |msg: &str| Error::Request {
             message: msg.to_string(),
@@ -366,6 +343,25 @@ impl StreamData {
         for adaption in period.adaptations {
             // skip subtitles that are embedded in the mpd manifest for now
             if adaption.contentType.is_some_and(|ct| ct == "text") {
+                if !adaption.mimeType.is_some_and(|mime| mime == "text/vtt") {
+                    continue;
+                }
+                subtitle = Some(Subtitle {
+                    executor: executor.clone(),
+                    locale: audio_locale.clone(),
+                    url: adaption
+                        .representations
+                        .first()
+                        .ok_or("no subtitle representation found")
+                        .map_err(err_fn)?
+                        .BaseURL
+                        .first()
+                        .ok_or("no subtitle url found")
+                        .map_err(err_fn)?
+                        .base
+                        .clone(),
+                    format: "vtt".to_string(),
+                });
                 continue;
             }
 
@@ -426,7 +422,7 @@ impl StreamData {
                             .map_err(|_| err_fn(&format!("invalid fps: {frame_rate}")))?
                     };
 
-                    video.push(Self {
+                    video.push(MediaStream {
                         executor: executor.clone(),
                         bandwidth: representation
                             .bandwidth
@@ -436,8 +432,8 @@ impl StreamData {
                             .codecs
                             .ok_or("no codecs found")
                             .map_err(err_fn)?,
-                        info: StreamDataInfo::Video { resolution, fps },
-                        drm: pssh.as_ref().map(|pssh| StreamDataDRM {
+                        info: MediaStreamInfo::Video { resolution, fps },
+                        drm: pssh.as_ref().map(|pssh| MediaStreamDRM {
                             pssh: pssh.clone(),
                             token: token.as_ref().to_string(),
                         }),
@@ -471,7 +467,7 @@ impl StreamData {
                         .parse::<u32>()
                         .map_err(|e| err_fn(&e.to_string()))?;
 
-                    audio.push(Self {
+                    audio.push(MediaStream {
                         executor: executor.clone(),
                         bandwidth: representation
                             .bandwidth
@@ -481,8 +477,8 @@ impl StreamData {
                             .codecs
                             .ok_or("no codecs found")
                             .map_err(err_fn)?,
-                        info: StreamDataInfo::Audio { sampling_rate },
-                        drm: pssh.as_ref().map(|pssh| StreamDataDRM {
+                        info: MediaStreamInfo::Audio { sampling_rate },
+                        drm: pssh.as_ref().map(|pssh| MediaStreamDRM {
                             pssh: pssh.clone(),
                             token: token.as_ref().to_string(),
                         }),
@@ -510,13 +506,60 @@ impl StreamData {
             }
         }
 
-        Ok((video, audio))
+        Ok(Self {
+            audio,
+            video,
+            subtitle,
+        })
     }
+}
 
+#[derive(Clone, Debug, Serialize, Request)]
+pub struct MediaStream {
+    #[serde(skip)]
+    executor: Arc<Executor>,
+
+    pub bandwidth: u64,
+    pub codecs: String,
+
+    pub info: MediaStreamInfo,
+    /// If [`Some`], the stream data is DRM encrypted and the struct contains all data needed for
+    /// you to decrypted it. If [`None`], the stream data is not DRM encrypted.
+    pub drm: Option<MediaStreamDRM>,
+
+    pub watch_id: String,
+
+    #[serde(skip_serializing)]
+    representation_id: String,
+    #[serde(skip_serializing)]
+    segment_start: u32,
+    #[serde(skip_serializing)]
+    segment_lengths: Vec<u32>,
+    #[serde(skip_serializing)]
+    segment_base_url: String,
+    #[serde(skip_serializing)]
+    segment_init_url: String,
+    #[serde(skip_serializing)]
+    segment_media_url: String,
+}
+
+#[derive(Clone, Debug, Serialize, Request)]
+pub struct MediaStreamDRM {
+    pub pssh: String,
+    pub token: String,
+}
+
+#[derive(Clone, Debug, Serialize, Request)]
+pub enum MediaStreamInfo {
+    Audio { sampling_rate: u32 },
+    Video { resolution: Resolution, fps: f64 },
+}
+
+impl MediaStream {
     /// Returns the streams' audio sampling rate. Only [`Some`] if the stream is an audio stream
-    /// (check [`StreamData::info`]).
+    /// (check [`MediaStream::info`]).
     pub fn sampling_rate(&self) -> Option<u32> {
-        if let StreamDataInfo::Audio { sampling_rate } = &self.info {
+        if let MediaStreamInfo::Audio { sampling_rate } = &self.info {
             Some(*sampling_rate)
         } else {
             None
@@ -524,9 +567,9 @@ impl StreamData {
     }
 
     /// Returns the streams' video resolution. Only [`Some`] if the stream is a video stream (check
-    /// [`StreamData::info`]).
+    /// [`MediaStream::info`]).
     pub fn resolution(&self) -> Option<Resolution> {
-        if let StreamDataInfo::Video { resolution, .. } = &self.info {
+        if let MediaStreamInfo::Video { resolution, .. } = &self.info {
             Some(resolution.clone())
         } else {
             None
@@ -534,9 +577,9 @@ impl StreamData {
     }
 
     /// Returns the streams' video fps. Only [`Some`] if the stream is a video stream (check
-    /// [`StreamData::info`]).
+    /// [`MediaStream::info`]).
     pub fn fps(&self) -> Option<f64> {
-        if let StreamDataInfo::Video { fps, .. } = &self.info {
+        if let MediaStreamInfo::Video { fps, .. } = &self.info {
             Some(*fps)
         } else {
             None

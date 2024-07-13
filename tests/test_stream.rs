@@ -1,6 +1,6 @@
 use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::media::{Media, Stream, StreamData, StreamSegment};
+use crunchyroll_rs::media::{Media, MediaStream, Stream, StreamSegment};
 use crunchyroll_rs::Episode;
 use rand::seq::SliceRandom;
 use std::io::Write;
@@ -18,17 +18,17 @@ static STREAM: Store<Stream> = Store::new(|| {
     })
 });
 
-static STREAM_DATA: Store<StreamData> = Store::new(|| {
+static VIDEO_STREAM: Store<MediaStream> = Store::new(|| {
     Box::pin(async {
         let stream = STREAM.get().await?;
-        Ok(stream.stream_data(None).await?.unwrap().0.remove(0))
+        Ok(stream.stream_data(None).await?.unwrap().video.remove(0))
     })
 });
 
 static STREAM_SEGMENTS: Store<Vec<StreamSegment>> = Store::new(|| {
     Box::pin(async {
-        let stream_data = STREAM_DATA.get().await?;
-        Ok(stream_data.segments())
+        let media_stream = VIDEO_STREAM.get().await?;
+        Ok(media_stream.segments())
     })
 });
 
@@ -39,7 +39,7 @@ async fn stream_from_id() {
 
 #[tokio::test]
 async fn stream_data() {
-    assert_result!(STREAM_DATA.get().await)
+    assert_result!(VIDEO_STREAM.get().await)
 }
 
 #[tokio::test]
