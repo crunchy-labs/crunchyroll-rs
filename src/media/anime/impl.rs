@@ -136,20 +136,20 @@ enum_values! {
     }
 }
 
-/// Details about a star rating of [`crate::media::rating::Rating`].
+/// Details about a star rating of [`crate::media::Rating`].
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct RatingStarDetails {
     /// The amount of user ratings.
     pub displayed: String,
-    /// If [`crate::media::rating::RatingStarDetails::displayed`] is > 1000 it gets converted from a normal integer to a
-    /// float. E.g. 1700 becomes 1.7. [`crate::media::rating::RatingStarDetails::unit`] is then `K` (= representing
-    /// a thousand). If its < 1000, [`crate::media::rating::RatingStarDetails::unit`] is just an empty string.
+    /// If [`crate::media::RatingStarDetails::displayed`] is > 1000 it gets converted from a normal integer to a
+    /// float. E.g. 1700 becomes 1.7. [`crate::media::RatingStarDetails::unit`] is then `K` (= representing
+    /// a thousand). If its < 1000, [`crate::media::RatingStarDetails::unit`] is just an empty string.
     pub unit: String,
 
     /// How many percent of user voted this star. Only populated if this struct is obtained via
-    /// [`crate::media::rating::Rating`].
+    /// [`crate::media::Rating`].
     pub percentage: Option<u8>,
 }
 

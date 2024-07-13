@@ -14,8 +14,8 @@ pub enum UrlType {
     /// Crunchyroll at all but to be api compatible it's included anyway.
     MovieListing(String),
     /// The parsed url points to a episode or movie. You can either try
-    /// [`crate::Episode::from_id`] and [`crate::Movie::from_id`] to guess if it's a episode or
-    /// movie (in 99.9% of the time it will be a episode, because (at the time of writing)
+    /// [`crate::Episode::from_id`] and [`crate::Movie::from_id`] to guess if it's an episode or
+    /// movie (in 99.9% of the time it will be an episode, because (at the time of writing)
     /// Crunchyroll has only 3 movies which are listed as movies. All other movies are listed as
     /// episodes. Makes sense I know) or use [`crate::MediaCollection::from_id`]. The value of this
     /// field is the id you have to use in all shown methods.
