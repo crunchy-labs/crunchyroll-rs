@@ -330,7 +330,7 @@ macro_rules! impl_media_video {
                 /// All streams are drm encrypted, decryption is not handled in this crate, so you
                 /// must do this yourself.
                 pub async fn stream(&self) -> Result<$crate::media::Stream> {
-                    $crate::media::Stream::from_id_web_chrome(&$crate::Crunchyroll { executor: self.executor.clone() }, &self.id, None).await
+                    $crate::media::Stream::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, &self.id, $crate::media::StreamPlatform::WebChrome, None).await
                 }
 
                 /// Check if the episode / movie can be watched.

@@ -23,6 +23,35 @@ fn deserialize_hardsubs<'de, D: Deserializer<'de>>(
         .collect())
 }
 
+/// Platforms that can request a [`Stream`]. Because not all platforms have their own variant, use
+/// [`Stream::Custom`] to define one.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub enum StreamPlatform {
+    AndroidPhone,
+    AndroidTablet,
+    ConsolePs4,
+    ConsolePs5,
+    ConsoleSwitch,
+    ConsoleXboxOne,
+    IosIpad,
+    IosIphone,
+    IosVision,
+    TvRoku,
+    TvSamsung,
+    TvLg,
+    #[default]
+    WebChrome,
+    WebEdge,
+    WebFirefox,
+    WebSafari,
+    Custom {
+        /// A device, e.g. `tv` or `web`.
+        device: String,
+        /// A platform, e.g. `roku` or `chrome`.
+        platform: String,
+    },
+}
+
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -31,9 +60,7 @@ pub struct StreamVersion {
     #[serde(skip)]
     pub(crate) executor: Arc<Executor>,
     #[serde(skip)]
-    device: String,
-    #[serde(skip)]
-    platform: String,
+    platform: StreamPlatform,
     #[serde(skip)]
     optional_media_type: Option<String>,
 
@@ -64,8 +91,7 @@ impl StreamVersion {
                 executor: self.executor.clone(),
             },
             &self.id,
-            &self.device,
-            &self.platform,
+            self.platform.clone(),
             self.optional_media_type.clone(),
         )
         .await
@@ -127,22 +153,33 @@ pub struct Stream {
 }
 
 impl Stream {
-    /// Requests a stream from an id via the chrome endpoint.
-    pub async fn from_id_web_chrome(
+    /// Requests a stream from an id.
+    pub async fn from_id(
         crunchyroll: &Crunchyroll,
         id: impl AsRef<str>,
+        stream_platform: StreamPlatform,
         optional_media_type: Option<String>,
     ) -> Result<Self> {
-        Self::from_id(crunchyroll, id, "web", "chrome", optional_media_type).await
-    }
+        let (device, platform) = match &stream_platform {
+            StreamPlatform::AndroidPhone => ("android", "phone"),
+            StreamPlatform::AndroidTablet => ("android", "tablet"),
+            StreamPlatform::ConsolePs4 => ("console", "ps4"),
+            StreamPlatform::ConsolePs5 => ("console", "ps5"),
+            StreamPlatform::ConsoleSwitch => ("console", "switch"),
+            StreamPlatform::ConsoleXboxOne => ("console", "xbox_one"),
+            StreamPlatform::IosIpad => ("ios", "ipad"),
+            StreamPlatform::IosIphone => ("ios", "iphone"),
+            StreamPlatform::IosVision => ("ios", "vision"),
+            StreamPlatform::TvRoku => ("tv", "roku"),
+            StreamPlatform::TvSamsung => ("tv", "samsung"),
+            StreamPlatform::TvLg => ("tv", "lg"),
+            StreamPlatform::WebChrome => ("web", "chrome"),
+            StreamPlatform::WebEdge => ("web", "edge"),
+            StreamPlatform::WebFirefox => ("web", "firefox"),
+            StreamPlatform::WebSafari => ("web", "safari"),
+            StreamPlatform::Custom { device, platform } => (device.as_str(), platform.as_str()),
+        };
 
-    async fn from_id(
-        crunchyroll: &Crunchyroll,
-        id: impl AsRef<str>,
-        device: &str,
-        platform: &str,
-        optional_media_type: Option<String>,
-    ) -> Result<Self> {
         let endpoint = format!(
             "https://cr-play-service.prd.crunchyrollsvc.com/v1/{}{}/{device}/{platform}/play",
             optional_media_type
@@ -162,8 +199,7 @@ impl Stream {
         stream.optional_media_type = optional_media_type;
 
         for version in &mut stream.versions {
-            version.device = device.to_string();
-            version.platform = platform.to_string();
+            version.platform = stream_platform.clone();
             version
                 .optional_media_type
                 .clone_from(&stream.optional_media_type)
