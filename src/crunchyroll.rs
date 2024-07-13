@@ -175,6 +175,20 @@ mod auth {
         Anonymous,
     }
 
+    /// Information about the device that creates a new session.
+    #[derive(Clone, Debug)]
+    pub struct DeviceIdentifier {
+        /// The device id, this is specific for every device type, but usually represented as UUID.
+        /// Using [`Uuid::new_v4`] for it works fine.
+        device_id: String,
+        /// Type of the device which issues the session, e.g. `Chrome on Windows` or `iPhone 15`.
+        device_type: String,
+        /// Name of the device which issues the session. This may be empty, for example all session
+        /// that are created over the website have an empty name; when issues via the app, the name
+        /// is the name of your phone (which you can modify/set when you set up the phone).
+        device_name: String,
+    }
+
     #[derive(Debug, Default, Deserialize)]
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -217,8 +231,6 @@ mod auth {
         /// writing error messages multiple times in functions which require the account id to be
         /// set they can just get the id or return the fix set error message.
         pub(crate) account_id: Result<String>,
-        pub(crate) device_id: Option<String>,
-        pub(crate) device_type: Option<String>,
     }
 
     #[cfg(feature = "experimental-stabilizations")]
@@ -293,26 +305,33 @@ mod auth {
         ) -> Result<RequestBuilder> {
             let mut config = self.config.write().await;
             if config.session_expire <= Utc::now() {
-                let login_response = match config.session_token.clone() {
+                let login_response = match &config.session_token {
                     SessionToken::RefreshToken(refresh_token) => {
                         Executor::auth_with_refresh_token(
                             &self.client,
-                            refresh_token,
-                            self.details.device_id.clone(),
-                            self.details.device_type.clone(),
+                            refresh_token.as_str(),
+                            #[cfg(feature = "tower")]
+                            self.middleware.as_ref(),
                         )
                         .await?
                     }
                     SessionToken::EtpRt(etp_rt) => {
                         Executor::auth_with_etp_rt(
                             &self.client,
-                            etp_rt,
-                            self.details.device_id.clone(),
-                            self.details.device_type.clone(),
+                            etp_rt.as_str(),
+                            #[cfg(feature = "tower")]
+                            self.middleware.as_ref(),
                         )
                         .await?
                     }
-                    SessionToken::Anonymous => Executor::auth_anonymously(&self.client).await?,
+                    SessionToken::Anonymous => {
+                        Executor::auth_anonymously(
+                            &self.client,
+                            #[cfg(feature = "tower")]
+                            self.middleware.as_ref(),
+                        )
+                        .await?
+                    }
                 };
 
                 let mut new_config = config.clone();
@@ -379,9 +398,14 @@ mod auth {
                 .contains(&"cr_premium".to_string())
         }
 
-        async fn auth_anonymously(client: &Client) -> Result<AuthResponse> {
+        async fn auth_anonymously(
+            client: &Client,
+            #[cfg(feature = "tower")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            >,
+        ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let resp = client
+            let req = client
                 .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -393,122 +417,160 @@ mod auth {
                     ])
                     .unwrap(),
                 )
-                .send()
-                .await?;
+                .build()?;
+            #[cfg(not(feature = "tower"))]
+            let resp = client.execute(req).await?;
+            #[cfg(feature = "tower")]
+            let resp = {
+                use std::ops::DerefMut;
+                if let Some(middleware) = middleware {
+                    middleware.lock().await.deref_mut().call(req).await?
+                } else {
+                    client.execute(req).await?
+                }
+            };
 
             check_request(endpoint.to_string(), resp).await
         }
 
         async fn auth_with_credentials(
             client: &Client,
-            email: String,
-            password: String,
-            device_id: Option<String>,
-            device_type: Option<String>,
+            email: &str,
+            password: &str,
+            device_identifier: &Option<DeviceIdentifier>,
+            #[cfg(feature = "tower")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
             let mut body = vec![
-                ("username", email.as_ref()),
-                ("password", password.as_ref()),
+                ("username", email),
+                ("password", password),
                 ("grant_type", "password"),
                 ("scope", "offline_access"),
             ];
-            if let Some(d_id) = &device_id {
-                body.extend_from_slice(&[("device_id", d_id)])
+            if let Some(device_identifier) = device_identifier {
+                body.extend_from_slice(&[
+                    ("device_id", device_identifier.device_id.as_str()),
+                    ("device_type", device_identifier.device_type.as_str()),
+                    ("device_name", device_identifier.device_name.as_str()),
+                ])
             }
-            if let Some(d_type) = &device_type {
-                body.extend_from_slice(&[("device_type", d_type)])
-            }
-            let resp = client.post(endpoint)
+            let req = client.post(endpoint)
                 .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
-                .send()
-                .await?;
+                .build()?;
+            #[cfg(not(feature = "tower"))]
+            let resp = client.execute(req).await?;
+            #[cfg(feature = "tower")]
+            let resp = {
+                use std::ops::DerefMut;
+                if let Some(middleware) = middleware {
+                    middleware.lock().await.deref_mut().call(req).await?
+                } else {
+                    client.execute(req).await?
+                }
+            };
 
             check_request(endpoint.to_string(), resp).await
         }
 
         async fn auth_with_refresh_token(
             client: &Client,
-            refresh_token: String,
-            device_id: Option<String>,
-            device_type: Option<String>,
+            refresh_token: &str,
+            #[cfg(feature = "tower")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let mut body = vec![
-                ("refresh_token", refresh_token.as_str()),
+            let body = vec![
+                ("refresh_token", refresh_token),
                 ("grant_type", "refresh_token"),
                 ("scope", "offline_access mp"),
             ];
-            if let Some(d_id) = &device_id {
-                body.extend_from_slice(&[("device_id", d_id)])
-            }
-            if let Some(d_type) = &device_type {
-                body.extend_from_slice(&[("device_type", d_type)])
-            }
-            let resp = client.post(endpoint)
+            let req = client.post(endpoint)
                 .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
-                .send()
-                .await?;
+                .build()?;
+            #[cfg(not(feature = "tower"))]
+            let resp = client.execute(req).await?;
+            #[cfg(feature = "tower")]
+            let resp = {
+                use std::ops::DerefMut;
+                if let Some(middleware) = middleware {
+                    middleware.lock().await.deref_mut().call(req).await?
+                } else {
+                    client.execute(req).await?
+                }
+            };
 
             check_request(endpoint.to_string(), resp).await
         }
 
         async fn auth_with_refresh_token_profile_id(
             client: &Client,
-            refresh_token: String,
-            profile_id: String,
-            device_id: Option<String>,
-            device_type: Option<String>,
+            refresh_token: &str,
+            profile_id: &str,
+            #[cfg(feature = "tower")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let mut body = vec![
-                ("refresh_token", refresh_token.as_str()),
+            let body = vec![
+                ("refresh_token", refresh_token),
                 ("grant_type", "refresh_token_profile_id"),
                 ("scope", "offline_access"),
-                ("profile_id", profile_id.as_str()),
+                ("profile_id", profile_id),
             ];
-            if let Some(d_id) = &device_id {
-                body.extend_from_slice(&[("device_id", d_id)])
-            }
-            if let Some(d_type) = &device_type {
-                body.extend_from_slice(&[("device_type", d_type)])
-            }
-            let resp = client.post(endpoint)
+            let req = client.post(endpoint)
                 .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
-                .send()
-                .await?;
+                .build()?;
+            #[cfg(not(feature = "tower"))]
+            let resp = client.execute(req).await?;
+            #[cfg(feature = "tower")]
+            let resp = {
+                use std::ops::DerefMut;
+                if let Some(middleware) = middleware {
+                    middleware.lock().await.deref_mut().call(req).await?
+                } else {
+                    client.execute(req).await?
+                }
+            };
 
             check_request(endpoint.to_string(), resp).await
         }
 
         async fn auth_with_etp_rt(
             client: &Client,
-            etp_rt: String,
-            device_id: Option<String>,
-            device_type: Option<String>,
+            etp_rt: &str,
+            #[cfg(feature = "tower")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let mut body = vec![("grant_type", "etp_rt_cookie"), ("scope", "offline_access")];
-            if let Some(d_id) = &device_id {
-                body.extend_from_slice(&[("device_id", d_id)])
-            }
-            if let Some(d_type) = &device_type {
-                body.extend_from_slice(&[("device_type", d_type)])
-            }
-            let resp = client
+            let body = vec![("grant_type", "etp_rt_cookie"), ("scope", "offline_access")];
+            let req = client
                 .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .header(header::COOKIE, format!("etp_rt={etp_rt}"))
                 .body(serde_urlencoded::to_string(body).unwrap())
-                .send()
-                .await?;
+                .build()?;
+            #[cfg(not(feature = "tower"))]
+            let resp = client.execute(req).await?;
+            #[cfg(feature = "tower")]
+            let resp = {
+                use std::ops::DerefMut;
+                if let Some(middleware) = middleware {
+                    middleware.lock().await.deref_mut().call(req).await?
+                } else {
+                    client.execute(req).await?
+                }
+            };
 
             check_request(endpoint.to_string(), resp).await
         }
@@ -532,8 +594,6 @@ mod auth {
                     policy: "".to_string(),
                     key_pair_id: "".to_string(),
                     account_id: Ok("".to_string()),
-                    device_id: None,
-                    device_type: None,
                 },
                 #[cfg(feature = "tower")]
                 middleware: None,
@@ -611,7 +671,7 @@ mod auth {
         client: Client,
         locale: Locale,
         preferred_audio_locale: Option<Locale>,
-        device_identifier: Option<(String, String)>,
+        device_identifier: Option<DeviceIdentifier>,
 
         #[cfg(feature = "tower")]
         middleware: Option<tokio::sync::Mutex<crate::internal::tower::Middleware>>,
@@ -699,15 +759,15 @@ mod auth {
             self
         }
 
-        /// Set a identifier for the session which will be opened. `device_id` is usually a random
+        /// Set an identifier for the session which will be opened. `device_id` is usually a random
         /// UUID, `device_type` a description of the device which issues the session, e.g. `Chrome
         /// on Windows` or `iPhone 15`.
+        /// Gets only used if the login method is [`CrunchyrollBuilder::login_with_credentials`].
         pub fn device_identifier(
             mut self,
-            device_id: String,
-            device_type: String,
+            device_identifier: DeviceIdentifier,
         ) -> CrunchyrollBuilder {
-            self.device_identifier = Some((device_id, device_type));
+            self.device_identifier = Some(device_identifier);
             self
         }
 
@@ -760,7 +820,12 @@ mod auth {
         pub async fn login_anonymously(self) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
-            let login_response = Executor::auth_anonymously(&self.client).await?;
+            let login_response = Executor::auth_anonymously(
+                &self.client,
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
+            )
+            .await?;
             let session_token = SessionToken::Anonymous;
 
             self.post_login(login_response, session_token).await
@@ -776,14 +841,11 @@ mod auth {
 
             let login_response = Executor::auth_with_credentials(
                 &self.client,
-                email.as_ref().to_string(),
-                password.as_ref().to_string(),
-                self.device_identifier
-                    .as_ref()
-                    .map(|(device_id, _)| device_id.clone()),
-                self.device_identifier
-                    .as_ref()
-                    .map(|(_, device_type)| device_type.clone()),
+                email.as_ref(),
+                password.as_ref(),
+                &self.device_identifier,
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
             )
             .await?;
             let session_token =
@@ -806,13 +868,9 @@ mod auth {
 
             let login_response = Executor::auth_with_refresh_token(
                 &self.client,
-                refresh_token.as_ref().to_string(),
-                self.device_identifier
-                    .as_ref()
-                    .map(|(device_id, _)| device_id.clone()),
-                self.device_identifier
-                    .as_ref()
-                    .map(|(_, device_type)| device_type.clone()),
+                refresh_token.as_ref(),
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
             )
             .await?;
             let session_token =
@@ -837,14 +895,10 @@ mod auth {
 
             let login_response = Executor::auth_with_refresh_token_profile_id(
                 &self.client,
-                refresh_token.as_ref().to_string(),
-                profile_id.as_ref().to_string(),
-                self.device_identifier
-                    .as_ref()
-                    .map(|(device_id, _)| device_id.clone()),
-                self.device_identifier
-                    .as_ref()
-                    .map(|(_, device_type)| device_type.clone()),
+                refresh_token.as_ref(),
+                profile_id.as_ref(),
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
             )
             .await?;
             let session_token =
@@ -864,13 +918,9 @@ mod auth {
 
             let login_response = Executor::auth_with_etp_rt(
                 &self.client,
-                etp_rt.as_ref().to_string(),
-                self.device_identifier
-                    .as_ref()
-                    .map(|(device_id, _)| device_id.clone()),
-                self.device_identifier
-                    .as_ref()
-                    .map(|(_, device_type)| device_type.clone()),
+                etp_rt.as_ref(),
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
             )
             .await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone().unwrap());
@@ -969,14 +1019,6 @@ mod auth {
                                     .to_string(),
                             }
                         }),
-                        device_id: self
-                            .device_identifier
-                            .as_ref()
-                            .map(|(device_id, _)| device_id.clone()),
-                        device_type: self
-                            .device_identifier
-                            .as_ref()
-                            .map(|(_, device_type)| device_type.clone()),
                     },
                     #[cfg(feature = "tower")]
                     middleware: self.middleware,
