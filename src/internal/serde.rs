@@ -1,3 +1,4 @@
+use crate::account::Wallpaper;
 use crate::common::Image;
 use crate::error::Error;
 use crate::{Request, Result};
@@ -197,4 +198,15 @@ where
         serde_json::to_value(as_map).map_err(|e| SerdeError::custom(e.to_string()))?,
     )
     .map_err(|e| SerdeError::custom(e.to_string()))
+}
+
+pub(crate) fn deserialize_wallpaper_from_id<'de, D>(deserializer: D) -> Result<Wallpaper, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let id = String::deserialize(deserializer)?;
+    Ok(Wallpaper {
+        id: id.clone(),
+        title: id,
+    })
 }
