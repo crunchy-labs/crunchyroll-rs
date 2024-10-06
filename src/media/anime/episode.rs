@@ -144,6 +144,8 @@ pub struct Episode {
 
     pub available_offline: bool,
     pub availability_notes: String,
+    /// Is "available" or "not available"
+    pub availability_status: String,
 
     pub closed_captions_available: bool,
 

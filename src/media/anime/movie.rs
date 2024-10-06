@@ -62,6 +62,8 @@ pub struct Movie {
 
     pub available_offline: bool,
     pub availability_notes: String,
+    /// Is "available" or "not available"
+    pub availability_status: String,
 
     #[cfg(feature = "__test_strict")]
     #[serde(rename = "type")]
