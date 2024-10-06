@@ -1,6 +1,7 @@
 [package]
 name = "crunchyroll-rs"
-version = "0.12.0"
+# increase version of internal package as well when updating
+version = "0.12.1"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2021"
 description = "Pure Rust implementation of the crunchyroll api."
@@ -26,32 +27,32 @@ __test_strict = []
 [dependencies]
 async-trait = "0.1"
 chrono = { version = ">=0.4.35", features = ["serde"] }
-dash-mpd = { version = "0.16", default-features = false }
+dash-mpd = { version = "0.17", default-features = false }
 futures-util = { version = "0.3", features = ["std"], default-features = false }
 jsonwebtoken = { version = "9.3", default-features = false }
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
-reqwest = { version = "0.12.5", features = ["cookies", "json", "multipart", "rustls-tls"] }
+reqwest = { version = "0.12.8", features = ["cookies", "json", "multipart", "rustls-tls"] }
 rustls = { version = "0.23.4", default-features = false, features = ["std", "tls12"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 smart-default = "0.7"
-tokio = { version = "1.38", features = ["sync"] }
+tokio = { version = "1.40", features = ["sync"] }
 uuid = { version = "1.10", features = ["v4"] }
 webpki-roots = "0.26"
 
-crunchyroll-rs-internal = { version = "0.12.0", path = "internal" }
+crunchyroll-rs-internal = { version = "0.12.1", path = "internal" }
 
 lazy_static = { version = "1.5", optional = true }
-regex = { version = "1.10", default-features = false, features = ["std"], optional = true }
+regex = { version = "1.11", default-features = false, features = ["std"], optional = true }
 tower-service = { version = "0.3", optional = true }
 
 [dev-dependencies]
 anyhow = "1.0"
-once_cell = "1.19"
+once_cell = "1.20"
 rand = "0.8"
-tokio = { version = "1.38", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { version = "1.40", features = ["macros", "rt", "rt-multi-thread"] }
 
 [workspace]
 members = ["internal"]
