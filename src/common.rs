@@ -269,7 +269,7 @@ pub struct Image {
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
 #[doc(hidden)]
-#[async_trait::async_trait]
+#[allow(async_fn_in_trait)]
 pub trait Request: Send {
     /// Set a usable [`Executor`] instance to the struct if required
     async fn __set_executor(&mut self, _: Arc<Executor>) {}

@@ -109,7 +109,6 @@ impl<'de> Deserialize<'de> for MediaCollection {
     }
 }
 
-#[async_trait::async_trait]
 impl Request for MediaCollection {
     async fn __set_executor(&mut self, executor: Arc<Executor>) {
         match self {

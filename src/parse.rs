@@ -1,6 +1,11 @@
 //! Url parsing.
 
 use regex::Regex;
+use std::sync::OnceLock;
+
+static SERIES_REGEX: OnceLock<Regex> = OnceLock::new();
+static MUSIC_REGEX: OnceLock<Regex> = OnceLock::new();
+static EPISODE_REGEX: OnceLock<Regex> = OnceLock::new();
 
 /// Types of Crunchyroll urls, pointing to media.
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
@@ -31,21 +36,25 @@ pub enum UrlType {
 /// Extract information out of Crunchyroll urls which are pointing to media.
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
-    lazy_static::lazy_static! {
-        static ref SERIES_REGEX: Regex = Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?(?P<type>series|movie_listing)/(?P<id>[^/]+).*$").unwrap();
-        static ref MUSIC_REGEX: Regex = Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?watch/(?P<music_type>musicvideo|concert)/(?P<id>[^/]+).*$").unwrap();
-        static ref EPISODE_REGEX: Regex = Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?watch/(?P<id>[^/]+).*$").unwrap();
-    }
+    let series_regex = SERIES_REGEX.get_or_init(|| {
+        Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?(?P<type>series|movie_listing)/(?P<id>[^/]+).*$").unwrap()
+    });
+    let music_regex = MUSIC_REGEX.get_or_init(|| {
+        Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?watch/(?P<music_type>musicvideo|concert)/(?P<id>[^/]+).*$").unwrap()
+    });
+    let episode_regex = EPISODE_REGEX.get_or_init(|| {
+        Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?watch/(?P<id>[^/]+).*$").unwrap()
+    });
 
     #[allow(clippy::manual_map)]
-    if let Some(capture) = SERIES_REGEX.captures(url.as_ref()) {
+    if let Some(capture) = series_regex.captures(url.as_ref()) {
         let id = capture.name("id").unwrap().as_str().to_string();
         match capture.name("type").unwrap().as_str() {
             "series" => Some(UrlType::Series(id)),
             "movie_listing" => Some(UrlType::MovieListing(id)),
             _ => unreachable!(),
         }
-    } else if let Some(capture) = MUSIC_REGEX.captures(url.as_ref()) {
+    } else if let Some(capture) = music_regex.captures(url.as_ref()) {
         match capture.name("music_type").unwrap().as_str() {
             "musicvideo" => Some(UrlType::MusicVideo(
                 capture.name("id").unwrap().as_str().to_string(),
@@ -55,7 +64,7 @@ pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
             )),
             _ => unreachable!(),
         }
-    } else if let Some(capture) = EPISODE_REGEX.captures(url.as_ref()) {
+    } else if let Some(capture) = episode_regex.captures(url.as_ref()) {
         Some(UrlType::EpisodeOrMovie(
             capture.name("id").unwrap().as_str().to_string(),
         ))

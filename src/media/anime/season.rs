@@ -157,7 +157,6 @@ impl Season {
     }
 }
 
-#[async_trait::async_trait]
 impl Media for Season {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
         let mut season: Season = request_media(

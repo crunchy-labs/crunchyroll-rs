@@ -119,7 +119,6 @@ impl MusicVideo {
     }
 }
 
-#[async_trait::async_trait]
 impl Media for MusicVideo {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
         let endpoint = format!(

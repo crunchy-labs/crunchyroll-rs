@@ -237,7 +237,6 @@ impl_manual_media_serialize! {
 macro_rules! impl_media_request {
     ($($media:ident)*) => {
         $(
-            #[async_trait::async_trait]
             impl $crate::common::Request for $media {
                 async fn __set_executor(&mut self, executor: std::sync::Arc<$crate::Executor>) {
                     crate::media::Media::__set_executor(self, executor).await;

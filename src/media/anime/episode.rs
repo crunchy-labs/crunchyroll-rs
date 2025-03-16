@@ -218,7 +218,6 @@ impl Episode {
     }
 }
 
-#[async_trait::async_trait]
 impl Media for Episode {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
         let mut episode: Episode = request_media(

@@ -1,14 +1,14 @@
 #![allow(dead_code, unused_must_use, clippy::complexity)]
 
 use anyhow::bail;
-use once_cell::sync::OnceCell;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::OnceLock;
 use std::{env, fs};
 
 pub struct Store<T> {
     get_fn: fn() -> Pin<Box<dyn Future<Output = anyhow::Result<T>>>>,
-    value: OnceCell<anyhow::Result<T>>,
+    value: OnceLock<anyhow::Result<T>>,
 }
 
 impl<T> Store<T> {
@@ -17,7 +17,7 @@ impl<T> Store<T> {
     ) -> Store<T> {
         Store {
             get_fn: function,
-            value: OnceCell::new(),
+            value: OnceLock::new(),
         }
     }
 

@@ -58,7 +58,6 @@ pub fn derive_request(input: TokenStream) -> TokenStream {
     };
 
     let expanded = quote! {
-        #[async_trait::async_trait]
         impl #impl_generics crate::Request for #ident #ty_generics # where_clause {
             async fn __set_executor(&mut self, executor: std::sync::Arc<crate::Executor>) {
                 #(#impl_executor)*

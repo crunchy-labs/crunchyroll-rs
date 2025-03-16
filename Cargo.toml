@@ -15,7 +15,7 @@ categories = ["api-bindings"]
 default = ["parse"]
 
 # Add functionality to parse Crunchyroll urls.
-parse = ["dep:lazy_static", "dep:regex"]
+parse = ["dep:regex"]
 # Add the ability to specify custom middleware.
 tower = ["dep:tower-service"]
 # Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
@@ -25,7 +25,6 @@ experimental-stabilizations = []
 __test_strict = []
 
 [dependencies]
-async-trait = "0.1"
 chrono = { version = ">=0.4.35", features = ["serde"] }
 dash-mpd = { version = "0.17", default-features = false }
 futures-util = { version = "0.3", features = ["std"], default-features = false }
@@ -44,13 +43,11 @@ webpki-roots = "0.26"
 
 crunchyroll-rs-internal = { version = "0.12.1", path = "internal" }
 
-lazy_static = { version = "1.5", optional = true }
 regex = { version = "1.11", default-features = false, features = ["std"], optional = true }
 tower-service = { version = "0.3", optional = true }
 
 [dev-dependencies]
 anyhow = "1.0"
-once_cell = "1.20"
 rand = "0.8"
 tokio = { version = "1.40", features = ["macros", "rt", "rt-multi-thread"] }
 

@@ -96,7 +96,6 @@ impl<'de> Deserialize<'de> for Concert {
     }
 }
 
-#[async_trait::async_trait]
 impl Media for Concert {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self> {
         let endpoint = format!(
