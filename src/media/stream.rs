@@ -197,9 +197,9 @@ impl Stream {
                 return match &e {
                     // try to invalidate the session if the decoding failed. a decoding failure
                     // usually means that the request was successful but returned unexpected data.
-                    // thus, an active session that isn't usable if this functions returns an error
-                    // and might block further stream requests until crunchyroll invalidates the
-                    // session server-side
+                    // thus, an active session is issued to the server, but it isn't usable because
+                    // this functions returns an error. further stream requests may be blocked until
+                    // crunchyroll invalidates the session server-side if it isn't done manually
                     Error::Decode { content, .. } => {
                         let Ok(content_map) = serde_json::from_slice::<Map<String, Value>>(content)
                         else {
@@ -216,8 +216,8 @@ impl Stream {
                         };
 
                         if uses_stream_limits {
-                            let _ =
-                                Self::invalid_raw(id.as_ref(), token, &crunchyroll.executor).await;
+                            let _ = Self::invalidate_raw(id.as_ref(), token, &crunchyroll.executor)
+                                .await;
                         }
                         Err(e)
                     }
@@ -285,10 +285,10 @@ impl Stream {
             return Ok(());
         }
 
-        Self::invalid_raw(&self.id, &self.token, &self.executor).await
+        Self::invalidate_raw(&self.id, &self.token, &self.executor).await
     }
 
-    async fn invalid_raw(id: &str, token: &str, executor: &Arc<Executor>) -> Result<()> {
+    async fn invalidate_raw(id: &str, token: &str, executor: &Arc<Executor>) -> Result<()> {
         let endpoint = format!(
             "https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{}/{}",
             id, token
