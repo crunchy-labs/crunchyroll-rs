@@ -66,7 +66,7 @@ impl<'de> Deserialize<'de> for SkipEvents {
             let Some(obj) = as_map.get(object) else {
                 continue;
             };
-            if obj.as_object().map_or(false, |o| o.is_empty())
+            if obj.as_object().is_some_and(|o| o.is_empty())
                 // crunchyroll sometimes has a skip events, but it's lacking start or end times.
                 // this is just abstracted away since an event without a start or end doesn't make
                 // sense to be wrapped in e.g. an Option

@@ -378,7 +378,7 @@ impl StreamData {
         for adaption in period.adaptations {
             // skip subtitles that are embedded in the mpd manifest for now
             if adaption.contentType.is_some_and(|ct| ct == "text") {
-                if !adaption.mimeType.is_some_and(|mime| mime == "text/vtt") {
+                if adaption.mimeType.is_none_or(|mime| mime != "text/vtt") {
                     continue;
                 }
                 subtitle = Some(Subtitle {
