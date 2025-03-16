@@ -54,7 +54,6 @@ pub struct Account {
     pub email_promotion_details: bool,
 
     pub cr_beta_opt_in: bool,
-    pub qa_user: bool,
     pub email_verified: bool,
     pub has_password: bool,
 
