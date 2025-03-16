@@ -2,7 +2,7 @@ use crate::utils::SESSION;
 use crate::utils::Store;
 use crunchyroll_rs::Episode;
 use crunchyroll_rs::media::{Media, MediaStream, Stream, StreamSegment};
-use rand::seq::SliceRandom;
+use rand::prelude::*;
 use std::io::Write;
 
 mod utils;
@@ -59,7 +59,7 @@ async fn process_segments() {
     for _ in 0..10 {
         sink.write(
             &segments
-                .choose(&mut rand::thread_rng())
+                .choose(&mut rand::rng())
                 .unwrap()
                 .data()
                 .await

@@ -3,7 +3,7 @@ use crunchyroll_rs::Locale;
 use crunchyroll_rs::crunchyroll::MaturityRating;
 use crunchyroll_rs::profile::{Profiles, UpdateProfilePreferences};
 use rand::Rng;
-use rand::distributions::Alphanumeric;
+use rand::distr::Alphanumeric;
 use std::env;
 
 mod utils;
@@ -27,12 +27,12 @@ async fn modify_profile() {
 
     let new_profile = profiles
         .new_profile(
-            rand::thread_rng()
+            rand::rng()
                 .sample_iter(&Alphanumeric)
                 .take(16)
                 .map(char::from)
                 .collect(),
-            rand::thread_rng()
+            rand::rng()
                 .sample_iter(&Alphanumeric)
                 .take(16)
                 .map(char::from)
@@ -46,7 +46,7 @@ async fn modify_profile() {
     assert_result!(
         profile
             .change_profile_name(
-                rand::thread_rng()
+                rand::rng()
                     .sample_iter(&Alphanumeric)
                     .take(16)
                     .map(char::from)
