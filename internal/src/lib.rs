@@ -1,10 +1,10 @@
 use darling::FromDeriveInput;
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::__private::{Span, TokenStream2};
 use syn::{
-    parse_macro_input, Data, DeriveInput, GenericArgument, Ident, Path, PathArguments, PathSegment,
-    Type,
+    Data, DeriveInput, GenericArgument, Ident, Path, PathArguments, PathSegment, Type,
+    parse_macro_input,
 };
 
 #[derive(FromDeriveInput)]

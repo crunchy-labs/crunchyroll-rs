@@ -1,7 +1,7 @@
-use crate::utils::Store;
 use crate::utils::SESSION;
-use crunchyroll_rs::media::{Media, MediaStream, Stream, StreamSegment};
+use crate::utils::Store;
 use crunchyroll_rs::Episode;
+use crunchyroll_rs::media::{Media, MediaStream, Stream, StreamSegment};
 use rand::seq::SliceRandom;
 use std::io::Write;
 

@@ -4,7 +4,7 @@ mod browse {
     use crate::categories::Category;
     use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult};
     use crate::media::MediaType;
-    use crate::{enum_values, options, Crunchyroll, Locale, MediaCollection, Request, Result};
+    use crate::{Crunchyroll, Locale, MediaCollection, Request, Result, enum_values, options};
     use futures_util::FutureExt;
     use serde::{Deserialize, Serialize};
 

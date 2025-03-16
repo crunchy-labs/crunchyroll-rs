@@ -139,7 +139,7 @@ impl Crunchylist {
             _ => {
                 return Err(Error::Input {
                     message: "music related media isn't supported".to_string(),
-                })
+                });
             }
         };
         self.executor

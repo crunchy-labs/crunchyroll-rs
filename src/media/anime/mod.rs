@@ -7,8 +7,8 @@ mod series;
 pub(crate) mod util;
 
 pub use episode::*;
+pub use r#impl::*;
 pub use movie::*;
 pub use movie_listing::*;
-pub use r#impl::*;
 pub use season::*;
 pub use series::*;

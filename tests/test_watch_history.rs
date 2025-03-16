@@ -6,11 +6,13 @@ use futures_util::StreamExt;
 #[tokio::test]
 async fn watch_history() {
     let crunchy = SESSION.get().await.unwrap();
-    assert_result!(crunchy
-        .watch_history()
-        .next()
-        .await
-        .unwrap_or(Ok(WatchHistoryEntry::default())))
+    assert_result!(
+        crunchy
+            .watch_history()
+            .next()
+            .await
+            .unwrap_or(Ok(WatchHistoryEntry::default()))
+    )
 }
 
 #[tokio::test]

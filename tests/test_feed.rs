@@ -1,4 +1,4 @@
-use crate::utils::{Store, SESSION};
+use crate::utils::{SESSION, Store};
 use crunchyroll_rs::feed::HomeFeed;
 use futures_util::StreamExt;
 
@@ -20,25 +20,29 @@ async fn home_feed_by_id() {
 
 #[tokio::test]
 async fn news_feed() {
-    assert_result!(SESSION
-        .get()
-        .await
-        .unwrap()
-        .news_feed()
-        .latest_news
-        .next()
-        .await
-        .unwrap())
+    assert_result!(
+        SESSION
+            .get()
+            .await
+            .unwrap()
+            .news_feed()
+            .latest_news
+            .next()
+            .await
+            .unwrap()
+    )
 }
 
 #[tokio::test]
 async fn recommendations() {
-    assert_result!(SESSION
-        .get()
-        .await
-        .unwrap()
-        .recommendations()
-        .next()
-        .await
-        .unwrap())
+    assert_result!(
+        SESSION
+            .get()
+            .await
+            .unwrap()
+            .recommendations()
+            .next()
+            .await
+            .unwrap()
+    )
 }

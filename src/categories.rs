@@ -1,9 +1,9 @@
 //! Media categories.
 
+use crate::Result;
 use crate::common::{Image, V2BulkResult};
 use crate::crunchyroll::Executor;
-use crate::Result;
-use crate::{enum_values, Crunchyroll, Locale, Request};
+use crate::{Crunchyroll, Locale, Request, enum_values};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 

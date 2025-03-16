@@ -1,4 +1,4 @@
-use crate::error::{is_request_error, Error};
+use crate::error::{Error, is_request_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use dash_mpd::MPD;
 use reqwest::StatusCode;

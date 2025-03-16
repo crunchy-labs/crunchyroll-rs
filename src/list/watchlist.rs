@@ -1,7 +1,7 @@
 use crate::common::V2BulkResult;
 use crate::error::Error;
 use crate::{
-    enum_values, options, Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result,
+    Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result, enum_values, options,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

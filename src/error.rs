@@ -1,8 +1,8 @@
 //! Library specific errors.
 
 use reqwest::{Response, StatusCode};
-use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 use std::fmt::{Debug, Display, Formatter};
 
@@ -224,7 +224,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
                 message: "The requested resource is not present".to_string(),
                 status: Some(resp.status()),
                 url,
-            })
+            });
         }
         429 => {
             let retry_secs =

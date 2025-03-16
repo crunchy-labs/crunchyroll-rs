@@ -3,7 +3,7 @@ name = "crunchyroll-rs"
 # increase version of internal package as well when updating
 version = "0.12.1"
 authors = ["Crunchy Labs Maintainers"]
-edition = "2021"
+edition = "2024"
 description = "Pure Rust implementation of the crunchyroll api."
 readme = "README.md"
 repository = "https://github.com/crunchy-labs/crunchyroll-rs"

@@ -48,7 +48,7 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
             _ => {
                 return Err(Error::Internal {
                     message: format!("key is not supported to be urlencoded ({})", key),
-                })
+                });
             }
         };
         let value_as_string = match value {
@@ -70,7 +70,7 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
             _ => {
                 return Err(Error::Internal {
                     message: format!("value is not supported to be urlencoded ({})", value),
-                })
+                });
             }
         };
         q.push((key_as_string, value_as_string));

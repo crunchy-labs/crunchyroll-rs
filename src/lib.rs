@@ -164,7 +164,7 @@ pub use media::{
     Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
 };
 #[cfg(feature = "parse")]
-pub use parse::{parse_url, UrlType};
+pub use parse::{UrlType, parse_url};
 
 #[cfg(feature = "__test_strict")]
 use internal::strict::StrictValue;

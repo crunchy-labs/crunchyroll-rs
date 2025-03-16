@@ -1,9 +1,9 @@
-use crate::utils::{Store, SESSION};
+use crate::utils::{SESSION, Store};
+use crunchyroll_rs::Locale;
 use crunchyroll_rs::crunchyroll::MaturityRating;
 use crunchyroll_rs::profile::{Profiles, UpdateProfilePreferences};
-use crunchyroll_rs::Locale;
-use rand::distributions::Alphanumeric;
 use rand::Rng;
+use rand::distributions::Alphanumeric;
 use std::env;
 
 mod utils;

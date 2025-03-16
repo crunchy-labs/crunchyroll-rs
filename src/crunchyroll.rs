@@ -155,10 +155,10 @@ impl Crunchyroll {
 }
 
 mod auth {
-    use crate::error::{check_request, Error};
+    use crate::error::{Error, check_request};
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
-    use reqwest::{header, Client, ClientBuilder, IntoUrl, RequestBuilder};
+    use reqwest::{Client, ClientBuilder, IntoUrl, RequestBuilder, header};
     use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
     use std::ops::Add;

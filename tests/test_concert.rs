@@ -1,4 +1,4 @@
-use crate::utils::{Store, SESSION};
+use crate::utils::{SESSION, Store};
 use crunchyroll_rs::Concert;
 
 mod utils;

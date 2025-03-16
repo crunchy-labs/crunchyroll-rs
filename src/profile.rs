@@ -5,7 +5,7 @@ use crate::macros::options;
 use crate::{Crunchyroll, Executor, Locale, Result};
 use crunchyroll_rs_internal::Request;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::Arc;
 
 options! {

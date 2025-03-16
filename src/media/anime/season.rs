@@ -1,8 +1,8 @@
 use crate::common::Request;
 use crate::crunchyroll::Executor;
+use crate::media::Media;
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
-use crate::media::Media;
 use crate::{Crunchyroll, Episode, Locale, Result, Series};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
