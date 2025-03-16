@@ -3,6 +3,7 @@ use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use dash_mpd::MPD;
 use reqwest::StatusCode;
 use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::iter;
@@ -121,6 +122,7 @@ pub struct Stream {
 
     pub url: String,
     pub audio_locale: Locale,
+    #[serde(default)]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_empty_pre_string_to_none")]
     pub burned_in_locale: Option<Locale>,
 
@@ -189,11 +191,40 @@ impl Stream {
             id.as_ref()
         );
 
-        let mut stream = crunchyroll
-            .executor
-            .get(endpoint)
-            .request::<Stream>()
-            .await?;
+        let mut stream = match crunchyroll.executor.get(endpoint).request::<Stream>().await {
+            Ok(stream) => stream,
+            Err(e) => {
+                return match &e {
+                    // try to invalidate the session if the decoding failed. a decoding failure
+                    // usually means that the request was successful but returned unexpected data.
+                    // thus, an active session that isn't usable if this functions returns an error
+                    // and might block further stream requests until crunchyroll invalidates the
+                    // session server-side
+                    Error::Decode { content, .. } => {
+                        let Ok(content_map) = serde_json::from_slice::<Map<String, Value>>(content)
+                        else {
+                            return Err(e);
+                        };
+                        let Some(uses_stream_limits) = content_map
+                            .get("session")
+                            .and_then(|s| s.as_object()?.get("usesStreamLimits")?.as_bool())
+                        else {
+                            return Err(e);
+                        };
+                        let Some(token) = content_map.get("token").and_then(|t| t.as_str()) else {
+                            return Err(e);
+                        };
+
+                        if uses_stream_limits {
+                            let _ =
+                                Self::invalid_raw(id.as_ref(), token, &crunchyroll.executor).await;
+                        }
+                        Err(e)
+                    }
+                    _ => Err(e),
+                };
+            }
+        };
         stream.__set_executor(crunchyroll.executor.clone()).await;
         stream.id = id.as_ref().to_string();
         stream.optional_media_type = optional_media_type;
@@ -254,12 +285,16 @@ impl Stream {
             return Ok(());
         }
 
+        Self::invalid_raw(&self.id, &self.token, &self.executor).await
+    }
+
+    async fn invalid_raw(id: &str, token: &str, executor: &Arc<Executor>) -> Result<()> {
         let endpoint = format!(
             "https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{}/{}",
-            self.id, self.token
+            id, token
         );
 
-        self.executor.delete(endpoint).request_raw(true).await?;
+        executor.delete(endpoint).request_raw(true).await?;
 
         Ok(())
     }
