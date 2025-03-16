@@ -25,10 +25,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cargo cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -38,31 +38,26 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          target: ${{ matrix.toolchain }}
-          default: true
+          targets: ${{ matrix.toolchain }}
 
       - name: Test
         env:
           ETP_RT: ${{ secrets.ETP_RT }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: login_anonymously --all-features
+        run: cargo test --target ${{ matrix.toolchain }} login_anonymously --all-features
 
   test-full:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cargo cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/
@@ -72,19 +67,14 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          target: ${{ matrix.toolchain }}
-          default: true
+          targets: ${{ matrix.toolchain }}
 
       - name: Test
         env:
           ETP_RT: ${{ secrets.ETP_RT }}
           IS_PREMIUM: ${{ secrets.IS_PREMIUM }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_credentials --skip login_with_refresh_token --skip login_with_refresh_token_profile_id --skip profiles --skip modify_profile --skip clear_watch_history
+        run: cargo test --target ${{ matrix.toolchain }} --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_credentials --skip login_with_refresh_token --skip login_with_refresh_token_profile_id --skip profiles --skip modify_profile --skip clear_watch_history
