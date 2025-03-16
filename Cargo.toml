@@ -7,6 +7,7 @@ edition = "2024"
 description = "Pure Rust implementation of the crunchyroll api."
 readme = "README.md"
 repository = "https://github.com/crunchy-labs/crunchyroll-rs"
+documentation = "https://docs.rs/crunchyroll-rs"
 license = "MIT OR Apache-2.0"
 keywords = ["crunchyroll", "anime", "downloader"]
 categories = ["api-bindings"]
