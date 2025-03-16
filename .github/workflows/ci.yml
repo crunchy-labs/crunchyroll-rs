@@ -17,7 +17,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            toolchain: x86_64-unknown-linux-musl
+            toolchain: x86_64-unknown-linux-gnu
           - os: windows-latest
             toolchain: x86_64-pc-windows-gnu
           - os: macos-latest
@@ -71,10 +71,9 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          targets: ${{ matrix.toolchain }}
 
       - name: Test
         env:
           ETP_RT: ${{ secrets.ETP_RT }}
           IS_PREMIUM: ${{ secrets.IS_PREMIUM }}
-        run: cargo test --target ${{ matrix.toolchain }} --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_credentials --skip login_with_refresh_token --skip login_with_refresh_token_profile_id --skip profiles --skip modify_profile --skip clear_watch_history
+        run: cargo test --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_credentials --skip login_with_refresh_token --skip login_with_refresh_token_profile_id --skip profiles --skip modify_profile --skip clear_watch_history
