@@ -28,7 +28,7 @@ macro_rules! impl_media_music {
                 /// All streams are drm encrypted, decryption is not handled in this crate, so you
                 /// must do this yourself.
                 pub async fn stream(&self) -> Result<$crate::media::Stream> {
-                    $crate::media::Stream::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, &self.id, $crate::media::StreamPlatform::WebChrome, Some("music".to_string())).await
+                    $crate::media::Stream::from_id(&$crate::Crunchyroll { executor: self.executor.clone() }, &self.id, $crate::media::StreamPlatform::WebChrome).await
                 }
 
                 /// Check if the music video / concert can be watched.

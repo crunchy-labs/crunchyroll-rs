@@ -1,11 +1,13 @@
 use crate::account::Wallpaper;
 use crate::common::Image;
 use crate::error::Error;
-use crate::{Request, Result};
+use crate::media::Subtitle;
+use crate::{Locale, Request, Result};
 use chrono::Duration;
-use serde::de::{DeserializeOwned, Error as SerdeError};
+use serde::de::{DeserializeOwned, Error as SerdeError, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value};
+use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Request)]
@@ -181,6 +183,44 @@ pub(crate) fn deserialize_streams_link<'de, D: Deserializer<'de>>(
         .last()
         .ok_or_else(|| serde::de::Error::custom("cannot extract stream id"))?
         .to_string())
+}
+
+pub(crate) fn deserialize_stream_subtitles<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<HashMap<Locale, Subtitle>, D::Error> {
+    let mut as_map = Map::deserialize(deserializer)?;
+
+    // for whatever reason every subtitles map has a 'none' entry. i suppose it should declare that
+    // no subtitle is available, but keep why doesn't they keep the map empty then? and more, the
+    // none entry is also present if other subtitle are available. questionable
+    let _ = as_map.remove("none");
+
+    serde_json::from_value(
+        serde_json::to_value(as_map).map_err(|e| SerdeError::custom(e.to_string()))?,
+    )
+    .map_err(|e| SerdeError::custom(e.to_string()))
+}
+
+pub(crate) fn deserialize_stream_hardsubs<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<HashMap<Locale, String>, D::Error> {
+    let mut as_map = Map::deserialize(deserializer)?;
+
+    // same 'none' entry as already said in `deserialize_stream_subtitles`
+    let _ = as_map.remove("none");
+
+    #[derive(Deserialize)]
+    struct HardSub {
+        url: String,
+    }
+
+    Ok(
+        HashMap::<String, HardSub>::deserialize(as_map.into_deserializer())
+            .map_err(|e| SerdeError::custom(e.to_string()))?
+            .into_iter()
+            .map(|(l, hs)| (Locale::from(l), hs.url))
+            .collect(),
+    )
 }
 
 pub(crate) fn deserialize_panel<'de, D, T>(deserializer: D) -> Result<T, D::Error>

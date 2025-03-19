@@ -2,27 +2,13 @@ use crate::error::{Error, is_request_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use dash_mpd::MPD;
 use reqwest::StatusCode;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::iter;
 use std::sync::Arc;
 use std::time::Duration;
-
-fn deserialize_hardsubs<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<HashMap<Locale, String>, D::Error> {
-    #[derive(Deserialize)]
-    struct HardSub {
-        url: String,
-    }
-
-    Ok(HashMap::<String, HardSub>::deserialize(deserializer)?
-        .into_iter()
-        .map(|(l, hs)| (Locale::from(l), hs.url))
-        .collect())
-}
 
 /// Platforms that can request a [`Stream`]. Because not all platforms have their own variant, use
 /// [`Stream::Custom`] to define one.
@@ -93,7 +79,6 @@ impl StreamVersion {
             },
             &self.id,
             self.platform.clone(),
-            self.optional_media_type.clone(),
         )
         .await
     }
@@ -126,10 +111,11 @@ pub struct Stream {
     #[serde(deserialize_with = "crate::internal::serde::deserialize_empty_pre_string_to_none")]
     pub burned_in_locale: Option<Locale>,
 
-    #[serde(deserialize_with = "deserialize_hardsubs")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_stream_hardsubs")]
     pub hard_subs: HashMap<Locale, String>,
 
     /// All subtitles.
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_stream_subtitles")]
     pub subtitles: HashMap<Locale, Subtitle>,
     pub captions: HashMap<Locale, Subtitle>,
 
@@ -143,8 +129,6 @@ pub struct Stream {
 
     #[serde(skip)]
     id: String,
-    #[serde(skip)]
-    optional_media_type: Option<String>,
 
     #[cfg(feature = "__test_strict")]
     asset_id: crate::StrictValue,
@@ -160,7 +144,6 @@ impl Stream {
         crunchyroll: &Crunchyroll,
         id: impl AsRef<str>,
         stream_platform: StreamPlatform,
-        optional_media_type: Option<String>,
     ) -> Result<Self> {
         let (device, platform) = match &stream_platform {
             StreamPlatform::AndroidPhone => ("android", "phone"),
@@ -183,11 +166,7 @@ impl Stream {
         };
 
         let endpoint = format!(
-            "https://cr-play-service.prd.crunchyrollsvc.com/v1/{}{}/{device}/{platform}/play",
-            optional_media_type
-                .as_ref()
-                .map(|omt| format!("{omt}/"))
-                .unwrap_or_default(),
+            "https://www.crunchyroll.com/playback/v2/{}/{device}/{platform}/play",
             id.as_ref()
         );
 
@@ -227,13 +206,9 @@ impl Stream {
         };
         stream.__set_executor(crunchyroll.executor.clone()).await;
         stream.id = id.as_ref().to_string();
-        stream.optional_media_type = optional_media_type;
 
         for version in &mut stream.versions {
             version.platform = stream_platform.clone();
-            version
-                .optional_media_type
-                .clone_from(&stream.optional_media_type)
         }
 
         Ok(stream)
@@ -290,7 +265,7 @@ impl Stream {
 
     async fn invalidate_raw(id: &str, token: &str, executor: &Arc<Executor>) -> Result<()> {
         let endpoint = format!(
-            "https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{}/{}",
+            "https://www.crunchyroll.com/playback/v1/token/{}/{}",
             id, token
         );
 
