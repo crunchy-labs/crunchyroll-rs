@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// Metadata for a movie.
-#[allow(dead_code)]
+#[allow(dead_code, non_snake_case)]
 #[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault)]
 #[serde(remote = "Self")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -89,6 +89,8 @@ pub struct Movie {
     availability_ends: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     premium_date: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    SeriesGUID: Option<crate::StrictValue>,
 }
 
 impl Movie {
