@@ -33,6 +33,7 @@ pub trait Media {
     where
         Self: Sized;
 
+    #[doc(hidden)]
     async fn __set_executor(&mut self, executor: Arc<Executor>);
 
     #[doc(hidden)]
