@@ -7,7 +7,7 @@ mod utils;
 static MOVIE_LISTING: Store<MovieListing> = Store::new(|| {
     Box::pin(async {
         let crunchy = SESSION.get().await?;
-        let movie_listing = crunchy.media_from_id("G6MG10746").await?;
+        let movie_listing = crunchy.media_from_id("G6JQ8XWXR").await?;
         Ok(movie_listing)
     })
 });
