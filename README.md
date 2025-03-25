@@ -13,6 +13,9 @@
   <a href="https://crates.io/crates/crunchyroll-rs">
     <img src="https://img.shields.io/crates/v/crunchyroll-rs" alt="crates.io">
   </a>
+  <a href="https://crates.io/crates/crunchyroll-rs">
+    <img src="https://img.shields.io/crates/d/crunchyroll-rs" alt="crates.io downloads">
+  </a>
   <a href="https://docs.rs/crunchyroll-rs/">
     <img src="https://img.shields.io/docsrs/crunchyroll-rs" alt="Docs">
   </a>
