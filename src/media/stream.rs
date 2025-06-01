@@ -78,7 +78,7 @@ impl StreamVersion {
                 executor: self.executor.clone(),
             },
             &self.id,
-            self.platform.clone(),
+            &self.platform,
         )
         .await
     }
@@ -143,7 +143,7 @@ impl Stream {
     pub async fn from_id(
         crunchyroll: &Crunchyroll,
         id: impl AsRef<str>,
-        stream_platform: StreamPlatform,
+        stream_platform: &StreamPlatform,
     ) -> Result<Self> {
         let (device, platform) = match &stream_platform {
             StreamPlatform::AndroidPhone => ("android", "phone"),

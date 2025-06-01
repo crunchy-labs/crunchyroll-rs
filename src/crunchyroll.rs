@@ -156,8 +156,10 @@ impl Crunchyroll {
 
 mod auth {
     use crate::error::{Error, check_request};
+    use crate::media::StreamPlatform;
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
+    use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
     use reqwest::{Client, ClientBuilder, IntoUrl, RequestBuilder, header};
     use serde::de::DeserializeOwned;
     use serde::{Deserialize, Serialize};
@@ -180,13 +182,13 @@ mod auth {
     pub struct DeviceIdentifier {
         /// The device id, this is specific for every device type, but usually represented as UUID.
         /// Using [`Uuid::new_v4`] for it works fine.
-        device_id: String,
+        pub device_id: String,
         /// Type of the device which issues the session, e.g. `Chrome on Windows` or `iPhone 15`.
-        device_type: String,
+        pub device_type: String,
         /// Name of the device which issues the session. This may be empty, for example all session
         /// that are created over the website have an empty name; when issues via the app, the name
         /// is the name of your phone (which you can modify/set when you set up the phone).
-        device_name: String,
+        pub device_name: String,
     }
 
     #[derive(Debug, Default, Deserialize)]
@@ -220,6 +222,8 @@ mod auth {
     pub(crate) struct ExecutorDetails {
         pub(crate) locale: Locale,
         pub(crate) preferred_audio_locale: Option<Locale>,
+        pub(crate) device_identifier: Option<DeviceIdentifier>,
+        pub(crate) stream_platform: StreamPlatform,
 
         pub(crate) bucket: String,
 
@@ -310,6 +314,7 @@ mod auth {
                         Executor::auth_with_refresh_token(
                             &self.client,
                             refresh_token.as_str(),
+                            &self.details.device_identifier,
                             #[cfg(feature = "tower")]
                             self.middleware.as_ref(),
                         )
@@ -319,6 +324,7 @@ mod auth {
                         Executor::auth_with_etp_rt(
                             &self.client,
                             etp_rt.as_str(),
+                            &self.details.device_identifier,
                             #[cfg(feature = "tower")]
                             self.middleware.as_ref(),
                         )
@@ -327,6 +333,7 @@ mod auth {
                     SessionToken::Anonymous => {
                         Executor::auth_anonymously(
                             &self.client,
+                            &self.details.device_identifier,
                             #[cfg(feature = "tower")]
                             self.middleware.as_ref(),
                         )
@@ -398,25 +405,36 @@ mod auth {
                 .contains(&"cr_premium".to_string())
         }
 
+        fn auth_body<'a>(
+            mut pre_body: Vec<(&'a str, &'a str)>,
+            device_identifier: &'a Option<DeviceIdentifier>,
+        ) -> Vec<(&'a str, &'a str)> {
+            pre_body.push(("scope", "offline_access"));
+            if let Some(device_identifier) = device_identifier {
+                pre_body.extend_from_slice(&[
+                    ("device_id", device_identifier.device_id.as_str()),
+                    ("device_type", device_identifier.device_type.as_str()),
+                    ("device_name", device_identifier.device_name.as_str()),
+                ])
+            }
+            pre_body
+        }
+
         async fn auth_anonymously(
             client: &Client,
+            device_identifier: &Option<DeviceIdentifier>,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
+            let body = Self::auth_body(vec![("grant_type", "client_id")], device_identifier);
             let req = client
                 .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .header("ETP-Anonymous-ID", uuid::Uuid::new_v4().to_string())
-                .body(
-                    serde_urlencoded::to_string([
-                        ("grant_type", "client_id"),
-                        ("scope", "offline_access"),
-                    ])
-                    .unwrap(),
-                )
+                .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
             #[cfg(not(feature = "tower"))]
             let resp = client.execute(req).await?;
@@ -443,21 +461,16 @@ mod auth {
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let mut body = vec![
-                ("username", email),
-                ("password", password),
-                ("grant_type", "password"),
-                ("scope", "offline_access"),
-            ];
-            if let Some(device_identifier) = device_identifier {
-                body.extend_from_slice(&[
-                    ("device_id", device_identifier.device_id.as_str()),
-                    ("device_type", device_identifier.device_type.as_str()),
-                    ("device_name", device_identifier.device_name.as_str()),
-                ])
-            }
+            let body = Self::auth_body(
+                vec![
+                    ("username", email),
+                    ("password", password),
+                    ("grant_type", "password"),
+                ],
+                device_identifier,
+            );
             let req = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
+                .header(header::AUTHORIZATION, "Basic eHVuaWh2ZWRidDNtYmlzdWhldnQ6MWtJUzVkeVR2akUwX3JxYUEzWWVBaDBiVVhVbXhXMTE=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
@@ -479,18 +492,21 @@ mod auth {
         async fn auth_with_refresh_token(
             client: &Client,
             refresh_token: &str,
+            device_identifier: &Option<DeviceIdentifier>,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let body = vec![
-                ("refresh_token", refresh_token),
-                ("grant_type", "refresh_token"),
-                ("scope", "offline_access mp"),
-            ];
+            let body = Self::auth_body(
+                vec![
+                    ("refresh_token", refresh_token),
+                    ("grant_type", "refresh_token"),
+                ],
+                device_identifier,
+            );
             let req = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
+                .header(header::AUTHORIZATION, "Basic eHVuaWh2ZWRidDNtYmlzdWhldnQ6MWtJUzVkeVR2akUwX3JxYUEzWWVBaDBiVVhVbXhXMTE=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
@@ -513,17 +529,20 @@ mod auth {
             client: &Client,
             refresh_token: &str,
             profile_id: &str,
+            device_identifier: &Option<DeviceIdentifier>,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let body = vec![
-                ("refresh_token", refresh_token),
-                ("grant_type", "refresh_token_profile_id"),
-                ("scope", "offline_access"),
-                ("profile_id", profile_id),
-            ];
+            let body = Self::auth_body(
+                vec![
+                    ("refresh_token", refresh_token),
+                    ("grant_type", "refresh_token_profile_id"),
+                    ("profile_id", profile_id),
+                ],
+                device_identifier,
+            );
             let req = client.post(endpoint)
                 .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -547,12 +566,13 @@ mod auth {
         async fn auth_with_etp_rt(
             client: &Client,
             etp_rt: &str,
+            device_identifier: &Option<DeviceIdentifier>,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-            let body = vec![("grant_type", "etp_rt_cookie"), ("scope", "offline_access")];
+            let body = Self::auth_body(vec![("grant_type", "etp_rt_cookie")], device_identifier);
             let req = client
                 .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
@@ -589,6 +609,8 @@ mod auth {
                 details: ExecutorDetails {
                     locale: Default::default(),
                     preferred_audio_locale: None,
+                    device_identifier: None,
+                    stream_platform: Default::default(),
                     bucket: "".to_string(),
                     signature: "".to_string(),
                     policy: "".to_string(),
@@ -672,6 +694,7 @@ mod auth {
         locale: Locale,
         preferred_audio_locale: Option<Locale>,
         device_identifier: Option<DeviceIdentifier>,
+        stream_platform: StreamPlatform,
 
         #[cfg(feature = "tower")]
         middleware: Option<tokio::sync::Mutex<crate::internal::tower::Middleware>>,
@@ -688,6 +711,7 @@ mod auth {
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
                 device_identifier: None,
+                stream_platform: StreamPlatform::default(),
                 #[cfg(feature = "tower")]
                 middleware: None,
                 #[cfg(feature = "experimental-stabilizations")]
@@ -700,6 +724,19 @@ mod auth {
     }
 
     impl CrunchyrollBuilder {
+        pub const DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
+            (
+                header::USER_AGENT,
+                HeaderValue::from_static("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27"),
+            ),
+            (header::ACCEPT, HeaderValue::from_static("*/*")),
+            (
+                header::ACCEPT_LANGUAGE,
+                HeaderValue::from_static("en-US,en;q=0.5"),
+            ),
+            (header::CONNECTION, HeaderValue::from_static("keep-alive")),
+        ];
+
         /// Return a [`ClientBuilder`] which has all required configurations necessary to send
         /// successful requests to Crunchyroll, applied (most of the time; sometimes Crunchyroll has
         /// fluctuations that requests doesn't work for a specific amount of time and after that
@@ -725,7 +762,7 @@ mod auth {
             Client::builder()
                 .https_only(true)
                 .cookie_store(true)
-                .user_agent("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27")
+                .default_headers(HeaderMap::from_iter(CrunchyrollBuilder::DEFAULT_HEADERS))
                 .use_preconfigured_tls(tls_config)
         }
 
@@ -768,6 +805,11 @@ mod auth {
             device_identifier: DeviceIdentifier,
         ) -> CrunchyrollBuilder {
             self.device_identifier = Some(device_identifier);
+            self
+        }
+
+        pub fn stream_platform(mut self, stream_platform: StreamPlatform) -> CrunchyrollBuilder {
+            self.stream_platform = stream_platform;
             self
         }
 
@@ -822,6 +864,7 @@ mod auth {
 
             let login_response = Executor::auth_anonymously(
                 &self.client,
+                &self.device_identifier,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -869,6 +912,7 @@ mod auth {
             let login_response = Executor::auth_with_refresh_token(
                 &self.client,
                 refresh_token.as_ref(),
+                &self.device_identifier,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -897,6 +941,7 @@ mod auth {
                 &self.client,
                 refresh_token.as_ref(),
                 profile_id.as_ref(),
+                &self.device_identifier,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -919,6 +964,7 @@ mod auth {
             let login_response = Executor::auth_with_etp_rt(
                 &self.client,
                 etp_rt.as_ref(),
+                &self.device_identifier,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -1000,6 +1046,8 @@ mod auth {
                     details: ExecutorDetails {
                         locale: self.locale,
                         preferred_audio_locale: self.preferred_audio_locale,
+                        device_identifier: self.device_identifier,
+                        stream_platform: self.stream_platform,
 
                         // '/' is trimmed so that urls which require it must be in .../{bucket}/... like format.
                         // this just looks cleaner
