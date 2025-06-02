@@ -24,6 +24,11 @@ async fn series_seasons() {
 }
 
 #[tokio::test]
+async fn series_copyright() {
+    assert_result!(SERIES.get().await.unwrap().copyright().await)
+}
+
+#[tokio::test]
 async fn series_featured_music() {
     assert_result!(SERIES.get().await.unwrap().featured_music().await)
 }

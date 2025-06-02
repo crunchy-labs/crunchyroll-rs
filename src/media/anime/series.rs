@@ -3,10 +3,19 @@ use crate::crunchyroll::Executor;
 use crate::media::anime::util::fix_empty_season_versions;
 use crate::media::util::request_media;
 use crate::media::{Media, PosterImages};
-use crate::{Crunchyroll, Locale, MusicVideo, Result, Season};
+use crate::{Crunchyroll, Locale, MusicVideo, Request, Result, Season};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct SeriesCopyright {
+    pub short_copyright: String,
+    pub long_copyright: String,
+}
 
 /// Information about a series which was nominated for the Crunchyroll Anime Awards.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -144,6 +153,12 @@ impl Series {
             fix_empty_season_versions(season);
         }
         Ok(seasons)
+    }
+
+    /// Get copyright holders of this series.
+    pub async fn copyright(&self) -> Result<SeriesCopyright> {
+        let endpoint = format!("https://static.crunchyroll.com/copyright/{}.json", self.id);
+        self.executor.get(endpoint).request().await
     }
 
     /// Get music videos which are related to this series.
