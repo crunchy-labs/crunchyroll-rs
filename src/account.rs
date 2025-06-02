@@ -47,10 +47,13 @@ pub struct Account {
     pub opt_out_free_trials: bool,
     pub opt_out_pm_updates: bool,
     #[serde(rename = "opt_out_store_deals")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_bool_invert")]
     pub email_store_details: bool,
     #[serde(rename = "opt_out_newsletters")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_bool_invert")]
     pub email_newsletter: bool,
     #[serde(rename = "opt_out_promotional_updates")]
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_bool_invert")]
     pub email_promotion_details: bool,
 
     pub cr_beta_opt_in: bool,
@@ -134,17 +137,17 @@ impl Account {
         }
 
         if let Some(email_store_details) = preferences.email_store_details {
-            notification_update.insert("opt_out_store_deals".into(), email_store_details.into());
+            notification_update.insert("opt_out_store_deals".into(), (!email_store_details).into());
             updated_self.email_store_details = email_store_details;
         }
         if let Some(email_newsletter) = preferences.email_newsletter {
-            notification_update.insert("opt_out_newsletters".into(), email_newsletter.into());
+            notification_update.insert("opt_out_newsletters".into(), (!email_newsletter).into());
             updated_self.email_newsletter = email_newsletter;
         }
         if let Some(email_promotion_details) = preferences.email_promotion_details {
             notification_update.insert(
                 "opt_out_promotional_updates".into(),
-                email_promotion_details.into(),
+                (!email_promotion_details).into(),
             );
             updated_self.email_promotion_details = email_promotion_details
         }

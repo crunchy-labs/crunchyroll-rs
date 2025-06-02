@@ -156,6 +156,13 @@ where
     }
 }
 
+pub(crate) fn deserialize_bool_invert<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<bool, D::Error> {
+    let bool = bool::deserialize(deserializer)?;
+    Ok(!bool)
+}
+
 pub(crate) fn deserialize_thumbnail_image<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Vec<Image>, D::Error> {
