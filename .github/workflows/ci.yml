@@ -75,5 +75,7 @@ jobs:
       - name: Test
         env:
           ETP_RT: ${{ secrets.ETP_RT }}
+          ETP_RT_DEVICE_ID: ${{ secrets.ETP_RT_DEVICE_ID }}
+          ETP_RT_DEVICE_TYPE: ${{ secrets.ETP_RT_DEVICE_TYPE }}
           IS_PREMIUM: ${{ secrets.IS_PREMIUM }}
         run: cargo test --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_credentials --skip login_with_refresh_token --skip login_with_refresh_token_profile_id --skip profiles --skip modify_profile --skip clear_watch_history

@@ -3,6 +3,7 @@
 mod utils;
 
 use crunchyroll_rs::Crunchyroll;
+use crunchyroll_rs::crunchyroll::DeviceIdentifier;
 use std::env;
 
 #[tokio::test]
@@ -76,11 +77,23 @@ async fn login_with_refresh_token_profile_id() {
 #[tokio::test]
 async fn login_with_etp_rt() {
     let etp_rt = env::var("ETP_RT").expect("'ETP_RT' environment variable not found");
+    let etp_rt_device_id =
+        env::var("ETP_RT_DEVICE_ID").expect("'ETP_RT_DEVICE_ID' environment variable not found");
+    let etp_rt_device_type = env::var("ETP_RT_DEVICE_TYPE")
+        .expect("'ETP_RT_DEVICE_TYPE' environment variable not found");
+    let etp_rt_device_name = env::var("ETP_RT_DEVICE_TYPE").ok();
     let is_premium = env::var("IS_PREMIUM")
         .ok()
         .map(|e| e.parse::<bool>().unwrap());
 
-    let crunchy = Crunchyroll::builder().login_with_etp_rt(etp_rt).await;
+    let crunchy = Crunchyroll::builder()
+        .device_identifier(DeviceIdentifier {
+            device_id: etp_rt_device_id,
+            device_type: etp_rt_device_type,
+            device_name: etp_rt_device_name,
+        })
+        .login_with_etp_rt(etp_rt)
+        .await;
 
     assert_result!(crunchy);
     if let Some(is_premium) = is_premium {

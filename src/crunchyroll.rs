@@ -188,7 +188,7 @@ mod auth {
         /// Name of the device which issues the session. This may be empty, for example all session
         /// that are created over the website have an empty name; when issues via the app, the name
         /// is the name of your phone (which you can modify/set when you set up the phone).
-        pub device_name: String,
+        pub device_name: Option<String>,
     }
 
     #[derive(Debug, Default, Deserialize)]
@@ -411,11 +411,11 @@ mod auth {
         ) -> Vec<(&'a str, &'a str)> {
             pre_body.push(("scope", "offline_access"));
             if let Some(device_identifier) = device_identifier {
-                pre_body.extend_from_slice(&[
-                    ("device_id", device_identifier.device_id.as_str()),
-                    ("device_type", device_identifier.device_type.as_str()),
-                    ("device_name", device_identifier.device_name.as_str()),
-                ])
+                pre_body.push(("device_id", device_identifier.device_id.as_str()));
+                pre_body.push(("device_type", device_identifier.device_type.as_str()));
+                if let Some(device_name) = &device_identifier.device_name {
+                    pre_body.push(("device_name", device_name.as_str()));
+                }
             }
             pre_body
         }
@@ -952,12 +952,12 @@ mod auth {
             self.post_login(login_response, session_token).await
         }
 
-        /// Logs in with an etp rt cookie and returns a new `Crunchyroll` instance.
-        /// This cookie can be extracted if you copy the `etp_rt` cookie from your browser.
-        /// Note: Even though the tokens used in [`CrunchyrollBuilder::login_with_etp_rt`] and
-        /// [`CrunchyrollBuilder::login_with_refresh_token`] are having the same syntax, Crunchyroll
-        /// internal they're different. I had issues when I tried to log in with the `etp_rt`
-        /// cookie on [`CrunchyrollBuilder::login_with_refresh_token`] and vice versa.
+        /// Logs in with the `etp_rt` cookie that is generated when logging in with the browser and
+        /// returns a new `Crunchyroll` instance. This cookie can be extracted if you copy the
+        /// `etp_rt` cookie from your browser.
+        /// *Note*: You need to set [`CrunchyrollBuilder::device_identifier`] to the same identifier
+        /// which were used in the login that initially created the `etp_rt` cookie, otherwise the
+        /// login will fail.
         pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
@@ -1160,4 +1160,4 @@ mod auth {
 }
 
 pub(crate) use auth::Executor;
-pub use auth::{CrunchyrollBuilder, SessionToken};
+pub use auth::{CrunchyrollBuilder, DeviceIdentifier, SessionToken};
