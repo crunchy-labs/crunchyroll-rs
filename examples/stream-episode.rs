@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
 
     let sink = &mut std::io::sink();
     for (i, segment) in segments.iter().enumerate() {
-        println!("Downloading segment {} of {}", i + 1, segments.len() + 1);
+        println!("Downloading segment {} of {}", i + 1, segments.len());
         sink.write_all(&segment.data().await?)?;
     }
 
