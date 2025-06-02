@@ -101,6 +101,7 @@ pub struct GameFeed {
 }
 
 /// Items which can be shown on the home feed.
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, Serialize, Request)]
 pub enum HomeFeed {
     /// The feed at the top of the Crunchyroll website.
@@ -192,7 +193,7 @@ impl<'de> Deserialize<'de> for HomeFeed {
                             .ok_or_else(|| type_error("link", "string"))?
                             .to_string();
                         let query: Vec<(String, String)> =
-                            serde_urlencoded::from_str(link.split('?').last().unwrap())
+                            serde_urlencoded::from_str(link.split('?').next_back().unwrap())
                                 .map_err(|e| Error::custom(e.to_string()))?;
 
                         let mut browse_options = BrowseOptions::default();

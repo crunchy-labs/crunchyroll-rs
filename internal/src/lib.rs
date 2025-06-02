@@ -71,7 +71,7 @@ fn derive_request_check(set_path: TokenStream2, path: &Path) -> TokenStream2 {
     let segment = path.segments.last().unwrap();
 
     let _deep_set_path = set_path.to_string();
-    let deep_set_path = _deep_set_path.split('.').last().unwrap();
+    let deep_set_path = _deep_set_path.split('.').next_back().unwrap();
 
     if segment.ident == "Option" {
         let options_set_path = Ident::new(

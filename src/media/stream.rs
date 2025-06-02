@@ -387,8 +387,7 @@ impl StreamData {
                 .segments
                 .iter()
                 .flat_map(|s| {
-                    iter::repeat(s.d as u32)
-                        .take(s.r.unwrap_or_default() as usize + 1)
+                    iter::repeat_n(s.d as u32, s.r.unwrap_or_default() as usize + 1)
                         .collect::<Vec<u32>>()
                 })
                 .collect::<Vec<u32>>();

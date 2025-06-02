@@ -180,7 +180,7 @@ pub(crate) fn deserialize_streams_link<'de, D: Deserializer<'de>>(
     Ok(as_string
         .trim_end_matches("/streams")
         .split('/')
-        .last()
+        .next_back()
         .ok_or_else(|| serde::de::Error::custom("cannot extract stream id"))?
         .to_string())
 }

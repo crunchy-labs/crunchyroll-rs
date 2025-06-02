@@ -57,7 +57,7 @@ async fn process_segments() {
     // if the test passes, it's unlikely that some error will occur when streaming all segments (
     // and if it does, hopefully someone using this in production will report it)
     for _ in 0..10 {
-        sink.write(
+        sink.write_all(
             &segments
                 .choose(&mut rand::rng())
                 .unwrap()
