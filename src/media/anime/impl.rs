@@ -343,8 +343,8 @@ macro_rules! impl_media_video {
                         "https://static.crunchyroll.com/skip-events/production/{}.json",
                         self.id
                     );
-                    let raw_result = self.executor.get(endpoint)
-                        .request_raw(true)
+                    let raw_result = self.executor.get(&endpoint)
+                        .request_raw(false)
                         .await?;
                     let result = String::from_utf8_lossy(raw_result.as_slice());
                     if result.contains("</Error>") {

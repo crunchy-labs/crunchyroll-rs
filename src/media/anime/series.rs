@@ -97,6 +97,8 @@ pub struct Series {
     pub mature_blocked: bool,
 
     pub availability_notes: String,
+    /// Is "available" or "not available"
+    pub availability_status: Option<String>,
 
     /// Awards for which this anime was nominated at the Crunchyroll Anime Awards.
     pub awards: Option<Vec<SeriesAward>>,

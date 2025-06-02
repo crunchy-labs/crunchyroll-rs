@@ -27,6 +27,12 @@ pub struct EpisodeVersion {
     pub is_premium_only: bool,
     pub original: bool,
 
+    /// Can be:
+    /// - `main`: Version is the same as the episode this is a version of.
+    /// - `dub`: Version is dubbed.
+    #[serde(default)]
+    pub roles: Vec<String>,
+
     #[cfg(feature = "__test_strict")]
     pub(crate) variant: crate::StrictValue,
 }
@@ -82,6 +88,11 @@ pub struct Episode {
     pub series_id: String,
     pub series_title: String,
     pub series_slug_title: String,
+
+    /// Can be:
+    /// - `dub`: Version is dubbed.
+    #[serde(default)]
+    pub roles: Vec<String>,
 
     // probably empty
     #[serde(default)]

@@ -75,6 +75,7 @@ pub(crate) fn fix_empty_episode_versions(episode: &mut Episode) {
             season_id: episode.season_id.clone(),
             is_premium_only: episode.is_premium_only,
             original: true,
+            roles: episode.roles.clone(),
             #[cfg(feature = "__test_strict")]
             variant: StrictValue::default(),
         })
