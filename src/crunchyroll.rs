@@ -152,6 +152,11 @@ impl Crunchyroll {
     pub async fn session_token(&self) -> SessionToken {
         self.executor.config.read().await.session_token.clone()
     }
+
+    /// Return the device identifier for the current session.
+    pub fn device_identifier(&self) -> Option<DeviceIdentifier> {
+        self.executor.details.device_identifier.clone()
+    }
 }
 
 mod auth {
