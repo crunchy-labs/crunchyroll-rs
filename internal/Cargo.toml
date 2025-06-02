@@ -3,6 +3,7 @@ name = "crunchyroll-rs-internal"
 version = "0.13.0"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
+rust-version = "1.85.0"
 description = "Internal crate for crunchyroll-rs. Do not use."
 repository = "https://github.com/crunchy-labs/crunchyroll-rs"
 license = "MIT OR Apache-2.0"

@@ -47,3 +47,24 @@ jobs:
         with:
           sarif_file: rust-clippy-results.sarif
           wait-for-processing: true
+
+  verify-msrv:
+    name: Verify minimum supported Rust version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Install cargo-msrv
+        run: cargo install cargo-msrv --locked
+
+      - name: Verify msrv
+        run: cargo msrv verify --all-features
+
+      - name: Verify msrv of internal crate
+        run: cd internal && cargo msrv verify --all-features

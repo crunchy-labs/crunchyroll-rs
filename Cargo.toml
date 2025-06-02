@@ -4,6 +4,7 @@ name = "crunchyroll-rs"
 version = "0.13.0"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
+rust-version = "1.85.0"
 description = "Pure Rust implementation of the crunchyroll api."
 readme = "README.md"
 repository = "https://github.com/crunchy-labs/crunchyroll-rs"
