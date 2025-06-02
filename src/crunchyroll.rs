@@ -663,6 +663,20 @@ mod auth {
             self.executor.request(self.builder).await
         }
 
+        pub(crate) async fn request_static<T: Request + DeserializeOwned>(
+            self,
+        ) -> Result<Option<T>> {
+            let raw_result = self.request_raw(false).await?;
+            if raw_result
+                .windows(8)
+                .any(move |window| window == b"</Error>")
+            {
+                Ok(None)
+            } else {
+                Ok(serde_json::from_slice(raw_result.as_slice())?)
+            }
+        }
+
         pub(crate) async fn request_raw(mut self, auth: bool) -> Result<Vec<u8>> {
             if auth {
                 self.builder = self.executor.auth_req(self.builder).await?;

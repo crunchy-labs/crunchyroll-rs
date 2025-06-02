@@ -33,7 +33,7 @@ pub struct SkipEventsEvent {
 }
 
 /// Information about skippable events like an intro or credits.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[serde(remote = "Self")]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -338,21 +338,12 @@ macro_rules! impl_media_video {
                 }
 
                 /// Get skippable events like intro or credits.
-                pub async fn skip_events(&self) -> Result<SkipEvents> {
+                pub async fn skip_events(&self) -> Result<Option<SkipEvents>> {
                     let endpoint = format!(
                         "https://static.crunchyroll.com/skip-events/production/{}.json",
                         self.id
                     );
-                    let raw_result = self.executor.get(&endpoint)
-                        .request_raw(false)
-                        .await?;
-                    let result = String::from_utf8_lossy(raw_result.as_slice());
-                    if result.contains("</Error>") {
-                        // sometimes crunchyroll just returns a xml error instead of an empty result
-                        return Ok(SkipEvents::default())
-                    } else {
-                        return Ok(serde_json::from_str(&result)?)
-                    }
+                    self.executor.get(&endpoint).request_static().await
                 }
 
                 /// Return the previous episode / movie. Is [`None`] if the current media is the

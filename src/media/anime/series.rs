@@ -156,9 +156,9 @@ impl Series {
     }
 
     /// Get copyright holders of this series.
-    pub async fn copyright(&self) -> Result<SeriesCopyright> {
+    pub async fn copyright(&self) -> Result<Option<SeriesCopyright>> {
         let endpoint = format!("https://static.crunchyroll.com/copyright/{}.json", self.id);
-        self.executor.get(endpoint).request().await
+        self.executor.get(endpoint).request_static().await
     }
 
     /// Get music videos which are related to this series.
