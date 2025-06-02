@@ -144,13 +144,13 @@ impl Crunchyroll {
     /// Return the access token used to make requests. The token changes every 5 minutes, so you
     /// might have to re-call this function if you have a long-living session where you need it.
     pub async fn access_token(&self) -> String {
-        self.executor.config.read().await.access_token.clone()
+        self.executor.session.read().await.access_token.clone()
     }
 
     /// Return the current session token. It can be used to log-in later with
     /// [`CrunchyrollBuilder::login_with_refresh_token`] or [`CrunchyrollBuilder::login_with_etp_rt`].
     pub async fn session_token(&self) -> SessionToken {
-        self.executor.config.read().await.session_token.clone()
+        self.executor.session.read().await.session_token.clone()
     }
 
     /// Return the device identifier for the current session.
@@ -215,7 +215,7 @@ mod auth {
     }
 
     #[derive(Clone, Debug)]
-    pub(crate) struct ExecutorConfig {
+    pub(crate) struct ExecutorSession {
         pub(crate) token_type: String,
         pub(crate) access_token: String,
         pub(crate) session_token: SessionToken,
@@ -230,11 +230,6 @@ mod auth {
         pub(crate) device_identifier: Option<DeviceIdentifier>,
         pub(crate) stream_platform: StreamPlatform,
 
-        pub(crate) bucket: String,
-
-        pub(crate) signature: String,
-        pub(crate) policy: String,
-        pub(crate) key_pair_id: String,
         /// The account id is wrapped in a [`Result`] since [`Executor::auth_anonymously`] /
         /// [`CrunchyrollBuilder::login_anonymously`] doesn't return an account id and to prevent
         /// writing error messages multiple times in functions which require the account id to be
@@ -258,7 +253,8 @@ mod auth {
 
         /// Must be a [`RwLock`] because `Executor` is always passed inside `Arc` which does not
         /// allow direct changes to the struct.
-        pub(crate) config: RwLock<ExecutorConfig>,
+        pub(crate) session: RwLock<ExecutorSession>,
+
         pub(crate) details: ExecutorDetails,
 
         #[cfg(feature = "tower")]
@@ -312,9 +308,9 @@ mod auth {
             self: &Arc<Self>,
             mut req: RequestBuilder,
         ) -> Result<RequestBuilder> {
-            let mut config = self.config.write().await;
-            if config.session_expire <= Utc::now() {
-                let login_response = match &config.session_token {
+            let mut session = self.session.write().await;
+            if session.session_expire <= Utc::now() {
+                let login_response = match &session.session_token {
                     SessionToken::RefreshToken(refresh_token) => {
                         Executor::auth_with_refresh_token(
                             &self.client,
@@ -346,27 +342,26 @@ mod auth {
                     }
                 };
 
-                let mut new_config = config.clone();
-                new_config.token_type = login_response.token_type;
-                new_config.access_token = login_response.access_token;
-                new_config.session_token = match new_config.session_token {
-                    SessionToken::RefreshToken(_) => {
-                        SessionToken::RefreshToken(login_response.refresh_token.unwrap())
-                    }
-                    SessionToken::EtpRt(_) => {
-                        SessionToken::EtpRt(login_response.refresh_token.unwrap())
-                    }
-                    SessionToken::Anonymous => SessionToken::Anonymous,
+                *session = ExecutorSession {
+                    token_type: login_response.token_type,
+                    access_token: login_response.access_token,
+                    session_token: match session.session_token {
+                        SessionToken::RefreshToken(_) => {
+                            SessionToken::RefreshToken(login_response.refresh_token.unwrap())
+                        }
+                        SessionToken::EtpRt(_) => {
+                            SessionToken::EtpRt(login_response.refresh_token.unwrap())
+                        }
+                        SessionToken::Anonymous => SessionToken::Anonymous,
+                    },
+                    session_expire: Utc::now()
+                        .add(Duration::try_seconds(login_response.expires_in as i64).unwrap()),
                 };
-                new_config.session_expire = Utc::now()
-                    .add(Duration::try_seconds(login_response.expires_in as i64).unwrap());
-
-                *config = new_config;
             }
 
             req = req.header(
                 header::AUTHORIZATION,
-                format!("Bearer {}", config.access_token),
+                format!("{} {}", session.token_type, session.access_token),
             );
             Ok(req)
         }
@@ -375,9 +370,9 @@ mod auth {
             &self,
             claim: &str,
         ) -> Result<Option<T>> {
-            let executor_config = self.config.read().await;
+            let executor_session = self.session.read().await;
 
-            let token = executor_config.access_token.as_str();
+            let token = executor_session.access_token.as_str();
             let key = jsonwebtoken::DecodingKey::from_rsa_components("", "").unwrap();
             let mut validation = jsonwebtoken::Validation::default();
             // the jwt might be expired when calling this function. but there is no really need to
@@ -605,7 +600,7 @@ mod auth {
         fn default() -> Self {
             Self {
                 client: Client::new(),
-                config: RwLock::new(ExecutorConfig {
+                session: RwLock::new(ExecutorSession {
                     token_type: "".to_string(),
                     access_token: "".to_string(),
                     session_token: SessionToken::RefreshToken("".into()),
@@ -616,10 +611,6 @@ mod auth {
                     preferred_audio_locale: None,
                     device_identifier: None,
                     stream_platform: Default::default(),
-                    bucket: "".to_string(),
-                    signature: "".to_string(),
-                    policy: "".to_string(),
-                    key_pair_id: "".to_string(),
                     account_id: Ok("".to_string()),
                 },
                 #[cfg(feature = "tower")]
@@ -994,54 +985,11 @@ mod auth {
             login_response: AuthResponse,
             session_token: SessionToken,
         ) -> Result<Crunchyroll> {
-            let index_endpoint = "https://www.crunchyroll.com/index/v2";
-            #[derive(Deserialize, smart_default::SmartDefault)]
-            #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-            #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-            #[allow(dead_code)]
-            struct IndexRespCms {
-                bucket: String,
-                #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-                expires: DateTime<Utc>,
-                key_pair_id: String,
-                policy: String,
-                signature: String,
-            }
-            #[derive(Default, Deserialize, Request)]
-            #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-            #[cfg_attr(not(feature = "__test_strict"), serde(default))]
-            #[allow(dead_code)]
-            struct IndexResp {
-                cms_web: IndexRespCms,
-                default_marketing_opt_in: bool,
-                service_available: bool,
-
-                #[cfg(feature = "__test_strict")]
-                cms: crate::StrictValue,
-                #[cfg(feature = "__test_strict")]
-                cms_beta: crate::StrictValue,
-            }
-
-            let index_req = self.client.get(index_endpoint).header(
-                header::AUTHORIZATION,
-                format!(
-                    "{} {}",
-                    login_response.token_type, login_response.access_token
-                ),
-            );
-            let index: IndexResp = request(
-                &self.client,
-                index_req,
-                #[cfg(feature = "tower")]
-                self.middleware.as_ref(),
-            )
-            .await?;
-
             let crunchy = Crunchyroll {
                 executor: Arc::new(Executor {
                     client: self.client,
 
-                    config: RwLock::new(ExecutorConfig {
+                    session: RwLock::new(ExecutorSession {
                         token_type: login_response.token_type,
                         access_token: login_response.access_token,
                         session_token,
@@ -1054,18 +1002,6 @@ mod auth {
                         device_identifier: self.device_identifier,
                         stream_platform: self.stream_platform,
 
-                        // '/' is trimmed so that urls which require it must be in .../{bucket}/... like format.
-                        // this just looks cleaner
-                        bucket: index
-                            .cms_web
-                            .bucket
-                            .strip_prefix('/')
-                            .unwrap_or(index.cms_web.bucket.as_str())
-                            .to_string(),
-
-                        signature: index.cms_web.signature,
-                        policy: index.cms_web.policy,
-                        key_pair_id: index.cms_web.key_pair_id,
                         account_id: login_response.account_id.ok_or_else(|| {
                             Error::Authentication {
                                 message: "Login with a user account to use this function"
