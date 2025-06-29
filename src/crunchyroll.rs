@@ -12,7 +12,6 @@ enum_values! {
     #[allow(non_camel_case_types)]
     #[derive(Hash, Ord, PartialOrd)]
     pub enum Locale {
-        ar_ME = "ar-ME"
         ar_SA = "ar-SA"
         ca_ES = "ca-ES"
         de_DE = "de-DE"
@@ -20,7 +19,6 @@ enum_values! {
         en_US = "en-US"
         es_419 = "es-419"
         es_ES = "es-ES"
-        es_LA = "es-LA"
         fr_FR = "fr-FR"
         hi_IN = "hi-IN"
         id_ID = "id-ID"
@@ -38,7 +36,7 @@ enum_values! {
         tr_TR = "tr-TR"
         vi_VN = "vi-VN"
         zh_CN = "zh-CN"
-        zh_HK = "zh_HK"
+        zh_HK = "zh-HK"
         zh_TW = "zh-TW"
     }
 }
@@ -46,7 +44,6 @@ enum_values! {
 impl Locale {
     pub fn all() -> Vec<Locale> {
         vec![
-            Locale::ar_ME,
             Locale::ar_SA,
             Locale::ca_ES,
             Locale::de_DE,
@@ -54,7 +51,6 @@ impl Locale {
             Locale::en_US,
             Locale::es_419,
             Locale::es_ES,
-            Locale::es_LA,
             Locale::fr_FR,
             Locale::hi_IN,
             Locale::id_ID,
@@ -77,16 +73,15 @@ impl Locale {
         ]
     }
 
-    pub fn to_human_readable(&self) -> String {
+    pub fn to_human_readable(&self) -> &str {
         match self {
-            Locale::ar_ME => "Arabic",
             Locale::ar_SA => "Arabic (Saudi Arabia)",
             Locale::ca_ES => "Catalan",
             Locale::de_DE => "German",
             Locale::en_IN => "English (India)",
             Locale::en_US => "English (US)",
-            Locale::es_419 | Locale::es_LA => "Spanish (Latin America)",
-            Locale::es_ES => "Spanish (European)",
+            Locale::es_419 => "Spanish (Latin America)",
+            Locale::es_ES => "Spanish (Spain)",
             Locale::fr_FR => "French",
             Locale::hi_IN => "Hindi",
             Locale::id_ID => "Indonesian",
@@ -96,7 +91,7 @@ impl Locale {
             Locale::ms_MY => "Malay",
             Locale::pl_PL => "Polish",
             Locale::pt_BR => "Portuguese (Brazil)",
-            Locale::pt_PT => "Portuguese (Europe)",
+            Locale::pt_PT => "Portuguese (Portugal)",
             Locale::ru_RU => "Russian",
             Locale::ta_IN => "Tamil",
             Locale::te_IN => "Telugu",
@@ -108,7 +103,6 @@ impl Locale {
             Locale::zh_TW => "Chinese (Mandarin)",
             Locale::Custom(custom) => custom.as_str(),
         }
-        .to_string()
     }
 }
 
