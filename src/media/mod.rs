@@ -28,7 +28,7 @@ crate::enum_values! {
 /// Trait every media struct ([`Series`], [`Season`], [`Episode`], [`MovieListing`], [`Movie`],
 /// [`MusicVideo`], [`Concert`]) implements.
 #[allow(async_fn_in_trait)]
-pub trait Media {
+pub trait Media: Into<MediaCollection> {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self>
     where
         Self: Sized;
