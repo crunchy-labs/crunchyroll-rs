@@ -126,19 +126,3 @@ impl Request for MediaCollection {
         }
     }
 }
-
-macro_rules! impl_media_collection {
-    ($($media:ident)*) => {
-        $(
-            impl From<$media> for MediaCollection {
-                fn from(value: $media) -> Self {
-                    MediaCollection::$media(value)
-                }
-            }
-        )*
-    }
-}
-
-impl_media_collection! {
-    Series Season Episode MovieListing Movie MusicVideo Concert
-}

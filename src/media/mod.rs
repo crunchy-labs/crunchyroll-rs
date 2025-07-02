@@ -1,6 +1,7 @@
 //! All media items like series, episodes or movies.
 
 mod anime;
+mod r#impl;
 mod media_collection;
 mod music;
 mod shared;
@@ -14,6 +15,7 @@ pub use shared::*;
 pub use stream::*;
 
 use crate::crunchyroll::Executor;
+use crate::internal::sealed::Sealed;
 use crate::{Crunchyroll, Result};
 use std::sync::Arc;
 
@@ -28,7 +30,7 @@ crate::enum_values! {
 /// Trait every media struct ([`Series`], [`Season`], [`Episode`], [`MovieListing`], [`Movie`],
 /// [`MusicVideo`], [`Concert`]) implements.
 #[allow(async_fn_in_trait)]
-pub trait Media: Into<MediaCollection> {
+pub trait Media: Sealed + Into<MediaCollection> {
     async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self>
     where
         Self: Sized;
