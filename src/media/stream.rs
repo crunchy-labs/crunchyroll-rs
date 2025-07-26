@@ -119,6 +119,11 @@ pub struct Stream {
     pub subtitles: HashMap<Locale, Subtitle>,
     pub captions: HashMap<Locale, Subtitle>,
 
+    /// Either "on_demand", a normal video, or "live", a livestream. If it's "live",
+    /// [`Stream::stream_data`] will fail, as only on-demand videos are supported (and livestreams
+    /// are very rare, the only occurrences were airing Kaiju No. 8 episodes).
+    pub playback_type: String,
+
     pub token: String,
     /// If [`StreamSession::uses_stream_limits`] is `true`, this means that the stream data will be
     /// DRM encrypted, if `false` it isn't.
@@ -132,8 +137,6 @@ pub struct Stream {
 
     #[cfg(feature = "__test_strict")]
     asset_id: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    playback_type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     bifs: crate::StrictValue,
 }
@@ -221,6 +224,12 @@ impl Stream {
     /// time, typically the exact amount depends on the type of (premium) subscription you have. You
     /// can use [`Stream::invalidate`] to invalidate all stream data for this stream.
     pub async fn stream_data(&self, hardsub: Option<Locale>) -> Result<Option<StreamData>> {
+        if self.playback_type == "live" {
+            return Err(Error::Input {
+                message: "Livestream cannot be downloaded".to_string(),
+            });
+        }
+
         if let Some(hardsub) = hardsub {
             let Some(url) = self
                 .hard_subs

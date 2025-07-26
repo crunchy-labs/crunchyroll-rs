@@ -155,7 +155,8 @@ pub struct Episode {
 
     pub available_offline: bool,
     pub availability_notes: String,
-    /// Is "available" or "not available"
+    /// Is "available", "not available" or "coming_soon". At the time of writing, "coming_soon"
+    /// was only seen on episodes that were live-streamed.
     pub availability_status: String,
 
     pub closed_captions_available: bool,
