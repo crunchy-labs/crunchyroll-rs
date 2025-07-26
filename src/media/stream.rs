@@ -273,10 +273,7 @@ impl Stream {
     }
 
     async fn invalidate_raw(id: &str, token: &str, executor: &Arc<Executor>) -> Result<()> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/playback/v1/token/{}/{}",
-            id, token
-        );
+        let endpoint = format!("https://www.crunchyroll.com/playback/v1/token/{id}/{token}",);
 
         executor.delete(endpoint).request_raw(true).await?;
 

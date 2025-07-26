@@ -49,7 +49,7 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
             Value::Null => continue,
             _ => {
                 return Err(Error::Internal {
-                    message: format!("key is not supported to be urlencoded ({})", key),
+                    message: format!("key is not supported to be urlencoded ({key})"),
                 });
             }
         };
@@ -63,7 +63,7 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
                     Value::Number(number) => Ok(number.to_string()),
                     Value::String(string) => Ok(string),
                     _ => Err(Error::Internal {
-                        message: format!("value is not supported to be urlencoded ({})", vv),
+                        message: format!("value is not supported to be urlencoded ({vv})"),
                     }),
                 })
                 .collect::<Result<Vec<String>>>()?
@@ -71,7 +71,7 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
             Value::Null => continue,
             _ => {
                 return Err(Error::Internal {
-                    message: format!("value is not supported to be urlencoded ({})", value),
+                    message: format!("value is not supported to be urlencoded ({value})"),
                 });
             }
         };

@@ -76,7 +76,7 @@ impl Display for Error {
                     msg.push_str(&format!(" ({url})"))
                 }
                 if content.is_empty() {
-                    write!(f, "{}", msg)
+                    write!(f, "{msg}")
                 } else {
                     write!(f, "{}: {}", msg, String::from_utf8_lossy(content.as_ref()))
                 }
@@ -163,7 +163,7 @@ pub(crate) fn is_request_error(value: Value, url: &str, status: &StatusCode) -> 
 
     let error_msg = match serde_json::from_value::<ErrorTypes>(value) {
         Ok(ErrorTypes::MessageTypeError { message, r#type }) => {
-            format!("{} - {}", r#type, message)
+            format!("{type} - {message}")
         }
         Ok(ErrorTypes::CodeError {
             code,
