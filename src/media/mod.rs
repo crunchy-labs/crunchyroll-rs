@@ -29,21 +29,27 @@ crate::enum_values! {
 
 /// Trait every media struct ([`Series`], [`Season`], [`Episode`], [`MovieListing`], [`Movie`],
 /// [`MusicVideo`], [`Concert`]) implements.
-#[allow(async_fn_in_trait)]
 pub trait Media: Sealed + Into<MediaCollection> {
-    async fn from_id(crunchyroll: &Crunchyroll, id: impl AsRef<str> + Send) -> Result<Self>
+    fn from_id(
+        crunchyroll: &Crunchyroll,
+        id: impl AsRef<str> + Send,
+    ) -> impl Future<Output = Result<Self>>
     where
         Self: Sized;
 
     #[doc(hidden)]
-    async fn __set_executor(&mut self, executor: Arc<Executor>);
+    fn __set_executor(&mut self, executor: Arc<Executor>) -> impl Future<Output = ()>;
 
     #[doc(hidden)]
-    async fn __apply_fixes(&mut self) {}
+    fn __apply_fixes(&mut self) -> impl Future<Output = ()> {
+        async move {}
+    }
 
     #[doc(hidden)]
     #[cfg(feature = "experimental-stabilizations")]
-    async fn __apply_experimental_stabilizations(&mut self) {}
+    fn __apply_experimental_stabilizations(&mut self) -> impl Future<Output = ()> {
+        async move {}
+    }
 }
 
 impl Crunchyroll {
