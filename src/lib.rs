@@ -162,7 +162,7 @@ pub(crate) use macros::{enum_values, options};
 
 pub use crunchyroll::{Crunchyroll, Locale};
 pub use media::{
-    Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
+    Artist, Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
 };
 #[cfg(feature = "parse")]
 pub use parse::{UrlType, parse_url};
