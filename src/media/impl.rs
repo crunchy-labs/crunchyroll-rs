@@ -1,5 +1,7 @@
 use crate::internal::sealed::Sealed;
-use crate::{Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series};
+use crate::{
+    Artist, Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
+};
 
 macro_rules! impl_sealed {
     ($($media:ident)*) => {
@@ -10,7 +12,7 @@ macro_rules! impl_sealed {
 }
 
 impl_sealed! {
-    Series Season Episode MovieListing Movie MusicVideo Concert
+    Series Season Episode MovieListing Movie Artist MusicVideo Concert
 }
 
 macro_rules! impl_from_media_collection {
@@ -26,5 +28,5 @@ macro_rules! impl_from_media_collection {
 }
 
 impl_from_media_collection! {
-    Series Season Episode MovieListing Movie MusicVideo Concert
+    Series Season Episode MovieListing Movie Artist MusicVideo Concert
 }

@@ -3,7 +3,7 @@ use crate::crunchyroll::Executor;
 use crate::error::Error;
 use crate::media::Media;
 use crate::{
-    Concert, Crunchyroll, Episode, Movie, MovieListing, MusicVideo, Result, Season, Series,
+    Artist, Concert, Crunchyroll, Episode, Movie, MovieListing, MusicVideo, Result, Season, Series,
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
@@ -19,6 +19,7 @@ pub enum MediaCollection {
     Episode(Episode),
     MovieListing(MovieListing),
     Movie(Movie),
+    Artist(Artist),
     MusicVideo(MusicVideo),
     Concert(Concert),
 }
@@ -119,6 +120,7 @@ impl Request for MediaCollection {
                 Request::__set_executor(movie_listing, executor).await
             }
             MediaCollection::Movie(movie) => Request::__set_executor(movie, executor).await,
+            MediaCollection::Artist(artist) => Request::__set_executor(artist, executor).await,
             MediaCollection::MusicVideo(music_video) => {
                 Request::__set_executor(music_video, executor).await
             }
