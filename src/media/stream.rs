@@ -471,6 +471,10 @@ impl StreamData {
                         .clone(),
                     segment_init_url: segment_init_url.clone(),
                     segment_media_url: segment_media_url.clone(),
+                    segment_timescale: segment_template
+                        .timescale
+                        .ok_or("no timescale found")
+                        .map_err(err_fn)? as u32,
                 };
 
                 if let Some(sampling_rate) = representation.audioSamplingRate {
@@ -591,6 +595,8 @@ pub struct MediaStream {
     segment_init_url: String,
     #[serde(skip_serializing)]
     segment_media_url: String,
+    #[serde(skip_serializing)]
+    segment_timescale: u32,
 }
 
 #[derive(Clone, Debug, Serialize, Request)]
@@ -611,11 +617,10 @@ pub struct MediaStreamDRM {
     pub types: Vec<MediaStreamDRMType>,
 }
 
-#[derive(Clone, Debug, Serialize, Request)]
-pub enum MediaStreamInfo {
-    Audio { sampling_rate: u32 },
-    Video { resolution: Resolution, fps: f64 },
-}
+static SEGMENT_MEDIA_URL_TEMPLATE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\$(?P<placeholder>RepresentationID|Number|Time|Bandwidth)(%0(?P<padding>\d)d)?\$")
+        .unwrap()
+});
 
 impl MediaStream {
     /// Returns all segment this stream is made of.
@@ -627,20 +632,52 @@ impl MediaStream {
                 self.segment_base_url,
                 self.segment_init_url
                     .replace("$RepresentationID$", &self.representation_id)
+                    .replace("$Bandwidth$", &self.bandwidth.to_string())
             ),
             length: Duration::from_secs(0),
         }];
 
+        let captures = SEGMENT_MEDIA_URL_TEMPLATE
+            .captures_iter(&self.segment_media_url)
+            .collect::<Vec<_>>();
         for i in 0..self.segment_lengths.len() {
+            let mut segment_media_url = self.segment_media_url.clone();
+            let mut offset = 0;
+            for capture in &captures {
+                let replace_string = match &capture["placeholder"] {
+                    "Number" => format!(
+                        "{:0width$}",
+                        self.segment_start + i as u32,
+                        width = capture
+                            .name("padding")
+                            .map_or(0, |p| p.as_str().parse().unwrap())
+                    ),
+                    "Time" => format!(
+                        "{:0width$}",
+                        i * self.segment_timescale as usize,
+                        width = capture
+                            .name("padding")
+                            .map_or(0, |p| p.as_str().parse().unwrap())
+                    ),
+                    "RepresentationID" => self.representation_id.clone(),
+                    "Bandwidth" => self.bandwidth.to_string(),
+                    _ => unreachable!(),
+                };
+
+                let mat = capture.get(0).unwrap();
+                let replace_start = (mat.start() as i32 + offset) as usize;
+                let replace_end = (mat.end() as i32 + offset) as usize;
+
+                let len_before = segment_media_url.len() as i32;
+                segment_media_url.replace_range(replace_start..replace_end, &replace_string);
+                let len_after = segment_media_url.len() as i32;
+
+                offset += len_after - len_before;
+            }
+
             segments.push(StreamSegment {
                 executor: self.executor.clone(),
-                url: format!(
-                    "{}{}",
-                    self.segment_base_url,
-                    self.segment_media_url
-                        .replace("$RepresentationID$", &self.representation_id)
-                        .replace("$Number$", &(self.segment_start + i as u32).to_string())
-                ),
+                url: format!("{}{}", self.segment_base_url, segment_media_url),
                 length: Duration::from_millis(self.segment_lengths[i] as u64),
             })
         }
