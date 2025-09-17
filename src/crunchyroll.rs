@@ -148,7 +148,7 @@ impl Crunchyroll {
     }
 
     /// Return the device identifier for the current session.
-    pub fn device_identifier(&self) -> Option<DeviceIdentifier> {
+    pub fn device_identifier(&self) -> DeviceIdentifier {
         self.executor.details.device_identifier.clone()
     }
 }
@@ -166,6 +166,9 @@ mod auth {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
+    const BASIC_AUTH_CREDENTIALS: &str =
+        "dXhmdzRjZnVpYWtqeGp2bnhrYmo6WTU4TzRBemttR2I2LUVveU55NVRKTVVCM0ota2FnVWc=";
+
     /// Stores if the refresh token or etp-rt cookie was used for login. Extract the token and use
     /// it as argument in their associated function ([`CrunchyrollBuilder::login_with_refresh_token`]
     /// or [`CrunchyrollBuilder::login_with_etp_rt`]) if you want to re-login into the account again.
@@ -182,12 +185,25 @@ mod auth {
         /// The device id, this is specific for every device type, but usually represented as UUID.
         /// Using [`Uuid::new_v4`] for it works fine.
         pub device_id: String,
-        /// Type of the device which issues the session, e.g. `Chrome on Windows` or `iPhone 15`.
+        /// Type of the device which issues the session, e.g. `Chrome on Windows`, `iPhone 15` or
+        /// `SM-G980F` (Samsung Galaxy S20).
+        /// *Note*: When using for login, the platforms for [`DeviceIdentifier::device_type`] and
+        /// [`CrunchyrollBuilder::stream_platform`] should match.
         pub device_type: String,
         /// Name of the device which issues the session. This may be empty, for example all session
         /// that are created over the website have an empty name; when issues via the app, the name
         /// is the name of your phone (which you can modify/set when you set up the phone).
         pub device_name: Option<String>,
+    }
+
+    impl Default for DeviceIdentifier {
+        fn default() -> Self {
+            Self {
+                device_id: "0000-0000-0000-0000".to_string(),
+                device_type: "0000-0000-0000-0000".to_string(),
+                device_name: None,
+            }
+        }
     }
 
     #[derive(Debug, Default, Deserialize)]
@@ -221,7 +237,7 @@ mod auth {
     pub(crate) struct ExecutorDetails {
         pub(crate) locale: Locale,
         pub(crate) preferred_audio_locale: Option<Locale>,
-        pub(crate) device_identifier: Option<DeviceIdentifier>,
+        pub(crate) device_identifier: DeviceIdentifier,
         pub(crate) stream_platform: StreamPlatform,
 
         /// The account id is wrapped in a [`Result`] since [`Executor::auth_anonymously`] /
@@ -401,22 +417,20 @@ mod auth {
 
         fn auth_body<'a>(
             mut pre_body: Vec<(&'a str, &'a str)>,
-            device_identifier: &'a Option<DeviceIdentifier>,
+            device_identifier: &'a DeviceIdentifier,
         ) -> Vec<(&'a str, &'a str)> {
             pre_body.push(("scope", "offline_access"));
-            if let Some(device_identifier) = device_identifier {
-                pre_body.push(("device_id", device_identifier.device_id.as_str()));
-                pre_body.push(("device_type", device_identifier.device_type.as_str()));
-                if let Some(device_name) = &device_identifier.device_name {
-                    pre_body.push(("device_name", device_name.as_str()));
-                }
+            pre_body.push(("device_id", device_identifier.device_id.as_str()));
+            pre_body.push(("device_type", device_identifier.device_type.as_str()));
+            if let Some(device_name) = &device_identifier.device_name {
+                pre_body.push(("device_name", device_name.as_str()));
             }
             pre_body
         }
 
         async fn auth_anonymously(
             client: &Client,
-            device_identifier: &Option<DeviceIdentifier>,
+            device_identifier: &DeviceIdentifier,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
@@ -449,7 +463,7 @@ mod auth {
             client: &Client,
             email: &str,
             password: &str,
-            device_identifier: &Option<DeviceIdentifier>,
+            device_identifier: &DeviceIdentifier,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
@@ -463,8 +477,12 @@ mod auth {
                 ],
                 device_identifier,
             );
-            let req = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic eHVuaWh2ZWRidDNtYmlzdWhldnQ6MWtJUzVkeVR2akUwX3JxYUEzWWVBaDBiVVhVbXhXMTE=")
+            let req = client
+                .post(endpoint)
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Basic {BASIC_AUTH_CREDENTIALS}"),
+                )
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
@@ -486,7 +504,7 @@ mod auth {
         async fn auth_with_refresh_token(
             client: &Client,
             refresh_token: &str,
-            device_identifier: &Option<DeviceIdentifier>,
+            device_identifier: &DeviceIdentifier,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
@@ -499,8 +517,12 @@ mod auth {
                 ],
                 device_identifier,
             );
-            let req = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic eHVuaWh2ZWRidDNtYmlzdWhldnQ6MWtJUzVkeVR2akUwX3JxYUEzWWVBaDBiVVhVbXhXMTE=")
+            let req = client
+                .post(endpoint)
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Basic {BASIC_AUTH_CREDENTIALS}"),
+                )
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
@@ -523,7 +545,7 @@ mod auth {
             client: &Client,
             refresh_token: &str,
             profile_id: &str,
-            device_identifier: &Option<DeviceIdentifier>,
+            device_identifier: &DeviceIdentifier,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
@@ -537,8 +559,12 @@ mod auth {
                 ],
                 device_identifier,
             );
-            let req = client.post(endpoint)
-                .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
+            let req = client
+                .post(endpoint)
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Basic {BASIC_AUTH_CREDENTIALS}"),
+                )
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
@@ -560,7 +586,7 @@ mod auth {
         async fn auth_with_etp_rt(
             client: &Client,
             etp_rt: &str,
-            device_identifier: &Option<DeviceIdentifier>,
+            device_identifier: &DeviceIdentifier,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
@@ -603,7 +629,7 @@ mod auth {
                 details: ExecutorDetails {
                     locale: Default::default(),
                     preferred_audio_locale: None,
-                    device_identifier: None,
+                    device_identifier: DeviceIdentifier::default(),
                     stream_platform: Default::default(),
                     account_id: Ok("".to_string()),
                 },
@@ -697,7 +723,6 @@ mod auth {
         client: Client,
         locale: Locale,
         preferred_audio_locale: Option<Locale>,
-        device_identifier: Option<DeviceIdentifier>,
         stream_platform: StreamPlatform,
 
         #[cfg(feature = "tower")]
@@ -714,7 +739,6 @@ mod auth {
                     .unwrap(),
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
-                device_identifier: None,
                 stream_platform: StreamPlatform::default(),
                 #[cfg(feature = "tower")]
                 middleware: None,
@@ -731,7 +755,7 @@ mod auth {
         pub const DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
             (
                 header::USER_AGENT,
-                HeaderValue::from_static("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27"),
+                HeaderValue::from_static("Crunchyroll/3.82.0 Android/8.0.0 okhttp/4.12.0"),
             ),
             (header::ACCEPT, HeaderValue::from_static("*/*")),
             (
@@ -800,18 +824,8 @@ mod auth {
             self
         }
 
-        /// Set an identifier for the session which will be opened. `device_id` is usually a random
-        /// UUID, `device_type` a description of the device which issues the session, e.g. `Chrome
-        /// on Windows` or `iPhone 15`.
-        /// Gets only used if the login method is [`CrunchyrollBuilder::login_with_credentials`].
-        pub fn device_identifier(
-            mut self,
-            device_identifier: DeviceIdentifier,
-        ) -> CrunchyrollBuilder {
-            self.device_identifier = Some(device_identifier);
-            self
-        }
-
+        /// Set the platform for which a stream should be requested. The platform should match the
+        /// given [`DeviceIdentifier::device_type`], else requesting streams might not work.
         pub fn stream_platform(mut self, stream_platform: StreamPlatform) -> CrunchyrollBuilder {
             self.stream_platform = stream_platform;
             self
@@ -863,26 +877,33 @@ mod auth {
 
         /// Login without an account. This is just like if you would visit crunchyroll.com without
         /// an account. Some functions won't work if logged in with this method.
-        pub async fn login_anonymously(self) -> Result<Crunchyroll> {
+        pub async fn login_anonymously(
+            self,
+            device_identifier: DeviceIdentifier,
+        ) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
             let login_response = Executor::auth_anonymously(
                 &self.client,
-                &self.device_identifier,
+                &device_identifier,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
             .await?;
             let session_token = SessionToken::Anonymous;
 
-            self.post_login(login_response, session_token).await
+            self.post_login(login_response, session_token, device_identifier)
+                .await
         }
 
         /// Logs in with credentials (email and password) and returns a new `Crunchyroll` instance.
+        /// *Note*: All logins you do with the generated refresh token must have the same
+        /// `device_identifier`, otherwise the login will fail.
         pub async fn login_with_credentials<S: AsRef<str>>(
             self,
             email: S,
             password: S,
+            device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
@@ -890,7 +911,7 @@ mod auth {
                 &self.client,
                 email.as_ref(),
                 password.as_ref(),
-                &self.device_identifier,
+                &device_identifier,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -898,25 +919,29 @@ mod auth {
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(login_response, session_token).await
+            self.post_login(login_response, session_token, device_identifier)
+                .await
         }
 
         /// Logs in with a refresh token. This token is obtained when logging in with
         /// [`CrunchyrollBuilder::login_with_credentials`].
-        /// Note: Even though the tokens used in [`CrunchyrollBuilder::login_with_refresh_token`] and
-        /// [`CrunchyrollBuilder::login_with_etp_rt`] are having the same syntax, Crunchyroll
+        /// *Note*: Even though the tokens used in [`CrunchyrollBuilder::login_with_refresh_token`]
+        /// and [`CrunchyrollBuilder::login_with_etp_rt`] are having the same syntax, Crunchyroll
         /// internal they're different. I had issues when I tried to log in with the refresh token
         /// on [`CrunchyrollBuilder::login_with_etp_rt`] and vice versa.
+        /// *Note*: You need to set the `device_identifier` to the same identifier which were used
+        /// in the login that initially created the refresh token, otherwise the login will fail.
         pub async fn login_with_refresh_token<S: AsRef<str>>(
             self,
             refresh_token: S,
+            device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
             let login_response = Executor::auth_with_refresh_token(
                 &self.client,
                 refresh_token.as_ref(),
-                &self.device_identifier,
+                &device_identifier,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -924,20 +949,23 @@ mod auth {
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(login_response, session_token).await
+            self.post_login(login_response, session_token, device_identifier)
+                .await
         }
 
         /// Just like [`CrunchyrollBuilder::login_with_refresh_token`] but with the addition that
         /// the id of a [`crate::profile::Profile`] is given too. The resulting [`Crunchyroll`]
         /// session will settings that are specific to the given [`crate::profile::Profile`] id.
-        ///
         /// *Note*: When using this login method, some endpoints aren't available / will return an
         /// error. Idk why, but these endpoints can only be used if the authentication is anything
         /// other than [`CrunchyrollBuilder::login_with_refresh_token_profile_id`].
+        /// *Note*: You need to set the `device_identifier` to the same identifier which were used
+        /// in the login that initially created the refresh token, otherwise the login will fail.
         pub async fn login_with_refresh_token_profile_id<S: AsRef<str>>(
             self,
             refresh_token: S,
             profile_id: S,
+            device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
@@ -945,7 +973,7 @@ mod auth {
                 &self.client,
                 refresh_token.as_ref(),
                 profile_id.as_ref(),
-                &self.device_identifier,
+                &device_identifier,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -953,29 +981,34 @@ mod auth {
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(login_response, session_token).await
+            self.post_login(login_response, session_token, device_identifier)
+                .await
         }
 
         /// Logs in with the `etp_rt` cookie that is generated when logging in with the browser and
         /// returns a new `Crunchyroll` instance. This cookie can be extracted if you copy the
         /// `etp_rt` cookie from your browser.
-        /// *Note*: You need to set [`CrunchyrollBuilder::device_identifier`] to the same identifier
-        /// which were used in the login that initially created the `etp_rt` cookie, otherwise the
-        /// login will fail.
-        pub async fn login_with_etp_rt<S: AsRef<str>>(self, etp_rt: S) -> Result<Crunchyroll> {
+        /// *Note*: You need to set the `device_identifier` to the same identifier which were used
+        /// in the login that initially created the `etp_rt` cookie, otherwise the login will fail.
+        pub async fn login_with_etp_rt<S: AsRef<str>>(
+            self,
+            etp_rt: S,
+            device_identifier: DeviceIdentifier,
+        ) -> Result<Crunchyroll> {
             self.pre_login().await?;
 
             let login_response = Executor::auth_with_etp_rt(
                 &self.client,
                 etp_rt.as_ref(),
-                &self.device_identifier,
+                &device_identifier,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
             .await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(login_response, session_token).await
+            self.post_login(login_response, session_token, device_identifier)
+                .await
         }
 
         async fn pre_login(&self) -> Result<()> {
@@ -992,6 +1025,7 @@ mod auth {
             self,
             login_response: AuthResponse,
             session_token: SessionToken,
+            device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
             let crunchy = Crunchyroll {
                 executor: Arc::new(Executor {
@@ -1007,7 +1041,7 @@ mod auth {
                     details: ExecutorDetails {
                         locale: self.locale,
                         preferred_audio_locale: self.preferred_audio_locale,
-                        device_identifier: self.device_identifier,
+                        device_identifier,
                         stream_platform: self.stream_platform,
 
                         account_id: login_response.account_id.ok_or_else(|| {
