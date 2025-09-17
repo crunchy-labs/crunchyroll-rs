@@ -11,7 +11,7 @@ pub static SESSION: Store<Crunchyroll> = Store::new(|| {
         let (raw_token, raw_device_identifier) = raw_session.split_once('\n').unwrap_or(("", ""));
 
         let (token_type, token) = raw_token.split_once(':').unwrap_or(("", ""));
-        let device_identifier = raw_device_identifier.is_empty().not().then(|| {
+        let device_identifier = if raw_device_identifier.is_empty().not() {
             let mut split = raw_device_identifier.splitn(3, ':');
             DeviceIdentifier {
                 device_id: split.next().unwrap_or_default().to_string(),
@@ -20,19 +20,19 @@ pub static SESSION: Store<Crunchyroll> = Store::new(|| {
                     dn.is_empty().not().then_some(dn.to_string())
                 }),
             }
-        });
-
-        let mut crunchyroll_builder = Crunchyroll::builder();
-        if let Some(device_identifier) = device_identifier {
-            crunchyroll_builder = crunchyroll_builder.device_identifier(device_identifier);
-        }
+        } else {
+            DeviceIdentifier::default()
+        };
 
         let crunchy = match token_type {
-            "refresh_token" => crunchyroll_builder
-                .login_with_refresh_token(token)
+            "refresh_token" => Crunchyroll::builder()
+                .login_with_refresh_token(token, device_identifier)
                 .await
                 .unwrap(),
-            "etp_rt" => crunchyroll_builder.login_with_etp_rt(token).await.unwrap(),
+            "etp_rt" => Crunchyroll::builder()
+                .login_with_etp_rt(token, device_identifier)
+                .await
+                .unwrap(),
             _ => panic!("invalid session '{raw_session}'"),
         };
 
@@ -46,14 +46,15 @@ pub async fn set_session(crunchy: Crunchyroll) -> anyhow::Result<()> {
         SessionToken::EtpRt(etp_rt) => format!("etp_rt:{etp_rt}"),
         SessionToken::Anonymous => return Ok(()),
     };
-    let device_identifier = crunchy.device_identifier().map_or("".to_string(), |di| {
+    let device_identifier = {
+        let di = crunchy.device_identifier();
         format!(
             "{}:{}:{}",
             di.device_id,
             di.device_type,
             di.device_name.unwrap_or("".to_string())
         )
-    });
+    };
 
     set_store(
         "session".to_string(),

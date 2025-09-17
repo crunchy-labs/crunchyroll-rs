@@ -1,6 +1,7 @@
 use anyhow::Result;
 use crunchyroll_rs::categories::Category;
 use crunchyroll_rs::common::StreamExt;
+use crunchyroll_rs::crunchyroll::DeviceIdentifier;
 use crunchyroll_rs::search::BrowseOptions;
 use crunchyroll_rs::{Crunchyroll, MediaCollection};
 use std::env;
@@ -11,7 +12,7 @@ async fn main() -> Result<()> {
     let password = env::var("PASSWORD").expect("'PASSWORD' environment variable not found");
 
     let crunchyroll = Crunchyroll::builder()
-        .login_with_credentials(email, password)
+        .login_with_credentials(email, password, DeviceIdentifier::default())
         .await?;
 
     let options = BrowseOptions::default()
@@ -33,6 +34,9 @@ async fn main() -> Result<()> {
                 println!("Browse returned movie listing {}", movie_listing.title)
             }
             MediaCollection::Movie(movie) => println!("Browse returned movie {}", movie.title),
+            MediaCollection::Artist(artist) => {
+                println!("Browse returned music artist {}", artist.name)
+            }
             MediaCollection::MusicVideo(music_video) => {
                 println!("Browse returned music video {}", music_video.title)
             }

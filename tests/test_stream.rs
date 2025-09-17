@@ -1,7 +1,7 @@
 use crate::utils::SESSION;
 use crate::utils::Store;
 use crunchyroll_rs::Episode;
-use crunchyroll_rs::media::{Media, MediaStream, Stream, StreamSegment};
+use crunchyroll_rs::media::{Media, Stream, StreamSegment, VideoMediaStream};
 use rand::prelude::*;
 use std::io::Write;
 
@@ -18,7 +18,7 @@ static STREAM: Store<Stream> = Store::new(|| {
     })
 });
 
-static VIDEO_STREAM: Store<MediaStream> = Store::new(|| {
+static VIDEO_STREAM: Store<VideoMediaStream> = Store::new(|| {
     Box::pin(async {
         let stream = STREAM.get().await?;
         Ok(stream.stream_data(None).await?.unwrap().video.remove(0))

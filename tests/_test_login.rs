@@ -15,7 +15,7 @@ async fn login_with_credentials() {
         .map(|e| e.parse::<bool>().unwrap());
 
     let crunchy = Crunchyroll::builder()
-        .login_with_credentials(email, password)
+        .login_with_credentials(email, password, DeviceIdentifier::default())
         .await;
 
     assert_result!(crunchy);
@@ -37,7 +37,7 @@ async fn login_with_refresh_token() {
         .map(|e| e.parse::<bool>().unwrap());
 
     let crunchy = Crunchyroll::builder()
-        .login_with_refresh_token(refresh_token)
+        .login_with_refresh_token(refresh_token, DeviceIdentifier::default())
         .await;
 
     assert_result!(crunchy);
@@ -60,7 +60,11 @@ async fn login_with_refresh_token_profile_id() {
         .map(|e| e.parse::<bool>().unwrap());
 
     let crunchy = Crunchyroll::builder()
-        .login_with_refresh_token_profile_id(&refresh_token, &profile_id)
+        .login_with_refresh_token_profile_id(
+            &refresh_token,
+            &profile_id,
+            DeviceIdentifier::default(),
+        )
         .await;
 
     assert_result!(crunchy);
@@ -87,12 +91,14 @@ async fn login_with_etp_rt() {
         .map(|e| e.parse::<bool>().unwrap());
 
     let crunchy = Crunchyroll::builder()
-        .device_identifier(DeviceIdentifier {
-            device_id: etp_rt_device_id,
-            device_type: etp_rt_device_type,
-            device_name: etp_rt_device_name,
-        })
-        .login_with_etp_rt(etp_rt)
+        .login_with_etp_rt(
+            etp_rt,
+            DeviceIdentifier {
+                device_id: etp_rt_device_id,
+                device_type: etp_rt_device_type,
+                device_name: etp_rt_device_name,
+            },
+        )
         .await;
 
     assert_result!(crunchy);
@@ -107,7 +113,9 @@ async fn login_with_etp_rt() {
 
 #[tokio::test]
 async fn login_anonymously() {
-    let crunchy = Crunchyroll::builder().login_anonymously().await;
+    let crunchy = Crunchyroll::builder()
+        .login_anonymously(DeviceIdentifier::default())
+        .await;
 
     assert_result!(crunchy);
     assert_eq!(crunchy.as_ref().unwrap().premium().await, false);

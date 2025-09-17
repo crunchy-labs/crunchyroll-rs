@@ -15,6 +15,7 @@ async fn main() -> Result<()> {
         UrlType::Series(_) => println!("url points to a crunchyroll series"),
         UrlType::MovieListing(_) => println!("url points to a crunchyroll movie listing"),
         UrlType::EpisodeOrMovie(_) => println!("url points to a crunchyroll episode or movie"),
+        UrlType::Artist(_) => println!("url points to a crunchyroll artist"),
         UrlType::MusicVideo(_) => println!("url points to a crunchyroll music video"),
         UrlType::Concert(_) => println!("url points to a crunchyroll concert"),
     }
