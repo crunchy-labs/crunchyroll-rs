@@ -17,14 +17,14 @@ enum_values! {
     }
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct DeviceLocation {
     pub country: String,
     pub city: String,
     pub area: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
+#[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Device {
