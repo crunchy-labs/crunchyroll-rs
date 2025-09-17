@@ -838,6 +838,7 @@ mod auth {
         /// available, but this doesn't always work. So in case such a case happens, or if you don't
         /// want/can update to a newer crate version, you can use this method to overwrite said
         /// token.
+        ///
         /// Tools you can use to get new tokens:
         /// - <https://github.com/crunchy-labs/crunchyroll-scripts>
         pub fn basic_auth_token(mut self, basic_auth_token: String) -> CrunchyrollBuilder {
@@ -910,7 +911,8 @@ mod auth {
                 .await
         }
 
-        /// Logs in with credentials (email and password) and returns a new `Crunchyroll` instance.
+        /// Logs in with credentials (email and password) and returns a new [`Crunchyroll`] instance.
+        ///
         /// *Note*: All logins you do with the generated refresh token must have the same
         /// `device_identifier`, otherwise the login will fail.
         pub async fn login_with_credentials<S: AsRef<str>>(
@@ -940,10 +942,12 @@ mod auth {
 
         /// Logs in with a refresh token. This token is obtained when logging in with
         /// [`CrunchyrollBuilder::login_with_credentials`].
+        ///
         /// *Note*: Even though the tokens used in [`CrunchyrollBuilder::login_with_refresh_token`]
         /// and [`CrunchyrollBuilder::login_with_etp_rt`] are having the same syntax, Crunchyroll
         /// internal they're different. I had issues when I tried to log in with the refresh token
         /// on [`CrunchyrollBuilder::login_with_etp_rt`] and vice versa.
+        ///
         /// *Note*: You need to set the `device_identifier` to the same identifier which were used
         /// in the login that initially created the refresh token, otherwise the login will fail.
         pub async fn login_with_refresh_token<S: AsRef<str>>(
@@ -972,9 +976,11 @@ mod auth {
         /// Just like [`CrunchyrollBuilder::login_with_refresh_token`] but with the addition that
         /// the id of a [`crate::profile::Profile`] is given too. The resulting [`Crunchyroll`]
         /// session will settings that are specific to the given [`crate::profile::Profile`] id.
+        ///
         /// *Note*: When using this login method, some endpoints aren't available / will return an
         /// error. Idk why, but these endpoints can only be used if the authentication is anything
         /// other than [`CrunchyrollBuilder::login_with_refresh_token_profile_id`].
+        ///
         /// *Note*: You need to set the `device_identifier` to the same identifier which were used
         /// in the login that initially created the refresh token, otherwise the login will fail.
         pub async fn login_with_refresh_token_profile_id<S: AsRef<str>>(
@@ -1003,8 +1009,9 @@ mod auth {
         }
 
         /// Logs in with the `etp_rt` cookie that is generated when logging in with the browser and
-        /// returns a new `Crunchyroll` instance. This cookie can be extracted if you copy the
+        /// returns a new [`Crunchyroll`] instance. This cookie can be extracted if you copy the
         /// `etp_rt` cookie from your browser.
+        ///
         /// *Note*: You need to set the `device_identifier` to the same identifier which were used
         /// in the login that initially created the `etp_rt` cookie, otherwise the login will fail.
         pub async fn login_with_etp_rt<S: AsRef<str>>(

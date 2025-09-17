@@ -26,7 +26,7 @@
 //!     .locale(Locale::en_US)
 //!     // login with user credentials (other login options are also available)
 //!     // support for username login was dropped by Crunchyroll on December 6th, 2023
-//!     .login_with_credentials("email", "password")
+//!     .login_with_credentials("email", "password", Default::default())
 //!     .await?;
 //! ```
 //!
