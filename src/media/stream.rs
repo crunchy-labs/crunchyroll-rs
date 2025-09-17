@@ -1,6 +1,7 @@
 use crate::error::{Error, is_request_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use dash_mpd::MPD;
+use regex::Regex;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -8,13 +9,14 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::iter;
 use std::ops::Not;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 /// Platforms that can request a [`Stream`]. Because not all platforms have their own variant, use
 /// [`Stream::Custom`] to define one.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum StreamPlatform {
+    #[default]
     AndroidPhone,
     AndroidTablet,
     ConsolePs4,
@@ -27,7 +29,6 @@ pub enum StreamPlatform {
     TvRoku,
     TvSamsung,
     TvLg,
-    #[default]
     WebChrome,
     WebEdge,
     WebFirefox,
@@ -60,6 +61,11 @@ pub struct StreamVersion {
     pub season_id: String,
 
     pub audio_locale: Locale,
+
+    /// [`Version::audio_role`], in my tests it always only had one entry. Empty if concert or
+    /// music video.
+    #[serde(default)]
+    pub roles: Vec<String>,
 
     pub is_premium_only: bool,
     pub original: bool,
@@ -173,7 +179,7 @@ impl Stream {
         };
 
         let endpoint = format!(
-            "https://www.crunchyroll.com/playback/v2/{}/{device}/{platform}/play",
+            "https://www.crunchyroll.com/playback/v3/{}/{device}/{platform}/play",
             id.as_ref()
         );
 
