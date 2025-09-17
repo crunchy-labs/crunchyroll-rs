@@ -179,19 +179,6 @@ pub(crate) fn deserialize_thumbnail_image<'de, D: Deserializer<'de>>(
     }
 }
 
-pub(crate) fn deserialize_streams_link<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<String, D::Error> {
-    let as_string = String::deserialize(deserializer)?;
-
-    Ok(as_string
-        .trim_end_matches("/streams")
-        .split('/')
-        .next_back()
-        .ok_or_else(|| serde::de::Error::custom("cannot extract stream id"))?
-        .to_string())
-}
-
 pub(crate) fn deserialize_stream_subtitles<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<HashMap<Locale, Subtitle>, D::Error> {

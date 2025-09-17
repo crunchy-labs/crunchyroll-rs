@@ -20,9 +20,6 @@ pub struct MusicVideo {
     pub(crate) executor: Arc<Executor>,
 
     pub id: String,
-    #[serde(alias = "streams_link")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_streams_link")]
-    pub stream_id: String,
     /// Ids of related anime series. Use [`crate::Series::from_id`] to get series from it.
     pub anime_ids: Vec<String>,
 
@@ -75,6 +72,9 @@ pub struct MusicVideo {
     /// Yea a hash. Md5. For what every reason.
     pub hash: String,
 
+    #[cfg(feature = "__test_strict")]
+    #[serde(rename = "streams_link")]
+    streams_link: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     #[serde(rename = "type")]
     type_: crate::StrictValue,

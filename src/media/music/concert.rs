@@ -20,9 +20,6 @@ pub struct Concert {
     pub(crate) executor: Arc<Executor>,
 
     pub id: String,
-    #[serde(alias = "streams_link")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_streams_link")]
-    pub stream_id: String,
 
     pub slug: String,
     pub title: String,
@@ -73,6 +70,9 @@ pub struct Concert {
     /// Yea a hash. Md5. For what every reason.
     pub hash: String,
 
+    #[cfg(feature = "__test_strict")]
+    #[serde(rename = "streams_link")]
+    streams_link: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     #[serde(rename = "type")]
     type_: crate::StrictValue,

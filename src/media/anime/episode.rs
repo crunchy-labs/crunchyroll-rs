@@ -61,9 +61,6 @@ pub struct Episode {
     pub(crate) executor: Arc<Executor>,
 
     pub id: String,
-    #[serde(alias = "streams_link")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_streams_link")]
-    pub stream_id: String,
     pub channel_id: String,
     pub identifier: String,
 
@@ -167,6 +164,8 @@ pub struct Episode {
     #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     pub versions: Vec<EpisodeVersion>,
 
+    #[cfg(feature = "__test_strict")]
+    streams_link: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     media_type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]

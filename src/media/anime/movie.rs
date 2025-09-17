@@ -17,9 +17,6 @@ pub struct Movie {
     pub(crate) executor: Arc<Executor>,
 
     pub id: String,
-    #[serde(alias = "streams_link")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_streams_link")]
-    pub stream_id: String,
     pub channel_id: String,
 
     pub slug: String,
@@ -65,6 +62,8 @@ pub struct Movie {
     /// Is "available" or "not available"
     pub availability_status: String,
 
+    #[cfg(feature = "__test_strict")]
+    streams_link: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     #[serde(rename = "type")]
     #[serde(alias = "media_type")]
