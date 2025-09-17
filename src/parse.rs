@@ -43,8 +43,8 @@ pub enum UrlType {
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
     if let Some(capture) = SERIES_REGEX.captures(url.as_ref()) {
-        let id = capture.name("id").unwrap().as_str().to_string();
-        match capture.name("type").unwrap().as_str() {
+        let id = capture["id"].to_string();
+        match &capture["type"] {
             "series" => Some(UrlType::Series(id)),
             "movie_listing" => Some(UrlType::MovieListing(id)),
             "artist" => Some(UrlType::Artist(id)),
@@ -52,15 +52,9 @@ pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
         }
     } else if let Some(capture) = EPISODE_REGEX.captures(url.as_ref()) {
         match capture.name("music_type").map(|m| m.as_str()) {
-            Some("musicvideo") => Some(UrlType::MusicVideo(
-                capture.name("id").unwrap().as_str().to_string(),
-            )),
-            Some("concert") => Some(UrlType::Concert(
-                capture.name("id").unwrap().as_str().to_string(),
-            )),
-            None => Some(UrlType::EpisodeOrMovie(
-                capture.name("id").unwrap().as_str().to_string(),
-            )),
+            Some("musicvideo") => Some(UrlType::MusicVideo(capture["id"].to_string())),
+            Some("concert") => Some(UrlType::Concert(capture["id"].to_string())),
+            None => Some(UrlType::EpisodeOrMovie(capture["id"].to_string())),
             _ => unreachable!(),
         }
     } else {
