@@ -7,6 +7,7 @@ use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::iter;
+use std::ops::Not;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -107,6 +108,9 @@ pub struct Stream {
 
     pub url: String,
     pub audio_locale: Locale,
+    /// Either "main" (original language), "dub" (dubbed) or "" (music video or concert).
+    #[serde(default)]
+    pub audio_role: String,
     #[serde(default)]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_empty_pre_string_to_none")]
     pub burned_in_locale: Option<Locale>,
@@ -305,8 +309,8 @@ impl Subtitle {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct StreamData {
-    pub audio: Vec<MediaStream>,
-    pub video: Vec<MediaStream>,
+    pub audio: Vec<AudioMediaStream>,
+    pub video: Vec<VideoMediaStream>,
     pub subtitle: Option<Subtitle>,
 }
 
@@ -405,20 +409,82 @@ impl StreamData {
                 .media
                 .ok_or("no media url found")
                 .map_err(err_fn)?;
-            let pssh = adaption.ContentProtection.into_iter().find_map(|cp| {
-                cp.cenc_pssh
-                    .first()
-                    .map(|pssh| pssh.clone().content.expect("pssh"))
-            });
+            let drm_types = adaption
+                .ContentProtection
+                .into_iter()
+                .filter_map(|cp| match cp.schemeIdUri.as_str() {
+                    "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95" => {
+                        Some(MediaStreamDRMType::Playready {
+                            pro: cp.msprpro.and_then(|pro| pro.content),
+                            pssh: cp.cenc_pssh.is_empty().not().then(|| {
+                                cp.cenc_pssh
+                                    .into_iter()
+                                    .filter_map(|pssh| pssh.content)
+                                    .collect()
+                            }),
+                        })
+                    }
+                    "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed" => {
+                        Some(MediaStreamDRMType::Widevine {
+                            pssh: cp
+                                .cenc_pssh
+                                .into_iter()
+                                .filter_map(|pssh| pssh.content)
+                                .collect(),
+                        })
+                    }
+                    _ => None,
+                })
+                .collect::<Vec<_>>();
 
-            if adaption.maxWidth.is_some() || adaption.maxHeight.is_some() {
-                for representation in adaption.representations {
+            for representation in adaption.representations {
+                let media_stream = MediaStream {
+                    executor: executor.clone(),
+                    bandwidth: representation
+                        .bandwidth
+                        .ok_or("no bandwidth found")
+                        .map_err(err_fn)?,
+                    codecs: representation
+                        .codecs
+                        .ok_or("no codecs found")
+                        .map_err(err_fn)?,
+                    drm: drm_types.is_empty().not().then(|| MediaStreamDRM {
+                        token: token.as_ref().to_string(),
+                        types: drm_types.clone(),
+                    }),
+                    watch_id: watch_id.as_ref().to_string(),
+                    representation_id: representation
+                        .id
+                        .ok_or("no representation id found")
+                        .map_err(err_fn)?,
+                    segment_start: segment_template
+                        .startNumber
+                        .ok_or("no start number found")
+                        .map_err(err_fn)? as u32,
+                    segment_lengths: segment_lengths.clone(),
+                    segment_base_url: representation
+                        .BaseURL
+                        .first()
+                        .ok_or("no base url found")
+                        .map_err(err_fn)?
+                        .base
+                        .clone(),
+                    segment_init_url: segment_init_url.clone(),
+                    segment_media_url: segment_media_url.clone(),
+                };
+
+                if let Some(sampling_rate) = representation.audioSamplingRate {
+                    audio.push(AudioMediaStream {
+                        media_stream,
+                        sampling_rate: sampling_rate
+                            .parse::<u32>()
+                            .map_err(|e| err_fn(&e.to_string()))?,
+                    })
+                } else {
                     let (Some(width), Some(height)) = (representation.width, representation.height)
                     else {
                         return Err(err_fn("invalid resolution"));
                     };
-                    let resolution = Resolution { width, height };
-
                     let frame_rate = representation
                         .frameRate
                         .ok_or("no fps found")
@@ -437,85 +503,10 @@ impl StreamData {
                             .map_err(|_| err_fn(&format!("invalid fps: {frame_rate}")))?
                     };
 
-                    video.push(MediaStream {
-                        executor: executor.clone(),
-                        bandwidth: representation
-                            .bandwidth
-                            .ok_or("no bandwidth found")
-                            .map_err(err_fn)?,
-                        codecs: representation
-                            .codecs
-                            .ok_or("no codecs found")
-                            .map_err(err_fn)?,
-                        info: MediaStreamInfo::Video { resolution, fps },
-                        drm: pssh.as_ref().map(|pssh| MediaStreamDRM {
-                            pssh: pssh.clone(),
-                            token: token.as_ref().to_string(),
-                        }),
-                        watch_id: watch_id.as_ref().to_string(),
-                        representation_id: representation
-                            .id
-                            .ok_or("no representation id found")
-                            .map_err(err_fn)?,
-                        segment_start: segment_template
-                            .startNumber
-                            .ok_or("no start number found")
-                            .map_err(err_fn)? as u32,
-                        segment_lengths: segment_lengths.clone(),
-                        segment_base_url: representation
-                            .BaseURL
-                            .first()
-                            .ok_or("no base url found")
-                            .map_err(err_fn)?
-                            .base
-                            .clone(),
-                        segment_init_url: segment_init_url.clone(),
-                        segment_media_url: segment_media_url.clone(),
-                    })
-                }
-            } else {
-                for representation in adaption.representations {
-                    let sampling_rate = representation
-                        .audioSamplingRate
-                        .ok_or("no audio sampling rate found")
-                        .map_err(err_fn)?
-                        .parse::<u32>()
-                        .map_err(|e| err_fn(&e.to_string()))?;
-
-                    audio.push(MediaStream {
-                        executor: executor.clone(),
-                        bandwidth: representation
-                            .bandwidth
-                            .ok_or("no bandwith found")
-                            .map_err(err_fn)?,
-                        codecs: representation
-                            .codecs
-                            .ok_or("no codecs found")
-                            .map_err(err_fn)?,
-                        info: MediaStreamInfo::Audio { sampling_rate },
-                        drm: pssh.as_ref().map(|pssh| MediaStreamDRM {
-                            pssh: pssh.clone(),
-                            token: token.as_ref().to_string(),
-                        }),
-                        watch_id: watch_id.as_ref().to_string(),
-                        representation_id: representation
-                            .id
-                            .ok_or("no representation id found")
-                            .map_err(err_fn)?,
-                        segment_start: segment_template
-                            .startNumber
-                            .ok_or("no start number found")
-                            .map_err(err_fn)? as u32,
-                        segment_lengths: segment_lengths.clone(),
-                        segment_base_url: representation
-                            .BaseURL
-                            .first()
-                            .ok_or("no base url found")
-                            .map_err(err_fn)?
-                            .base
-                            .clone(),
-                        segment_init_url: segment_init_url.clone(),
-                        segment_media_url: segment_media_url.clone(),
+                    video.push(VideoMediaStream {
+                        media_stream,
+                        resolution: Resolution { width, height },
+                        fps,
                     })
                 }
             }
@@ -529,6 +520,51 @@ impl StreamData {
     }
 }
 
+macro_rules! media_stream_types {
+    ($struct_name:ident => $media_stream_ident:ident) => {
+        impl $struct_name {
+            pub fn into_media_stream(self) -> MediaStream {
+                self.$media_stream_ident
+            }
+        }
+
+        impl std::ops::Deref for $struct_name {
+            type Target = MediaStream;
+
+            fn deref(&self) -> &Self::Target {
+                &self.$media_stream_ident
+            }
+        }
+
+        impl std::ops::DerefMut for $struct_name {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.$media_stream_ident
+            }
+        }
+    };
+}
+
+#[derive(Clone, Debug, Serialize, Request)]
+#[request(executor(internal))]
+pub struct AudioMediaStream {
+    media_stream: MediaStream,
+
+    pub sampling_rate: u32,
+}
+
+media_stream_types!(AudioMediaStream => media_stream);
+
+#[derive(Clone, Debug, Serialize, Request)]
+#[request(executor(internal))]
+pub struct VideoMediaStream {
+    media_stream: MediaStream,
+
+    pub resolution: Resolution,
+    pub fps: f64,
+}
+
+media_stream_types!(VideoMediaStream => media_stream);
+
 #[derive(Clone, Debug, Serialize, Request)]
 pub struct MediaStream {
     #[serde(skip)]
@@ -537,7 +573,6 @@ pub struct MediaStream {
     pub bandwidth: u64,
     pub codecs: String,
 
-    pub info: MediaStreamInfo,
     /// If [`Some`], the stream data is DRM encrypted and the struct contains all data needed for
     /// you to decrypted it. If [`None`], the stream data is not DRM encrypted.
     pub drm: Option<MediaStreamDRM>,
@@ -559,9 +594,21 @@ pub struct MediaStream {
 }
 
 #[derive(Clone, Debug, Serialize, Request)]
+pub enum MediaStreamDRMType {
+    /// One of both is always set
+    Playready {
+        pro: Option<String>,
+        pssh: Option<Vec<String>>,
+    },
+    Widevine {
+        pssh: Vec<String>,
+    },
+}
+
+#[derive(Clone, Debug, Serialize, Request)]
 pub struct MediaStreamDRM {
-    pub pssh: String,
     pub token: String,
+    pub types: Vec<MediaStreamDRMType>,
 }
 
 #[derive(Clone, Debug, Serialize, Request)]
@@ -571,36 +618,6 @@ pub enum MediaStreamInfo {
 }
 
 impl MediaStream {
-    /// Returns the streams' audio sampling rate. Only [`Some`] if the stream is an audio stream
-    /// (check [`MediaStream::info`]).
-    pub fn sampling_rate(&self) -> Option<u32> {
-        if let MediaStreamInfo::Audio { sampling_rate } = &self.info {
-            Some(*sampling_rate)
-        } else {
-            None
-        }
-    }
-
-    /// Returns the streams' video resolution. Only [`Some`] if the stream is a video stream (check
-    /// [`MediaStream::info`]).
-    pub fn resolution(&self) -> Option<Resolution> {
-        if let MediaStreamInfo::Video { resolution, .. } = &self.info {
-            Some(resolution.clone())
-        } else {
-            None
-        }
-    }
-
-    /// Returns the streams' video fps. Only [`Some`] if the stream is a video stream (check
-    /// [`MediaStream::info`]).
-    pub fn fps(&self) -> Option<f64> {
-        if let MediaStreamInfo::Video { fps, .. } = &self.info {
-            Some(*fps)
-        } else {
-            None
-        }
-    }
-
     /// Returns all segment this stream is made of.
     pub fn segments(&self) -> Vec<StreamSegment> {
         let mut segments = vec![StreamSegment {
@@ -633,7 +650,7 @@ impl MediaStream {
 }
 
 /// Video resolution.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub struct Resolution {
     pub width: u64,
     pub height: u64,
