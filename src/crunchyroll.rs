@@ -168,7 +168,7 @@ mod auth {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    const BASIC_AUTH_CREDENTIALS: &str =
+    const BASIC_AUTH_TOKEN: &str =
         "dXhmdzRjZnVpYWtqeGp2bnhrYmo6WTU4TzRBemttR2I2LUVveU55NVRKTVVCM0ota2FnVWc=";
 
     /// Stores if the refresh token or etp-rt cookie was used for login. Extract the token and use
@@ -241,6 +241,7 @@ mod auth {
         pub(crate) preferred_audio_locale: Option<Locale>,
         pub(crate) device_identifier: DeviceIdentifier,
         pub(crate) stream_platform: StreamPlatform,
+        pub(crate) basic_auth_token: String,
 
         /// The account id is wrapped in a [`Result`] since [`Executor::auth_anonymously`] /
         /// [`CrunchyrollBuilder::login_anonymously`] doesn't return an account id and to prevent
@@ -328,6 +329,7 @@ mod auth {
                             &self.client,
                             refresh_token.as_str(),
                             &self.details.device_identifier,
+                            &self.details.basic_auth_token,
                             #[cfg(feature = "tower")]
                             self.middleware.as_ref(),
                         )
@@ -466,6 +468,7 @@ mod auth {
             email: &str,
             password: &str,
             device_identifier: &DeviceIdentifier,
+            basic_auth_token: &str,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
@@ -481,10 +484,7 @@ mod auth {
             );
             let req = client
                 .post(endpoint)
-                .header(
-                    header::AUTHORIZATION,
-                    format!("Basic {BASIC_AUTH_CREDENTIALS}"),
-                )
+                .header(header::AUTHORIZATION, format!("Basic {basic_auth_token}"))
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
@@ -507,6 +507,7 @@ mod auth {
             client: &Client,
             refresh_token: &str,
             device_identifier: &DeviceIdentifier,
+            basic_auth_token: &str,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
@@ -521,10 +522,7 @@ mod auth {
             );
             let req = client
                 .post(endpoint)
-                .header(
-                    header::AUTHORIZATION,
-                    format!("Basic {BASIC_AUTH_CREDENTIALS}"),
-                )
+                .header(header::AUTHORIZATION, format!("Basic {basic_auth_token}"))
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
@@ -548,6 +546,7 @@ mod auth {
             refresh_token: &str,
             profile_id: &str,
             device_identifier: &DeviceIdentifier,
+            basic_auth_token: &str,
             #[cfg(feature = "tower")] middleware: Option<
                 &tokio::sync::Mutex<crate::internal::tower::Middleware>,
             >,
@@ -563,10 +562,7 @@ mod auth {
             );
             let req = client
                 .post(endpoint)
-                .header(
-                    header::AUTHORIZATION,
-                    format!("Basic {BASIC_AUTH_CREDENTIALS}"),
-                )
+                .header(header::AUTHORIZATION, format!("Basic {basic_auth_token}"))
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
@@ -633,6 +629,7 @@ mod auth {
                     preferred_audio_locale: None,
                     device_identifier: DeviceIdentifier::default(),
                     stream_platform: Default::default(),
+                    basic_auth_token: BASIC_AUTH_TOKEN.to_string(),
                     account_id: Ok("".to_string()),
                 },
                 #[cfg(feature = "tower")]
@@ -726,6 +723,7 @@ mod auth {
         locale: Locale,
         preferred_audio_locale: Option<Locale>,
         stream_platform: StreamPlatform,
+        basic_auth_token: String,
 
         #[cfg(feature = "tower")]
         middleware: Option<tokio::sync::Mutex<crate::internal::tower::Middleware>>,
@@ -742,6 +740,7 @@ mod auth {
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
                 stream_platform: StreamPlatform::default(),
+                basic_auth_token: BASIC_AUTH_TOKEN.to_string(),
                 #[cfg(feature = "tower")]
                 middleware: None,
                 #[cfg(feature = "experimental-stabilizations")]
@@ -833,6 +832,19 @@ mod auth {
             self
         }
 
+        /// Overwrite the basic auth token that is used to issue session. Crunchyroll rotates them
+        /// from time to time, which will result in failing logins.
+        /// This crate tries to keep the token up-to-date and push updates as soon as a new token is
+        /// available, but this doesn't always work. So in case such a case happens, or if you don't
+        /// want/can update to a newer crate version, you can use this method to overwrite said
+        /// token.
+        /// Tools you can use to get new tokens:
+        /// - <https://github.com/crunchy-labs/crunchyroll-scripts>
+        pub fn basic_auth_token(mut self, basic_auth_token: String) -> CrunchyrollBuilder {
+            self.basic_auth_token = basic_auth_token;
+            self
+        }
+
         /// Adds a [tower](https://docs.rs/tower/latest/tower/) middleware which is called on every
         /// request.
         #[cfg(feature = "tower")]
@@ -914,6 +926,7 @@ mod auth {
                 email.as_ref(),
                 password.as_ref(),
                 &device_identifier,
+                &self.basic_auth_token,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -944,6 +957,7 @@ mod auth {
                 &self.client,
                 refresh_token.as_ref(),
                 &device_identifier,
+                &self.basic_auth_token,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -976,6 +990,7 @@ mod auth {
                 refresh_token.as_ref(),
                 profile_id.as_ref(),
                 &device_identifier,
+                &self.basic_auth_token,
                 #[cfg(feature = "tower")]
                 self.middleware.as_ref(),
             )
@@ -1045,6 +1060,7 @@ mod auth {
                         preferred_audio_locale: self.preferred_audio_locale,
                         device_identifier,
                         stream_platform: self.stream_platform,
+                        basic_auth_token: self.basic_auth_token,
 
                         account_id: login_response.account_id.ok_or_else(|| {
                             Error::Authentication {
