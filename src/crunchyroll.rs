@@ -42,8 +42,9 @@ enum_values! {
 }
 
 impl Locale {
-    pub fn all() -> Vec<Locale> {
-        vec![
+    /// All available locales.
+    pub const fn all() -> &'static [Locale] {
+        &[
             Locale::ar_SA,
             Locale::ca_ES,
             Locale::de_DE,
@@ -73,6 +74,7 @@ impl Locale {
         ]
     }
 
+    /// Converts the locale into a (english) human-readable string.
     pub fn to_human_readable(&self) -> &str {
         match self {
             Locale::ar_SA => "Arabic (Saudi Arabia)",
