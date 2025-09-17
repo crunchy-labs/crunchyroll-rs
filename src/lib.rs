@@ -161,6 +161,7 @@ pub(crate) use internal::serde::EmptyJsonProxy;
 pub(crate) use macros::{enum_values, options};
 
 pub use crunchyroll::{Crunchyroll, Locale};
+pub use error::Error;
 pub use media::{
     Artist, Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
 };
