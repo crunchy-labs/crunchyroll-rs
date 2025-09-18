@@ -168,9 +168,6 @@ mod auth {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    const BASIC_AUTH_TOKEN: &str =
-        "dXhmdzRjZnVpYWtqeGp2bnhrYmo6WTU4TzRBemttR2I2LUVveU55NVRKTVVCM0ota2FnVWc=";
-
     /// Stores if the refresh token or etp-rt cookie was used for login. Extract the token and use
     /// it as argument in their associated function ([`CrunchyrollBuilder::login_with_refresh_token`]
     /// or [`CrunchyrollBuilder::login_with_etp_rt`]) if you want to re-login into the account again.
@@ -187,10 +184,9 @@ mod auth {
         /// The device id, this is specific for every device type, but usually represented as UUID.
         /// Using [`Uuid::new_v4`] for it works fine.
         pub device_id: String,
-        /// Type of the device which issues the session, e.g. `Chrome on Windows`, `iPhone 15` or
-        /// `SM-G980F` (Samsung Galaxy S20).
-        /// *Note*: When using for login, the platforms for [`DeviceIdentifier::device_type`] and
-        /// [`CrunchyrollBuilder::stream_platform`] should match.
+        /// Type of the device which issues the session, e.g. `ANDROIDTV` (recommended, this is on
+        /// par with the default user agent and [`CrunchyrollBuilder::stream_platform`]),
+        /// `Chrome on Windows`, `iPhone 15` or `SM-G980F` (Samsung Galaxy S20).
         pub device_type: String,
         /// Name of the device which issues the session. This may be empty, for example all session
         /// that are created over the website have an empty name; when issues via the app, the name
@@ -445,7 +441,7 @@ mod auth {
                 .post(endpoint)
                 .header(header::AUTHORIZATION, "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=")
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-                .header("ETP-Anonymous-ID", uuid::Uuid::new_v4().to_string())
+                .header("ETP-Anonymous-ID", &device_identifier.device_id)
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
             #[cfg(not(feature = "tower"))]
@@ -486,6 +482,7 @@ mod auth {
                 .post(endpoint)
                 .header(header::AUTHORIZATION, format!("Basic {basic_auth_token}"))
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .header("ETP-Anonymous-ID", &device_identifier.device_id)
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
             #[cfg(not(feature = "tower"))]
@@ -629,7 +626,7 @@ mod auth {
                     preferred_audio_locale: None,
                     device_identifier: DeviceIdentifier::default(),
                     stream_platform: Default::default(),
-                    basic_auth_token: BASIC_AUTH_TOKEN.to_string(),
+                    basic_auth_token: CrunchyrollBuilder::BASIC_AUTH_TOKEN.to_string(),
                     account_id: Ok("".to_string()),
                 },
                 #[cfg(feature = "tower")]
@@ -740,7 +737,7 @@ mod auth {
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
                 stream_platform: StreamPlatform::default(),
-                basic_auth_token: BASIC_AUTH_TOKEN.to_string(),
+                basic_auth_token: CrunchyrollBuilder::BASIC_AUTH_TOKEN.to_string(),
                 #[cfg(feature = "tower")]
                 middleware: None,
                 #[cfg(feature = "experimental-stabilizations")]
@@ -753,10 +750,14 @@ mod auth {
     }
 
     impl CrunchyrollBuilder {
+        pub const BASIC_AUTH_TOKEN: &'static str =
+            "Y2I5bnpybWh0MzJ2Z3RleHlna286S1V3bU1qSlh4eHVyc0hJVGQxenZsMkMyeVFhUW84TjQ=";
+        pub const USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.45.2_22274 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
+
         pub const DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
             (
                 header::USER_AGENT,
-                HeaderValue::from_static("Crunchyroll/3.82.0 Android/8.0.0 okhttp/4.12.0"),
+                HeaderValue::from_static(CrunchyrollBuilder::USER_AGENT),
             ),
             (header::ACCEPT, HeaderValue::from_static("*/*")),
             (
@@ -826,7 +827,10 @@ mod auth {
         }
 
         /// Set the platform for which a stream should be requested. The platform should match the
-        /// given [`DeviceIdentifier::device_type`], else requesting streams might not work.
+        /// user agent, else requesting streams doesn't work. The user agent must be manually edited
+        /// by using [`CrunchyrollBuilder::client`] (you can use
+        /// [`CrunchyrollBuilder::predefined_client_builder`], update the user agent header and
+        /// the pass it to [`CrunchyrollBuilder::client`]).
         pub fn stream_platform(mut self, stream_platform: StreamPlatform) -> CrunchyrollBuilder {
             self.stream_platform = stream_platform;
             self

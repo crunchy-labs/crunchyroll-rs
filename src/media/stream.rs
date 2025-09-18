@@ -16,7 +16,6 @@ use std::time::Duration;
 /// [`Stream::Custom`] to define one.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum StreamPlatform {
-    #[default]
     AndroidPhone,
     AndroidTablet,
     ConsolePs4,
@@ -26,6 +25,8 @@ pub enum StreamPlatform {
     IosIpad,
     IosIphone,
     IosVision,
+    #[default]
+    TvAndroid,
     TvRoku,
     TvSamsung,
     TvLg,
@@ -168,6 +169,7 @@ impl Stream {
             StreamPlatform::IosIpad => ("ios", "ipad"),
             StreamPlatform::IosIphone => ("ios", "iphone"),
             StreamPlatform::IosVision => ("ios", "vision"),
+            StreamPlatform::TvAndroid => ("tv", "android_tv"),
             StreamPlatform::TvRoku => ("tv", "roku"),
             StreamPlatform::TvSamsung => ("tv", "samsung"),
             StreamPlatform::TvLg => ("tv", "lg"),
