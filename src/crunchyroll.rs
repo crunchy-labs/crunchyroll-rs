@@ -1116,12 +1116,12 @@ mod auth {
             let result = check_request(url.clone(), resp).await?;
 
             let cleaned = clean_request(result);
-            let value = serde_json::Value::deserialize(serde::de::value::MapDeserializer::new(
-                cleaned.into_iter(),
-            ))?;
-            serde_json::from_value(value.clone()).map_err(|e| Error::Decode {
-                message: format!("{} at {}:{}", e, e.line(), e.column()),
-                content: value.to_string().into_bytes(),
+            // convert the map back to a string. by doing this, the error message contains the span
+            // where the error occurred which improves debuggability
+            let cleaned_string = serde_json::to_string(&cleaned).unwrap();
+            serde_json::from_str(&cleaned_string).map_err(|e| Error::Decode {
+                message: e.to_string(),
+                content: cleaned_string.into_bytes(),
                 url,
             })
         }
