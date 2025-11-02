@@ -8,6 +8,33 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+/// Details about up or down votes on an episode.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct EpisodeRatingType {
+    /// The amount of user ratings.
+    pub displayed: String,
+    /// If [`crate::media::RatingStarDetails::displayed`] is > 1000 it gets converted from a normal integer to a
+    /// float. E.g. 1700 becomes 1.7. [`crate::media::RatingStarDetails::unit`] is then `K` (= representing
+    /// a thousand). If its < 1000, [`crate::media::RatingStarDetails::unit`] is just an empty string.
+    pub unit: String,
+}
+
+/// Overview about rating statistics for an episode.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct EpisodeRating {
+    up: EpisodeRatingType,
+    down: EpisodeRatingType,
+
+    total: u32,
+
+    #[cfg(feature = "__test_strict")]
+    rating: crate::StrictValue,
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -226,6 +253,16 @@ impl Episode {
             .remove(0);
         fix_empty_season_versions(&mut season);
         Ok(season)
+    }
+
+    /// Returns episode ratings.
+    pub async fn rating(&self) -> Result<EpisodeRating> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content-reviews/v3/user/{}/rating/episode/{}",
+            self.executor.details.account_id.clone()?,
+            self.id
+        );
+        self.executor.get(endpoint).request().await
     }
 }
 

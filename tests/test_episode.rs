@@ -79,3 +79,9 @@ async fn episode_skip_events() {
     let episode = START_EPISODE.get().await.unwrap();
     episode.skip_events().await.unwrap();
 }
+
+#[tokio::test]
+async fn episode_rating() {
+    let episode = START_EPISODE.get().await.unwrap();
+    episode.rating().await.unwrap();
+}
