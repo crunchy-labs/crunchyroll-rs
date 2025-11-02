@@ -162,6 +162,18 @@ macro_rules! options {
                     ),*
                 ].to_vec()).unwrap()
             }
+
+            #[allow(dead_code)]
+            pub(crate) fn into_json(self) -> serde_json::Value {
+                let mut map = serde_json::Map::new();
+                $(
+                    if let Some(v) = self.$field {
+                        map.insert($query_name.to_string(), serde_json::to_value(v).unwrap());
+                    }
+                );*;
+
+                serde_json::Value::Object(map)
+            }
         }
     }
 }

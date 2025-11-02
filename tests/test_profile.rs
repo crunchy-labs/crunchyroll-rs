@@ -1,7 +1,7 @@
 use crate::utils::{SESSION, Store};
 use crunchyroll_rs::Locale;
 use crunchyroll_rs::crunchyroll::MaturityRating;
-use crunchyroll_rs::profile::{Profiles, UpdateProfilePreferences};
+use crunchyroll_rs::profile::{Profiles, UpdateProfilePreferences, Wallpaper};
 use rand::Rng;
 use rand::distr::Alphanumeric;
 use std::env;
@@ -69,4 +69,11 @@ async fn modify_profile() {
     }
 
     assert_result!(profile.clone().delete().await)
+}
+
+#[tokio::test]
+async fn all_wallpapers() {
+    let crunchy = SESSION.get().await.unwrap();
+
+    assert_result!(Wallpaper::all_wallpapers(crunchy).await)
 }

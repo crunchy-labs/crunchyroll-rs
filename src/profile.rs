@@ -38,7 +38,8 @@ pub struct Profile {
     #[serde(default)]
     pub avatar: String,
     #[serde(default)]
-    pub wallpaper: String,
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_wallpaper_from_id")]
+    pub wallpaper: Wallpaper,
 
     pub maturity_rating: MaturityRating,
 
@@ -71,6 +72,18 @@ impl Profile {
             .await?;
 
         self.profile_name = updated_self.profile_name;
+        Ok(())
+    }
+
+    /// Changes the current profile wallpaper.
+    pub async fn change_wallpaper(&mut self, wallpaper: Wallpaper) -> Result<()> {
+        let endpoint = "https://www.crunchyroll.com/accounts/v1/me/profile";
+        self.executor
+            .patch(endpoint)
+            .json(&json!({"wallpaper": &wallpaper.id}))
+            .request_raw(true)
+            .await?;
+        self.wallpaper = wallpaper;
         Ok(())
     }
 
@@ -191,3 +204,73 @@ impl Crunchyroll {
         self.executor.get(endpoint).request().await
     }
 }
+
+mod wallpaper {
+    use crate::{Crunchyroll, Request, Result};
+    use serde::{Deserialize, Serialize};
+
+    /// A collection of wallpapers under a specific title/topic.
+    #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
+    pub struct WallpaperCollection {
+        pub title: String,
+        pub assets: Vec<Wallpaper>,
+    }
+
+    /// Wallpaper which are shown at the top of your Crunchyroll profile.
+    #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
+    pub struct Wallpaper {
+        pub id: String,
+        pub title: String,
+    }
+
+    #[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
+    #[request(executor(items))]
+    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+    #[cfg_attr(not(feature = "__test_strict"), serde(default))]
+    struct WallpaperResult {
+        items: Vec<WallpaperCollection>,
+    }
+
+    impl Wallpaper {
+        /// Returns all available wallpapers
+        pub async fn all_wallpapers(crunchyroll: &Crunchyroll) -> Result<Vec<WallpaperCollection>> {
+            let endpoint = format!(
+                "https://www.crunchyroll.com/assets/v2/{}/wallpaper",
+                crunchyroll.executor.details.locale
+            );
+            Ok(crunchyroll
+                .executor
+                .get(endpoint)
+                .request::<WallpaperResult>()
+                .await?
+                .items)
+        }
+
+        /// Link to a low resolution image of the wallpaper.
+        pub fn tiny_url(&self) -> String {
+            format!(
+                "https://static.crunchyroll.com/assets/wallpaper/360x115/{}",
+                self.id
+            )
+        }
+
+        pub fn medium_url(&self) -> String {
+            format!(
+                "https://static.crunchyroll.com/assets/wallpaper/720x180/{}",
+                self.id
+            )
+        }
+
+        /// Link to a high resolution image of the wallpaper.
+        pub fn big_url(&self) -> String {
+            format!(
+                "https://static.crunchyroll.com/assets/wallpaper/1920x400/{}",
+                self.id
+            )
+        }
+    }
+}
+
+pub use wallpaper::*;

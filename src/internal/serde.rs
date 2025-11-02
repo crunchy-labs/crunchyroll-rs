@@ -1,7 +1,7 @@
-use crate::account::Wallpaper;
 use crate::common::Image;
 use crate::error::Error;
 use crate::media::Subtitle;
+use crate::profile::Wallpaper;
 use crate::{Locale, Request, Result};
 use chrono::Duration;
 use serde::de::{DeserializeOwned, Error as SerdeError, IntoDeserializer};
