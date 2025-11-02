@@ -43,7 +43,7 @@ The documentation is available at [docs.rs](https://docs.rs/crunchyroll-rs/).
 You need this crate and [tokio](https://github.com/tokio-rs/tokio) as dependency in your Cargo.toml in order to start working:
 ```toml
 [dependencies]
-crunchyroll-rs = "0.14"
+crunchyroll-rs = "0.15"
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Log in to Crunchyroll with your email and password.
     // Support for username login was dropped by Crunchyroll on December 6th, 2023
     let crunchyroll = Crunchyroll::builder()
-        .login_with_credentials("<email>", "<password>")
+        .login_with_credentials("<email>", "<password>", Default::default())
         .await?;
 
     let url = crunchyroll_rs::parse_url("https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome").expect("url is not valid");
