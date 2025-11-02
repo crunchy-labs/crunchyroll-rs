@@ -383,21 +383,11 @@ mod auth {
             let executor_session = self.session.read().await;
 
             let token = executor_session.access_token.as_str();
-            let key = jsonwebtoken::DecodingKey::from_rsa_components("", "").unwrap();
-            let mut validation = jsonwebtoken::Validation::default();
-            // the jwt might be expired when calling this function. but there is no really need to
-            // refresh it if this case happens. sure, it might be that something has changed when
-            // re-requesting the token but the possibility of this is tiny
-            validation.validate_exp = false;
             // we just want the jwt claims, no need to check the signature. no safety critical
             // processes rely on the jwt internally
-            validation.insecure_disable_signature_validation();
-
-            let mut claims = jsonwebtoken::decode::<serde_json::Map<String, serde_json::Value>>(
-                token,
-                &key,
-                &validation,
-            )
+            let mut claims = jsonwebtoken::dangerous::insecure_decode::<
+                serde_json::Map<String, serde_json::Value>,
+            >(token)
             .unwrap()
             .claims;
             if let Some(claim) = claims.remove(claim) {
