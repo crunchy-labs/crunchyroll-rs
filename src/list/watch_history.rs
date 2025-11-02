@@ -22,8 +22,10 @@ pub struct WatchHistoryEntry {
     pub playhead: u32,
     pub fully_watched: bool,
 
-    /// Should always be [`MediaCollection::Episode`] or [`MediaCollection::Movie`].
-    pub panel: MediaCollection,
+    /// Should always be [`Some`] with [`MediaCollection::Episode`] or [`MediaCollection::Movie`].
+    /// In some rare occurrences it's [`None`], without any obvious reason.
+    #[serde(default)]
+    pub panel: Option<MediaCollection>,
 }
 
 impl Crunchyroll {
