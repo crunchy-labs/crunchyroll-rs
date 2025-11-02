@@ -1,9 +1,9 @@
 use anyhow::Result;
+use crunchyroll_rs::Crunchyroll;
 use crunchyroll_rs::categories::Category;
 use crunchyroll_rs::common::StreamExt;
 use crunchyroll_rs::crunchyroll::DeviceIdentifier;
-use crunchyroll_rs::search::BrowseOptions;
-use crunchyroll_rs::{Crunchyroll, MediaCollection};
+use crunchyroll_rs::search::{BrowseOptions, SearchMediaCollection};
 use std::env;
 
 #[tokio::main]
@@ -24,23 +24,20 @@ async fn main() -> Result<()> {
     let mut browse_result = crunchyroll.browse(options.clone());
     while let Some(item) = browse_result.next().await {
         match item? {
-            MediaCollection::Series(series) => println!("Browse returned series {}", series.title),
+            SearchMediaCollection::Series(series) => {
+                println!("Browse returned series {}", series.title)
+            }
             // is never season
-            MediaCollection::Season(_) => (),
-            MediaCollection::Episode(episode) => {
+            SearchMediaCollection::Episode(episode) => {
                 println!("Browse returned episode {}", episode.title)
             }
-            MediaCollection::MovieListing(movie_listing) => {
+            SearchMediaCollection::MovieListing(movie_listing) => {
                 println!("Browse returned movie listing {}", movie_listing.title)
             }
-            MediaCollection::Movie(movie) => println!("Browse returned movie {}", movie.title),
-            MediaCollection::Artist(artist) => {
-                println!("Browse returned music artist {}", artist.name)
-            }
-            MediaCollection::MusicVideo(music_video) => {
+            SearchMediaCollection::MusicVideo(music_video) => {
                 println!("Browse returned music video {}", music_video.title)
             }
-            MediaCollection::Concert(concert) => {
+            SearchMediaCollection::Concert(concert) => {
                 println!("Browse returned concert {}", concert.title)
             }
         }

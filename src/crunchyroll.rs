@@ -669,6 +669,10 @@ mod auth {
             }
         }
 
+        pub(crate) fn apply_ratings_query(self) -> ExecutorRequestBuilder {
+            self.query(&[("ratings", "true")])
+        }
+
         pub(crate) fn json<T: Serialize + ?Sized>(mut self, json: &T) -> ExecutorRequestBuilder {
             self.builder = self.builder.json(json);
 

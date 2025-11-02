@@ -1,7 +1,8 @@
 use crate::common::{PaginationBulkResultMeta, Request};
 use crate::macros::enum_values;
 use crate::media::Media;
-use crate::{Episode, MediaCollection, Movie, MovieListing, Result, Season, Series};
+use crate::search::SearchMediaCollection;
+use crate::{Episode, Movie, MovieListing, Result, Season, Series};
 use chrono::{DateTime, Utc};
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer, Serialize};
@@ -274,16 +275,17 @@ macro_rules! impl_media_video_collection {
         $(
             impl $media_video {
                 /// Similar series or movie listing to the current item.
-                pub fn similar(&self) -> $crate::common::Pagination<MediaCollection> {
+                pub fn similar(&self) -> $crate::common::Pagination<SearchMediaCollection> {
                     use futures_util::FutureExt;
 
                     $crate::common::Pagination::new(|options| {
                         async move {
                             let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", options.executor.details.account_id.clone()?, options.extra.get("id").unwrap());
-                            let result: $crate::common::V2BulkResult<MediaCollection, PaginationBulkResultMeta> = options
+                            let result: $crate::common::V2BulkResult<SearchMediaCollection, PaginationBulkResultMeta> = options
                                 .executor
                                 .get(endpoint)
                                 .query(&[("n", options.page_size), ("start", options.start)])
+                                .apply_ratings_query()
                                 .apply_locale_query()
                                 .request()
                                 .await?;
