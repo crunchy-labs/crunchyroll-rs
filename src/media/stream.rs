@@ -13,7 +13,7 @@ use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 /// Platforms that can request a [`Stream`]. Because not all platforms have their own variant, use
-/// [`Stream::Custom`] to define one.
+/// [`StreamPlatform::Custom`] to define one.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum StreamPlatform {
     AndroidPhone,
@@ -63,7 +63,7 @@ pub struct StreamVersion {
 
     pub audio_locale: Locale,
 
-    /// [`Version::audio_role`], in my tests it always only had one entry. Empty if concert or
+    /// [`Stream::audio_role`], in my tests it always only had one entry. Empty if concert or
     /// music video.
     #[serde(default)]
     pub roles: Vec<String>,

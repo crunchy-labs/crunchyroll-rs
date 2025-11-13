@@ -182,7 +182,7 @@ mod auth {
     #[derive(Clone, Debug)]
     pub struct DeviceIdentifier {
         /// The device id, this is specific for every device type, but usually represented as UUID.
-        /// Using [`Uuid::new_v4`] for it works fine.
+        /// Using [`uuid::Uuid::new_v4`] for it works fine.
         pub device_id: String,
         /// Type of the device which issues the session, e.g. `ANDROIDTV` (recommended, this is on
         /// par with the default user agent and [`CrunchyrollBuilder::stream_platform`]),
