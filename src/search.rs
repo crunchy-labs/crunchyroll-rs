@@ -36,6 +36,7 @@ mod search_media {
 
     /// Like [`Series`], but exclusive for endpoints that search something.
     #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+    #[request(executor(series))]
     pub struct SearchSeries {
         #[serde(rename = "rating")]
         pub search_rating: SearchSeriesRating,
@@ -47,6 +48,7 @@ mod search_media {
 
     /// Like [`Episode`], but exclusive for endpoints that search something.
     #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+    #[request(executor(episode))]
     pub struct SearchEpisode {
         #[serde(rename = "rating")]
         pub search_rating: SearchEpisodeRating,
@@ -58,6 +60,7 @@ mod search_media {
 
     /// Like [`MovieListing`], but exclusive for endpoints that search something.
     #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+    #[request(executor(movie_listing))]
     pub struct SearchMovieListing {
         #[serde(rename = "rating")]
         pub search_rating: SearchMovieListingRating,
@@ -67,6 +70,7 @@ mod search_media {
 
     /// Like [`MusicVideo`], but exclusive for endpoints that search something.
     #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+    #[request(executor(music_video))]
     pub struct SearchMusicVideo {
         #[serde(flatten)]
         music_video: MusicVideo,
@@ -74,6 +78,7 @@ mod search_media {
 
     /// Like [`Concert`], but exclusive for endpoints that search something.
     #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+    #[request(executor(concert))]
     pub struct SearchConcert {
         #[serde(flatten)]
         concert: Concert,
