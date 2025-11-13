@@ -76,4 +76,4 @@ jobs:
           EMAIL: ${{ secrets.EMAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
           IS_PREMIUM: ${{ secrets.IS_PREMIUM }}
-        run: cargo test --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_refresh_token --skip login_with_refresh_token_profile_id --skip login_with_etp_rt --skip profiles --skip modify_profile --skip clear_watch_history
+        run: cargo test --features __test --tests --no-fail-fast --all-features -- --test-threads=1 --skip login_with_refresh_token --skip login_with_refresh_token_profile_id --skip login_with_etp_rt --skip profiles --skip modify_profile --skip clear_watch_history

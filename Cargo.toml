@@ -24,6 +24,7 @@ tower = ["dep:tower-service"]
 experimental-stabilizations = []
 
 # Internal! Do not use it outside of testing
+__test = []
 __test_strict = []
 
 [dependencies]

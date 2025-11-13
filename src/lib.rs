@@ -152,6 +152,8 @@ pub mod search;
 // internal
 mod internal;
 mod macros;
+#[cfg(feature = "__test")]
+mod test;
 
 // internal
 pub(crate) use common::Request;
