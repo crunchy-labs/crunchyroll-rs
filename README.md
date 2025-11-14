@@ -97,6 +97,11 @@ tls backends (note that [reqwest](https://github.com/seanmonstar/reqwest) curren
 backend, which is confirmed to work with openssl on Linux only, on Windows the blocks are even more aggressive). The
 configurations may vary on the factors addressed so there is no 100% right way to do it.
 
+## Disclaimer
+This library is unofficial and not affiliated with Crunchyroll in any way.
+
+**You are entirely responsible for what happens when you use crunchyroll-rs.**
+
 ## License
 
 This project is licensed under either of the following licenses, at your option:
