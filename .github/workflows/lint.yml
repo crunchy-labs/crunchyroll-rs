@@ -14,6 +14,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
       - name: Check code fmt
         run: cargo fmt --check
 
@@ -33,7 +38,9 @@ jobs:
           toolchain: stable
 
       - name: Install required cargo cli packages
-        run: cargo install clippy-sarif sarif-fmt
+        uses: taiki-e/install-action@v2
+        with:
+          tool: clippy-sarif,sarif-fmt
 
       - name: Run rust-clippy
         run:
@@ -61,7 +68,9 @@ jobs:
           toolchain: stable
 
       - name: Install cargo-msrv
-        run: cargo install cargo-msrv --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-msrv
 
       - name: Verify msrv
         run: cargo msrv verify --all-features
