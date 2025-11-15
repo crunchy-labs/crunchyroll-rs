@@ -54,6 +54,9 @@ mod search_media {
         pub search_rating: Option<SearchEpisodeRating>,
         #[serde(flatten)]
         episode: Episode,
+
+        #[cfg(feature = "__test_strict")]
+        last_public: Option<crate::StrictValue>,
     }
 
     pub type SearchMovieListingRating = SearchSeriesRating;

@@ -1,5 +1,10 @@
 use crate::utils::SESSION;
-use crunchyroll_rs::Locale;
+use crunchyroll_rs::{
+    Locale,
+    media::MediaType,
+    search::{BrowseOptions, BrowseSortType},
+};
+
 use futures_util::StreamExt;
 
 mod utils;
@@ -9,6 +14,23 @@ async fn by_browse() {
     let crunchy = SESSION.get().await.unwrap();
 
     assert_result!(crunchy.browse(Default::default()).next().await.unwrap());
+}
+
+#[tokio::test]
+async fn by_browse_latest_episodes() {
+    let crunchy = SESSION.get().await.unwrap();
+
+    assert_result!(
+        crunchy
+            .browse(
+                BrowseOptions::default()
+                    .sort(BrowseSortType::NewlyAdded)
+                    .media_type(MediaType::Custom("episode".into())),
+            )
+            .next()
+            .await
+            .unwrap()
+    );
 }
 
 #[tokio::test]
