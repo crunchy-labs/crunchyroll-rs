@@ -1,3 +1,4 @@
+use crate::categories::Category;
 use crate::common::{Image, Request};
 use crate::crunchyroll::Executor;
 use crate::media::Media;
@@ -167,6 +168,10 @@ pub struct Episode {
     #[serde(deserialize_with = "crate::internal::serde::deserialize_thumbnail_image")]
     pub images: Vec<Image>,
 
+    #[serde(default)]
+    #[serde(rename = "tenant_categories")]
+    pub categories: Vec<Category>,
+
     pub is_dubbed: bool,
     pub is_subbed: bool,
 
@@ -212,8 +217,6 @@ pub struct Episode {
     _type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    tenant_categories: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     available_date: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
