@@ -51,7 +51,7 @@ mod search_media {
     #[request(executor(episode))]
     pub struct SearchEpisode {
         #[serde(rename = "rating")]
-        pub search_rating: SearchEpisodeRating,
+        pub search_rating: Option<SearchEpisodeRating>,
         #[serde(flatten)]
         episode: Episode,
     }
