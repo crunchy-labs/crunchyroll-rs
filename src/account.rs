@@ -47,12 +47,15 @@ pub struct NotificationSettings {
     #[serde(deserialize_with = "crate::internal::serde::deserialize_bool_invert")]
     pub store_deals: bool,
     #[serde(rename = "opt_out_android_in_app_marketing")]
+    #[serde(default)]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_option_bool_invert")]
     pub android_in_app_marketing: Option<bool>,
     #[serde(rename = "opt_out_new_media_queue_updates")]
+    #[serde(default)]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_option_bool_invert")]
     pub media_queue_updates: Option<bool>,
     #[serde(rename = "opt_out_whats_app")]
+    #[serde(default)]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_option_bool_invert")]
     pub whatsapp: Option<bool>,
 }
