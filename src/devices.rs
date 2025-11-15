@@ -20,8 +20,8 @@ enum_values! {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct DeviceLocation {
     pub country: String,
-    pub city: String,
-    pub area: String,
+    pub city: Option<String>,
+    pub area: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
