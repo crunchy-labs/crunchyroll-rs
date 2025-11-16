@@ -116,12 +116,20 @@ enum_values! {
     }
 }
 
+enum_values! {
+    // Watchlist media type
+    pub enum WatchlistMediaType {
+        Series = "series"
+        Movie = "movie_listing"
+    }
+}
+
 options! {
     /// Options how to query the watchlist.
     WatchlistOptions;
     order(WatchlistOrder, "order") = Some(WatchlistOrder::Newest),
     sort(WatchlistSort, "sort_by") = None,
-    media_type(crate::media::MediaType, "type") = None,
+    media_type(WatchlistMediaType, "type") = None,
     language(WatchlistLanguage, "language") = None,
     only_favorites(bool, "is_favorite") = Some(false)
 }

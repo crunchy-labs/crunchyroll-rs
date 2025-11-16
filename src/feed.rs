@@ -1,8 +1,7 @@
 //! Feeds like home feed or news feed.
 
 use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult, V2TypeBulkResult};
-use crate::media::MediaType;
-use crate::search::{BrowseOptions, BrowseSortType};
+use crate::search::{BrowseMediaType, BrowseOptions, BrowseSortType};
 use crate::{Crunchyroll, MediaCollection, Request, Series};
 use chrono::{DateTime, Utc};
 use futures_util::FutureExt;
@@ -205,7 +204,7 @@ impl<'de> Deserialize<'de> for HomeFeed {
                                 }
                                 "type" => {
                                     browse_options =
-                                        browse_options.media_type(MediaType::from(value))
+                                        browse_options.media_type(BrowseMediaType::from(value))
                                 }
                                 _ => (),
                             }

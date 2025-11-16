@@ -19,14 +19,6 @@ use crate::internal::sealed::Sealed;
 use crate::{Crunchyroll, Result};
 use std::sync::Arc;
 
-crate::enum_values! {
-    /// Type of media.
-    pub enum MediaType {
-        Series = "series"
-        Movie = "movie_listing"
-    }
-}
-
 /// Trait every media struct ([`Series`], [`Season`], [`Episode`], [`MovieListing`], [`Movie`],
 /// [`MusicVideo`], [`Concert`]) implements.
 pub trait Media: Sealed + Into<MediaCollection> {
