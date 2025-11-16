@@ -168,6 +168,8 @@ pub struct Episode {
     #[serde(deserialize_with = "crate::internal::serde::deserialize_thumbnail_image")]
     pub images: Vec<Image>,
 
+    /// Categories of the series (Drama, Action, etc.). Can be missing on certain endpoints,
+    /// use [`Episode::categories()`] to get them reliably.
     #[serde(default)]
     #[serde(rename = "tenant_categories")]
     pub categories: Option<Vec<Category>>,

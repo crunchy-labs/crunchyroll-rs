@@ -90,6 +90,8 @@ pub struct MovieListing {
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub premium_available_date: DateTime<Utc>,
 
+    /// Categories of the listing (Drama, Action, etc.). Can be missing on certain endpoints,
+    /// use [`MovieListing::categories()`] to get them reliably.
     #[serde(default)]
     #[serde(rename = "tenant_categories")]
     pub categories: Option<Vec<Category>>,

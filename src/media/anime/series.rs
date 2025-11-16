@@ -95,6 +95,8 @@ pub struct Series {
 
     pub images: PosterImages,
 
+    /// Categories of the series (Drama, Action, etc.). Can be missing on certain endpoints,
+    /// use [`Series::categories()`] to get them reliably.
     #[serde(default)]
     #[serde(rename = "tenant_categories")]
     pub categories: Option<Vec<Category>>,
