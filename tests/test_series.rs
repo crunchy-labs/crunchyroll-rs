@@ -37,3 +37,10 @@ async fn series_featured_music() {
 async fn series_similar() {
     assert_result!(SERIES.get().await.unwrap().similar().next().await.unwrap())
 }
+
+#[tokio::test]
+async fn series_categories() {
+    let series = SERIES.get().await.unwrap();
+    let categories = series.categories().await.unwrap();
+    assert!(!categories.is_empty());
+}

@@ -1,5 +1,5 @@
-use crate::categories::Category;
-use crate::common::{Image, Request};
+use crate::categories::{Category, CategoryInformation};
+use crate::common::{Image, Request, V2BulkResult};
 use crate::crunchyroll::Executor;
 use crate::media::Media;
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
@@ -170,7 +170,7 @@ pub struct Episode {
 
     #[serde(default)]
     #[serde(rename = "tenant_categories")]
-    pub categories: Vec<Category>,
+    pub categories: Option<Vec<Category>>,
 
     pub is_dubbed: bool,
     pub is_subbed: bool,
@@ -266,6 +266,21 @@ impl Episode {
             self.id
         );
         self.executor.get(endpoint).request().await
+    }
+
+    // Returns episode series categories
+    pub async fn categories(&self) -> Result<Vec<CategoryInformation>> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/discover/categories?guid={}",
+            self.series_id,
+        );
+        Ok(self
+            .executor
+            .get(endpoint)
+            .apply_locale_query()
+            .request::<V2BulkResult<CategoryInformation>>()
+            .await?
+            .data)
     }
 }
 
