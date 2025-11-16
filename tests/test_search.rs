@@ -25,7 +25,7 @@ async fn by_browse_latest_episodes() {
             .browse(
                 BrowseOptions::default()
                     .sort(BrowseSortType::NewlyAdded)
-                    .media_type(MediaType::Custom("episode".into())),
+                    .media_type(MediaType::Episode),
             )
             .next()
             .await

@@ -24,6 +24,7 @@ crate::enum_values! {
     pub enum MediaType {
         Series = "series"
         Movie = "movie_listing"
+        Episode = "episode"
     }
 }
 
