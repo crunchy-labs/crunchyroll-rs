@@ -4,6 +4,7 @@ use crate::{Crunchyroll, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+/// Detailed information about a payment.
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -13,6 +14,7 @@ pub struct PaymentInfo {
     pub payment_method_name: String,
 }
 
+/// Invoice of a subscription billing.
 #[derive(Debug, Default, Deserialize, Serialize, Request)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -36,12 +38,13 @@ pub struct Invoice {
     pub description: String,
 }
 
+/// The history of all subscription billings.
 #[derive(Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct BillingHistory {
     #[serde(rename = "billingHistory")]
-    invoices: Vec<Invoice>,
+    pub invoices: Vec<Invoice>,
 }
 
 impl Crunchyroll {
