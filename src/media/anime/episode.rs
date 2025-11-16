@@ -1,4 +1,5 @@
-use crate::common::{Image, Request};
+use crate::categories::{Category, CategoryInformation};
+use crate::common::{Image, Request, V2BulkResult};
 use crate::crunchyroll::Executor;
 use crate::media::Media;
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
@@ -167,6 +168,12 @@ pub struct Episode {
     #[serde(deserialize_with = "crate::internal::serde::deserialize_thumbnail_image")]
     pub images: Vec<Image>,
 
+    /// Categories of the series (Drama, Action, etc.). Can be missing on certain endpoints,
+    /// use [`Episode::categories()`] to get them reliably.
+    #[serde(default)]
+    #[serde(rename = "tenant_categories")]
+    pub categories: Option<Vec<Category>>,
+
     pub is_dubbed: bool,
     pub is_subbed: bool,
 
@@ -212,8 +219,6 @@ pub struct Episode {
     _type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
-    tenant_categories: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     available_date: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
@@ -263,6 +268,21 @@ impl Episode {
             self.id
         );
         self.executor.get(endpoint).request().await
+    }
+
+    // Returns episode series categories
+    pub async fn categories(&self) -> Result<Vec<CategoryInformation>> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/discover/categories?guid={}",
+            self.series_id,
+        );
+        Ok(self
+            .executor
+            .get(endpoint)
+            .apply_locale_query()
+            .request::<V2BulkResult<CategoryInformation>>()
+            .await?
+            .data)
     }
 }
 

@@ -1,5 +1,5 @@
-use crate::categories::Category;
-use crate::common::Request;
+use crate::categories::{Category, CategoryInformation};
+use crate::common::{Request, V2BulkResult};
 use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
 use crate::media::{Media, PosterImages};
@@ -90,9 +90,11 @@ pub struct MovieListing {
     #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
     pub premium_available_date: DateTime<Utc>,
 
+    /// Categories of the listing (Drama, Action, etc.). Can be missing on certain endpoints,
+    /// use [`MovieListing::categories()`] to get them reliably.
     #[serde(default)]
     #[serde(rename = "tenant_categories")]
-    pub categories: Vec<Category>,
+    pub categories: Option<Vec<Category>>,
 
     pub maturity_ratings: Vec<String>,
     pub is_mature: bool,
@@ -151,6 +153,21 @@ impl MovieListing {
             self.id
         );
         request_media(self.executor.clone(), endpoint).await
+    }
+
+    // Returns movie listing categories
+    pub async fn categories(&self) -> Result<Vec<CategoryInformation>> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/discover/categories?guid={}",
+            self.id,
+        );
+        Ok(self
+            .executor
+            .get(endpoint)
+            .apply_locale_query()
+            .request::<V2BulkResult<CategoryInformation>>()
+            .await?
+            .data)
     }
 }
 

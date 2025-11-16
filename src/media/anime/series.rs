@@ -1,4 +1,5 @@
-use crate::categories::Category;
+use crate::categories::{Category, CategoryInformation};
+use crate::common::V2BulkResult;
 use crate::crunchyroll::Executor;
 use crate::media::anime::util::fix_empty_season_versions;
 use crate::media::util::request_media;
@@ -94,9 +95,11 @@ pub struct Series {
 
     pub images: PosterImages,
 
+    /// Categories of the series (Drama, Action, etc.). Can be missing on certain endpoints,
+    /// use [`Series::categories()`] to get them reliably.
     #[serde(default)]
     #[serde(rename = "tenant_categories")]
-    pub categories: Vec<Category>,
+    pub categories: Option<Vec<Category>>,
 
     #[serde(default)]
     pub keywords: Vec<String>,
@@ -168,6 +171,22 @@ impl Series {
             self.id
         );
         request_media(self.executor.clone(), endpoint).await
+    }
+
+    // Returns series categories
+    pub async fn categories(&self) -> Result<Vec<CategoryInformation>> {
+        let endpoint = format!(
+            "https://www.crunchyroll.com/content/v2/discover/categories?guid={}",
+            self.id,
+        );
+        Ok(self
+            .executor
+            .get(endpoint)
+            .apply_locale_query()
+            .apply_preferred_audio_locale_query()
+            .request::<V2BulkResult<CategoryInformation>>()
+            .await?
+            .data)
     }
 }
 

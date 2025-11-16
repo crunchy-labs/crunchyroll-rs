@@ -85,3 +85,10 @@ async fn episode_rating() {
     let episode = START_EPISODE.get().await.unwrap();
     episode.rating().await.unwrap();
 }
+
+#[tokio::test]
+async fn episode_categories() {
+    let episode = START_EPISODE.get().await.unwrap();
+    let categories = episode.categories().await.unwrap();
+    assert!(!categories.is_empty());
+}

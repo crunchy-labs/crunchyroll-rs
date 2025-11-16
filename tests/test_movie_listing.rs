@@ -21,3 +21,10 @@ async fn movie_listing_from_id() {
 async fn movies() {
     assert_result!(MOVIE_LISTING.get().await.unwrap().movies().await)
 }
+
+#[tokio::test]
+async fn movie_listing_categories() {
+    let movie_listing = MOVIE_LISTING.get().await.unwrap();
+    let categories = movie_listing.categories().await.unwrap();
+    assert!(!categories.is_empty());
+}
