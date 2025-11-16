@@ -1,8 +1,7 @@
 use crate::utils::SESSION;
 use crunchyroll_rs::{
     Locale,
-    media::MediaType,
-    search::{BrowseOptions, BrowseSortType},
+    search::{BrowseMediaType, BrowseOptions, BrowseSortType},
 };
 
 use futures_util::StreamExt;
@@ -25,7 +24,7 @@ async fn by_browse_latest_episodes() {
             .browse(
                 BrowseOptions::default()
                     .sort(BrowseSortType::NewlyAdded)
-                    .media_type(MediaType::Episode),
+                    .media_type(BrowseMediaType::Episode),
             )
             .next()
             .await

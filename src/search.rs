@@ -218,7 +218,6 @@ mod search_media {
 mod browse {
     use crate::categories::Category;
     use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult};
-    use crate::media::MediaType;
     use crate::search::SearchMediaCollection;
     use crate::{Crunchyroll, Locale, Request, Result, enum_values, options};
     use futures_util::FutureExt;
@@ -264,6 +263,15 @@ mod browse {
         }
     }
 
+    enum_values! {
+        /// Type of browse media.
+        pub enum BrowseMediaType {
+            Series = "series"
+            Movie = "movie_listing"
+            Episode = "episode"
+        }
+    }
+
     options! {
         /// Options how to browse.
         BrowseOptions;
@@ -279,7 +287,7 @@ mod browse {
         /// Specifies how the entries should be sorted.
         sort(BrowseSortType, "sort_by") = Some(BrowseSortType::NewlyAdded),
         /// Specifies the media type of the entries.
-        media_type(MediaType, "type") = None
+        media_type(BrowseMediaType, "type") = None
     }
 
     impl Crunchyroll {
