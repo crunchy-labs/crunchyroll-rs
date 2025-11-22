@@ -72,7 +72,7 @@ pub struct Concert {
 
     #[cfg(feature = "__test_strict")]
     #[serde(rename = "streams_link")]
-    streams_link: crate::StrictValue,
+    streams_link: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     #[serde(rename = "type")]
     type_: crate::StrictValue,

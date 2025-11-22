@@ -63,7 +63,7 @@ pub struct Movie {
     pub availability_status: String,
 
     #[cfg(feature = "__test_strict")]
-    streams_link: crate::StrictValue,
+    streams_link: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     #[serde(rename = "type")]
     #[serde(alias = "media_type")]

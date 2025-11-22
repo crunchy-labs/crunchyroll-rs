@@ -199,7 +199,7 @@ pub struct Episode {
     pub versions: Vec<EpisodeVersion>,
 
     #[cfg(feature = "__test_strict")]
-    streams_link: crate::StrictValue,
+    streams_link: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     media_type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
