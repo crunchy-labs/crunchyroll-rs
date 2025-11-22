@@ -4,7 +4,7 @@ use crate::{Executor, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::future::Future;
+use std::future::{Future, ready};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
@@ -269,10 +269,11 @@ pub struct Image {
 /// Helper trait for [`Crunchyroll::request`] generic returns.
 /// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
 #[doc(hidden)]
-#[allow(async_fn_in_trait)]
-pub trait Request: Send {
+pub trait Request {
     /// Set a usable [`Executor`] instance to the struct if required
-    async fn __set_executor(&mut self, _: Arc<Executor>) {}
+    fn __set_executor(&mut self, _: Arc<Executor>) -> impl Future<Output = ()> {
+        ready(())
+    }
 }
 
 /// Implement [`Request`] for cases where only the request must be done without needing an
