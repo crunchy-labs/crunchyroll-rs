@@ -14,6 +14,7 @@ pub use music::*;
 pub use shared::*;
 pub use stream::*;
 
+use crate::common::Request;
 use crate::crunchyroll::Executor;
 use crate::internal::sealed::Sealed;
 use crate::{Crunchyroll, Result};
@@ -21,7 +22,7 @@ use std::sync::Arc;
 
 /// Trait every media struct ([`Series`], [`Season`], [`Episode`], [`MovieListing`], [`Movie`],
 /// [`MusicVideo`], [`Concert`]) implements.
-pub trait Media: Sealed + Into<MediaCollection> {
+pub trait Media: Request + Sealed + Into<MediaCollection> {
     fn from_id(
         crunchyroll: &Crunchyroll,
         id: impl AsRef<str> + Send,

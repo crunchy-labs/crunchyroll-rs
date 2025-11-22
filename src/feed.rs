@@ -1,12 +1,14 @@
 //! Feeds like home feed or news feed.
 
 use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult, V2TypeBulkResult};
+use crate::crunchyroll::Executor;
 use crate::search::{BrowseMediaType, BrowseOptions, BrowseSortType};
 use crate::{Crunchyroll, MediaCollection, Request, Series};
 use chrono::{DateTime, Utc};
 use futures_util::FutureExt;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::sync::Arc;
 
 /// Images for a [`FeedCarousel`].
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
@@ -21,6 +23,7 @@ pub struct FeedCarouselImages {
 /// The carousel / sliding images showed at first when visiting crunchyroll.com
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+#[request(executor(panel))]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct FeedCarousel {
@@ -101,7 +104,7 @@ pub struct GameFeed {
 
 /// Items which can be shown on the home feed.
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, Serialize, Request)]
+#[derive(Clone, Debug, Serialize)]
 pub enum HomeFeed {
     /// The feed at the top of the Crunchyroll website.
     CarouselFeed(Vec<FeedCarousel>),
@@ -145,6 +148,20 @@ pub enum HomeFeed {
 impl Default for HomeFeed {
     fn default() -> Self {
         Self::Unknown(serde_json::Map::default())
+    }
+}
+
+impl Request for HomeFeed {
+    async fn __set_executor(&mut self, executor: Arc<Executor>) {
+        match self {
+            HomeFeed::CarouselFeed(carousel_feed) => {
+                for feed_carousel in carousel_feed {
+                    feed_carousel.__set_executor(executor.clone()).await;
+                }
+            }
+            HomeFeed::Series(series) => series.__set_executor(executor.clone()).await,
+            _ => (),
+        }
     }
 }
 

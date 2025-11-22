@@ -1,7 +1,11 @@
+mod util;
+
+use crate::util::IdentList;
 use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 use quote::{ToTokens, quote};
 use syn::__private::{Span, TokenStream2};
+use syn::spanned::Spanned;
 use syn::{
     Data, DeriveInput, GenericArgument, Ident, Path, PathArguments, PathSegment, Type,
     parse_macro_input,
@@ -10,12 +14,19 @@ use syn::{
 #[derive(FromDeriveInput)]
 #[darling(attributes(request))]
 struct DeriveRequestOpts {
-    executor: Option<darling::util::PathList>,
+    executor: Option<IdentList>,
 }
 
 #[proc_macro_derive(Request, attributes(request))]
 pub fn derive_request(input: TokenStream) -> TokenStream {
     let derive_input = parse_macro_input!(input as DeriveInput);
+    if !matches!(derive_input.data, Data::Struct(_)) && !matches!(derive_input.data, Data::Enum(_))
+    {
+        return syn::Error::new(derive_input.span(), "Only allowed on structs and enums")
+            .to_compile_error()
+            .into();
+    }
+
     let DeriveInput {
         ident,
         generics,
@@ -24,25 +35,30 @@ pub fn derive_request(input: TokenStream) -> TokenStream {
     } = &derive_input;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let request_opts: DeriveRequestOpts =
-        DeriveRequestOpts::from_derive_input(&derive_input).unwrap();
-    let executor_fields = request_opts.executor.unwrap_or_default();
+    let request_opts = DeriveRequestOpts::from_derive_input(&derive_input).unwrap();
+    let mut executor_fields = request_opts.executor.as_ref().map(|f| f.to_vec());
 
     let mut impl_executor = vec![];
 
-    if let Data::Struct(data_struct) = data {
-        for field in data_struct.fields.iter() {
-            if let Some(ident) = &field.ident {
-                for path in executor_fields.iter() {
-                    if path.is_ident(ident) {
-                        let ty = if let Type::Path(ty) = field.clone().ty {
-                            ty
-                        } else {
-                            unreachable!()
-                        };
-                        impl_executor.push(derive_request_check(quote! { self.#ident }, &ty.path));
+    match data {
+        Data::Struct(data_struct) => {
+            for field in data_struct.fields.iter() {
+                let Some(ident) = &field.ident else {
+                    continue;
+                };
+
+                for (i, executor_ident) in executor_fields.iter().flatten().enumerate() {
+                    if ident != executor_ident {
                         continue;
                     }
+
+                    let Type::Path(ty) = field.ty.clone() else {
+                        unreachable!()
+                    };
+                    impl_executor.push(derive_request_check(quote! { self.#ident }, &ty.path));
+
+                    executor_fields.as_mut().unwrap().remove(i);
+                    break;
                 }
 
                 if let Type::Path(ty) = field.clone().ty {
@@ -55,7 +71,25 @@ pub fn derive_request(input: TokenStream) -> TokenStream {
                 }
             }
         }
-    };
+        Data::Enum(_) if request_opts.executor.is_some() => {
+            return syn::Error::new(
+                request_opts.executor.unwrap().span(),
+                "Executor fields aren't allowed on enums",
+            )
+            .to_compile_error()
+            .into();
+        }
+        _ => (),
+    }
+
+    if let Some(first_field) = executor_fields.iter().flatten().next() {
+        return syn::Error::new(
+            first_field.span(),
+            format!("Executor field not found: {first_field}"),
+        )
+        .to_compile_error()
+        .into();
+    }
 
     let expanded = quote! {
         impl #impl_generics crate::Request for #ident #ty_generics # where_clause {

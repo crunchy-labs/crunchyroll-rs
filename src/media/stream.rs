@@ -557,7 +557,7 @@ macro_rules! media_stream_types {
 }
 
 #[derive(Clone, Debug, Serialize, Request)]
-#[request(executor(internal))]
+#[request(executor(media_stream))]
 pub struct AudioMediaStream {
     media_stream: MediaStream,
 
@@ -567,7 +567,7 @@ pub struct AudioMediaStream {
 media_stream_types!(AudioMediaStream => media_stream);
 
 #[derive(Clone, Debug, Serialize, Request)]
-#[request(executor(internal))]
+#[request(executor(media_stream))]
 pub struct VideoMediaStream {
     media_stream: MediaStream,
 
