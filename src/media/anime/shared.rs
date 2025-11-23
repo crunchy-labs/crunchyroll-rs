@@ -1,5 +1,4 @@
-use crate::Request;
-use crate::macros::enum_values;
+use crate::{Request, enum_values};
 use chrono::{DateTime, Utc};
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer, Serialize};

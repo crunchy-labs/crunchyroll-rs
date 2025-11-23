@@ -151,16 +151,13 @@ pub mod search;
 
 // internal
 mod internal;
-mod macros;
-#[cfg(feature = "__test")]
-mod test;
 
 // internal
 pub(crate) use common::Request;
 pub(crate) use crunchyroll::Executor;
 pub(crate) use error::Result;
+pub(crate) use internal::macros::{enum_values, options};
 pub(crate) use internal::serde::EmptyJsonProxy;
-pub(crate) use macros::{enum_values, options};
 
 pub use crunchyroll::{Crunchyroll, Locale};
 pub use error::Error;

@@ -1,9 +1,7 @@
 //! Multiprofiles.
 
 use crate::crunchyroll::MaturityRating;
-use crate::macros::options;
-use crate::{Crunchyroll, Executor, Locale, Result};
-use crunchyroll_rs_internal::Request;
+use crate::{Crunchyroll, Executor, Locale, Request, Result, options};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::sync::Arc;

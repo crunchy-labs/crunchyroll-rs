@@ -2,10 +2,8 @@
 
 use crate::common::BulkResult;
 use crate::crunchyroll::Executor;
-use crate::macros::enum_values;
-use crate::{Crunchyroll, Result};
+use crate::{Crunchyroll, Request, Result, enum_values};
 use chrono::{DateTime, Utc};
-use crunchyroll_rs_internal::Request;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
