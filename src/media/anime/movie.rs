@@ -1,6 +1,6 @@
 use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
-use crate::media::{Media, ThumbnailImages};
+use crate::media::{AdBreak, Media, ThumbnailImages};
 use crate::{Crunchyroll, MovieListing, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -61,6 +61,10 @@ pub struct Movie {
     pub availability_notes: String,
     /// Is "available" or "not available"
     pub availability_status: String,
+
+    /// **Only [`Some`] if the account is non-premium**. Contains ad breaks.
+    #[serde(default)]
+    pub ad_breaks: Option<Vec<AdBreak>>,
 
     #[cfg(feature = "__test_strict")]
     streams_link: Option<crate::StrictValue>,

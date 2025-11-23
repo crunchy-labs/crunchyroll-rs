@@ -1,9 +1,9 @@
 use crate::categories::{Category, CategoryInformation};
 use crate::common::{Image, Request, V2BulkResult};
 use crate::crunchyroll::Executor;
-use crate::media::Media;
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
+use crate::media::{AdBreak, Media};
 use crate::{Crunchyroll, Locale, Result, Season, Series};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -197,6 +197,10 @@ pub struct Episode {
     /// All versions of this episode (same episode but each entry has a different language).
     #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     pub versions: Vec<EpisodeVersion>,
+
+    /// **Only [`Some`] if the account is non-premium**. Contains ad breaks.
+    #[serde(default)]
+    pub ad_breaks: Option<Vec<AdBreak>>,
 
     #[cfg(feature = "__test_strict")]
     streams_link: Option<crate::StrictValue>,

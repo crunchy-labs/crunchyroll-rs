@@ -174,3 +174,12 @@ pub struct Rating {
     #[serde(deserialize_with = "crate::internal::serde::deserialize_empty_pre_string_to_none")]
     pub rating: Option<RatingStar>,
 }
+
+/// Information about an ad break. Ad breaks are only present with non-premium accounts.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct AdBreak {
+    pub offset_ms: u32,
+    /// Type of the add. As far as I can see, can be 'preroll' and 'midroll'
+    #[serde(rename = "type")]
+    pub ad_type: String,
+}
