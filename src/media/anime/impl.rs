@@ -1,4 +1,5 @@
-use crate::common::PaginationBulkResultMeta;
+use crate::categories::CategoryInformation;
+use crate::common::{PaginationBulkResultMeta, V2BulkResult};
 use crate::media::Media;
 use crate::media::SkipEvents;
 use crate::media::anime::shared::{PlayheadInformation, Rating, RatingStar, RelatedMedia};
@@ -83,7 +84,7 @@ impl_media_request! {
     Series Season Episode MovieListing Movie
 }
 
-macro_rules! media_eq {
+macro_rules! impl_media_eq {
     ($($media:ident)*) => {
         $(
             impl PartialEq<Self> for $media {
@@ -95,8 +96,36 @@ macro_rules! media_eq {
     }
 }
 
-media_eq! {
+impl_media_eq! {
     Series Season Episode MovieListing Movie
+}
+
+macro_rules! impl_categories {
+    ($($media:ident => $id_field:ident #[doc = $doc:literal])*) => {
+        $(
+            impl $media {
+                pub async fn categories(&self) -> Result<Vec<CategoryInformation>> {
+                    let endpoint = format!(
+                        "https://www.crunchyroll.com/content/v2/discover/categories?guid={}",
+                        self.$id_field,
+                    );
+                    Ok(self
+                        .executor
+                        .get(endpoint)
+                        .apply_locale_query()
+                        .request::<V2BulkResult<CategoryInformation>>()
+                        .await?
+                        .data)
+                }
+            }
+        )*
+    };
+}
+
+impl_categories! {
+    Episode => series_id #[doc = "Returns categories of the series."]
+    Series => id #[doc = "Returns categories of the series."]
+    MovieListing => id #[doc = "Returns categories of the movie listing."]
 }
 
 macro_rules! impl_media_video_collection {

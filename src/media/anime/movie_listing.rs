@@ -1,5 +1,5 @@
-use crate::categories::{Category, CategoryInformation};
-use crate::common::{Request, V2BulkResult};
+use crate::categories::Category;
+use crate::common::Request;
 use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
 use crate::media::{Media, PosterImages};
@@ -153,21 +153,6 @@ impl MovieListing {
             self.id
         );
         request_media(self.executor.clone(), endpoint).await
-    }
-
-    // Returns movie listing categories
-    pub async fn categories(&self) -> Result<Vec<CategoryInformation>> {
-        let endpoint = format!(
-            "https://www.crunchyroll.com/content/v2/discover/categories?guid={}",
-            self.id,
-        );
-        Ok(self
-            .executor
-            .get(endpoint)
-            .apply_locale_query()
-            .request::<V2BulkResult<CategoryInformation>>()
-            .await?
-            .data)
     }
 }
 
