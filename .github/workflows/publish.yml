@@ -9,6 +9,7 @@ on:
       dry_run:
         type: boolean
         default: false
+        description: Run without actually publishing
 
 jobs:
   publish:
@@ -16,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # I had a check here if the versions are already existing but magically with gh actions it returned a false
       # positive.
@@ -26,18 +27,14 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Publish internal
         run: |
           DRY_RUN=${{ github.event.inputs.dry_run }}
           DRY_RUN=${DRY_RUN:-"false"}
           cd internal && cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
-
-      # Sleep 10 seconds if publishing. Without this the "Publish main" step fails as it can't find the correct
-      # crunchyroll-rs-internal version, since the step is faster than crates.io can process the new  crunchyroll-rs-internal
-      # version
-      - name: Sleep in non dry run
-        if: github.event.inputs.dry_run != 'true'
-        run: sleep 10
 
       - name: Publish main
         run: |
