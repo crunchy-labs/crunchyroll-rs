@@ -69,6 +69,7 @@ pub struct StreamVersion {
     pub roles: Vec<String>,
 
     pub is_premium_only: bool,
+    /// If the audio of this version is the native language of this anime.
     pub original: bool,
 
     #[cfg(feature = "__test_strict")]
@@ -127,8 +128,9 @@ pub struct Stream {
 
     /// All subtitles.
     #[serde(deserialize_with = "crate::internal::serde::deserialize_stream_subtitles")]
-    pub subtitles: HashMap<Locale, Subtitle>,
-    pub captions: HashMap<Locale, Subtitle>,
+    pub subtitles: Vec<Subtitle>,
+    #[serde(deserialize_with = "crate::internal::serde::deserialize_stream_subtitles")]
+    pub captions: Vec<Subtitle>,
 
     /// Either "on_demand", a normal video, or "live", a livestream. If it's "live",
     /// [`Stream::stream_data`] will fail, as only on-demand videos are supported (and livestreams

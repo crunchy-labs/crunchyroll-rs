@@ -1,8 +1,8 @@
 use crate::common::Request;
 use crate::crunchyroll::Executor;
-use crate::media::Media;
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
+use crate::media::{LanguagePresentation, Media};
 use crate::{Crunchyroll, Episode, Locale, Result, Series};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -39,6 +39,7 @@ pub struct SeasonVersion {
 
     pub audio_locale: Locale,
 
+    /// If the audio of this version is the native language of this anime.
     pub original: bool,
     #[serde(default)]
     pub restriction_windows: Vec<SeasonVersionRestrictionWindow>,
@@ -117,6 +118,9 @@ pub struct Season {
     /// All versions of this season (same season but each entry has a different language).
     #[serde(deserialize_with = "crate::internal::serde::deserialize_maybe_null_to_default")]
     pub versions: Vec<SeasonVersion>,
+
+    /// Information about localization in this struct.
+    pub language_presentation: Option<LanguagePresentation>,
 
     #[cfg(feature = "__test_strict")]
     // currently empty (on all of my tests) but its might be filled in the future

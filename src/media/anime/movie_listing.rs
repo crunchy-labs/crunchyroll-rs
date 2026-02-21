@@ -20,6 +20,7 @@ pub struct MovieListingVersion {
 
     pub audio_locale: Locale,
 
+    /// If the audio of this version is the native language of this anime.
     pub original: bool,
 
     #[cfg(feature = "__test_strict")]

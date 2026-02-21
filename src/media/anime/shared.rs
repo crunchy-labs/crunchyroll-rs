@@ -24,8 +24,6 @@ pub struct SkipEventsEvent {
     #[cfg(feature = "__test_strict")]
     series_id: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    new: crate::StrictValue,
-    #[cfg(feature = "__test_strict")]
     r#type: crate::StrictValue,
 }
 
@@ -181,4 +179,12 @@ pub struct AdBreak {
     /// Type of the add. As far as I can see, can be 'preroll' and 'midroll'
     #[serde(rename = "type")]
     pub ad_type: String,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct LanguagePresentation {
+    /// The selected series audio.
+    pub audio_notation: String,
+    /// The language of the text fields in the parent [`Series`].
+    pub text_notation: String,
 }

@@ -3,7 +3,7 @@ use crate::common::{Image, Request};
 use crate::crunchyroll::Executor;
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
-use crate::media::{AdBreak, Media};
+use crate::media::{AdBreak, LanguagePresentation, Media};
 use crate::{Crunchyroll, Locale, Result, Season, Series};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -53,6 +53,7 @@ pub struct EpisodeVersion {
     pub audio_locale: Locale,
 
     pub is_premium_only: bool,
+    /// If the audio of this version is the native language of this anime.
     pub original: bool,
 
     /// Can be:
@@ -201,6 +202,10 @@ pub struct Episode {
     /// **Only [`Some`] if the account is non-premium**. Contains ad breaks.
     #[serde(default)]
     pub ad_breaks: Option<Vec<AdBreak>>,
+
+    /// Information about localization in this struct. Is [`None`] if the parent struct is
+    /// [`crate::search::SearchEpisode`].
+    pub language_presentation: Option<LanguagePresentation>,
 
     #[cfg(feature = "__test_strict")]
     streams_link: Option<crate::StrictValue>,

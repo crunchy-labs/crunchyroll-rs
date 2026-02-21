@@ -24,7 +24,7 @@ impl<'de> Deserialize<'de> for EmptyJsonProxy {
                 return Ok(EmptyJsonProxy);
             }
         }
-        Err(serde::de::Error::custom(format!(
+        Err(SerdeError::custom(format!(
             "result must be empty object / map: '{value}'"
         )))
     }
@@ -105,8 +105,7 @@ where
     D: Deserializer<'de>,
 {
     let value = String::deserialize(deserializer)?;
-    T::from_str(value.as_str())
-        .map_err(|_| serde::de::Error::custom("could not convert string to T"))
+    T::from_str(value.as_str()).map_err(|_| SerdeError::custom("could not convert string to T"))
 }
 
 /// Some responses are empty objects but actually must be array.
@@ -122,7 +121,7 @@ where
     if value.is_object() {
         Ok(vec![])
     } else {
-        serde_json::from_value(value).map_err(|e| serde::de::Error::custom(e.to_string()))
+        serde_json::from_value(value).map_err(|e| SerdeError::custom(e.to_string()))
     }
 }
 
@@ -136,7 +135,7 @@ where
     if value.is_null() {
         Ok(T::default())
     } else {
-        serde_json::from_value(value).map_err(|e| serde::de::Error::custom(e.to_string()))
+        serde_json::from_value(value).map_err(|e| SerdeError::custom(e.to_string()))
     }
 }
 
@@ -177,7 +176,7 @@ pub(crate) fn deserialize_thumbnail_image<'de, D: Deserializer<'de>>(
 
     if let Some(thumbnail) = as_map.get("thumbnail") {
         Ok(serde_json::from_value::<Vec<Vec<Image>>>(thumbnail.clone())
-            .map_err(|e| serde::de::Error::custom(e.to_string()))?
+            .map_err(|e| SerdeError::custom(e.to_string()))?
             .into_iter()
             .flatten()
             .collect())
@@ -188,7 +187,7 @@ pub(crate) fn deserialize_thumbnail_image<'de, D: Deserializer<'de>>(
 
 pub(crate) fn deserialize_stream_subtitles<'de, D: Deserializer<'de>>(
     deserializer: D,
-) -> Result<HashMap<Locale, Subtitle>, D::Error> {
+) -> Result<Vec<Subtitle>, D::Error> {
     let mut as_map = Map::deserialize(deserializer)?;
 
     // for whatever reason every subtitles map has a 'none' entry. i suppose it should declare that
@@ -196,10 +195,11 @@ pub(crate) fn deserialize_stream_subtitles<'de, D: Deserializer<'de>>(
     // none entry is also present if other subtitle are available. questionable
     let _ = as_map.remove("none");
 
-    serde_json::from_value(
-        serde_json::to_value(as_map).map_err(|e| SerdeError::custom(e.to_string()))?,
-    )
-    .map_err(|e| SerdeError::custom(e.to_string()))
+    let mut subtitles = Vec::with_capacity(as_map.len());
+    for v in as_map.into_values() {
+        subtitles.push(serde_json::from_value(v).map_err(|e| SerdeError::custom(e.to_string()))?);
+    }
+    Ok(subtitles)
 }
 
 pub(crate) fn deserialize_stream_hardsubs<'de, D: Deserializer<'de>>(

@@ -2,7 +2,7 @@ use crate::categories::Category;
 use crate::crunchyroll::Executor;
 use crate::media::anime::util::fix_empty_season_versions;
 use crate::media::util::request_media;
-use crate::media::{Media, PosterImages};
+use crate::media::{LanguagePresentation, Media, PosterImages};
 use crate::{Crunchyroll, Locale, MusicVideo, Request, Result, Season};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -115,6 +115,9 @@ pub struct Series {
     pub awards: Option<Vec<SeriesAward>>,
     /// Information about the livestream of an episode. The livestream may be already over.
     pub livestream: Option<SeriesLivestream>,
+    /// Information about localization in this struct. Is [`None`] if the parent struct is
+    /// [`crate::search::SearchSeries`].
+    pub language_presentation: Option<LanguagePresentation>,
 
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
