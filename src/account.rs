@@ -1,6 +1,6 @@
 //! Account specific actions.
 
-use crate::{Crunchyroll, EmptyJsonProxy, Executor, Locale, Request, Result, options};
+use crate::{Crunchyroll, EmptyJsonProxy, Executor, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -27,93 +27,9 @@ pub struct Account {
     pub created: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
-#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
-#[cfg_attr(not(feature = "__test_strict"), serde(default))]
-pub struct NotificationSettings {
-    #[serde(rename = "opt_out_free_trials")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_bool_invert")]
-    pub free_trials: bool,
-    #[serde(rename = "opt_out_newsletters")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_bool_invert")]
-    pub newsletters: bool,
-    #[serde(rename = "opt_out_pm_updates")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_bool_invert")]
-    pub pm_updates: bool,
-    #[serde(rename = "opt_out_promotional_updates")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_bool_invert")]
-    pub promotional_updates: bool,
-    #[serde(rename = "opt_out_store_deals")]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_bool_invert")]
-    pub store_deals: bool,
-    #[serde(rename = "opt_out_android_in_app_marketing")]
-    #[serde(default)]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_option_bool_invert")]
-    pub android_in_app_marketing: Option<bool>,
-    #[serde(rename = "opt_out_new_media_queue_updates")]
-    #[serde(default)]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_option_bool_invert")]
-    pub media_queue_updates: Option<bool>,
-    #[serde(rename = "opt_out_whats_app")]
-    #[serde(default)]
-    #[serde(deserialize_with = "crate::internal::serde::deserialize_option_bool_invert")]
-    pub whatsapp: Option<bool>,
-}
-
-options! {
-    /// Preferences which account details should be updates.
-    UpdateNotificationSettings;
-    /// Updates the language in which emails are sent to your account.
-    communication_language(Locale, "preferred_communication_language") = None,
-    /// Updates if newsletters should be sent to your email.
-    newsletters(bool, "opt_out_newsletters") = None,
-    /// Updates if promotions for products and offers should be sent to your email.
-    promotional_updates(bool, "opt_out_promotional_updates") = None,
-    /// Updates if store details should be sent to your email.
-    store_deals(bool, "opt_out_store_deals") = None
-}
-
 /// The [`Account`] struct is actually not required to perform this actions ([`Crunchyroll`] itself
 /// would be enough) but to keep it clean it's only available here.
 impl Account {
-    /// Get the notification settings.
-    pub async fn notification_settings(&self) -> Result<NotificationSettings> {
-        let endpoint = "https://www.crunchyroll.com/accounts/v1/me/notification_settings";
-        self.executor.get(endpoint).request().await
-    }
-
-    /// Updates the notification settings.
-    pub async fn update_notification_settings(
-        &self,
-        mut notification_settings: UpdateNotificationSettings,
-    ) -> Result<()> {
-        let profile_endpoint = format!(
-            "https://www.crunchyroll.com/accounts/v1/me/multiprofile/{}",
-            self.account_id
-        );
-        let notification_endpoint =
-            "https://www.crunchyroll.com/accounts/v1/me/notification_settings";
-
-        if let Some(communication_language) = notification_settings.communication_language {
-            self.executor
-                .patch(profile_endpoint)
-                .json(&[(
-                    "preferred_communication_language",
-                    communication_language.to_string(),
-                )])
-                .request_raw(true)
-                .await?;
-            notification_settings.communication_language = None;
-        }
-
-        self.executor
-            .patch(notification_endpoint)
-            .json(&notification_settings.into_json())
-            .request::<EmptyJsonProxy>()
-            .await?;
-        Ok(())
-    }
-
     /// Changes the current account password.
     pub async fn change_password(
         &self,
