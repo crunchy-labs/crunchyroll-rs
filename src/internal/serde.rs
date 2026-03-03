@@ -19,10 +19,10 @@ impl<'de> Deserialize<'de> for EmptyJsonProxy {
     {
         let value = Value::deserialize(deserializer)?;
 
-        if let Some(map) = &value.as_object() {
-            if map.is_empty() {
-                return Ok(EmptyJsonProxy);
-            }
+        if let Some(map) = &value.as_object()
+            && map.is_empty()
+        {
+            return Ok(EmptyJsonProxy);
         }
         Err(SerdeError::custom(format!(
             "result must be empty object / map: '{value}'"
