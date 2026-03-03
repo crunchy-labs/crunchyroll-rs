@@ -2,7 +2,7 @@ use crate::utils::{SESSION, Store};
 use crunchyroll_rs::Locale;
 use crunchyroll_rs::crunchyroll::MaturityRating;
 use crunchyroll_rs::profile::{Profiles, UpdateProfilePreferences, Wallpaper};
-use rand::Rng;
+use rand::RngExt;
 use rand::distr::Alphanumeric;
 use std::env;
 

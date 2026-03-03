@@ -1,6 +1,6 @@
 [package]
 name = "crunchyroll-rs-internal"
-version = "0.16.0"
+version = "0.17.0"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
 rust-version = "1.85.0"
@@ -12,7 +12,7 @@ license = "MIT OR Apache-2.0"
 proc-macro = true
 
 [dependencies]
-darling = "0.21"
+darling = "0.23"
 proc-macro2 = "1.0"
 syn = { version = "2.0", features = ["full"] }
 quote = "1.0"
