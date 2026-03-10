@@ -708,7 +708,7 @@ impl MediaStream {
 }
 
 /// Video resolution.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub struct Resolution {
     pub width: u64,
     pub height: u64,
