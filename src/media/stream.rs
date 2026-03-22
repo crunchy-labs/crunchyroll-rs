@@ -699,7 +699,10 @@ impl MediaStream {
             segments.push(StreamSegment {
                 executor: self.executor.clone(),
                 url: format!("{}{}", self.segment_base_url, segment_media_url),
-                length: Duration::from_millis(self.segment_lengths[i] as u64),
+                length: Duration::from_millis(
+                    ((self.segment_lengths[i] as f64 / self.segment_timescale as f64) * 1000.)
+                        as u64,
+                ),
             })
         }
 
