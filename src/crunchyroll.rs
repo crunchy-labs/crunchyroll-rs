@@ -418,6 +418,28 @@ mod auth {
             pre_body
         }
 
+        async fn send_auth_req(
+            client: &Client,
+            req: reqwest::Request,
+            #[cfg(feature = "tower")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            >,
+        ) -> Result<AuthResponse> {
+            #[cfg(not(feature = "tower"))]
+            let resp = client.execute(req).await?;
+            #[cfg(feature = "tower")]
+            let resp = {
+                use std::ops::DerefMut;
+                if let Some(middleware) = middleware {
+                    middleware.lock().await.deref_mut().call(req).await?
+                } else {
+                    client.execute(req).await?
+                }
+            };
+
+            check_request(resp.url().to_string(), resp).await
+        }
+
         async fn auth_anonymously(
             client: &Client,
             device_identifier: &DeviceIdentifier,
@@ -434,19 +456,14 @@ mod auth {
                 .header("ETP-Anonymous-ID", &device_identifier.device_id)
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
 
         async fn auth_with_credentials(
@@ -475,19 +492,14 @@ mod auth {
                 .header("ETP-Anonymous-ID", &device_identifier.device_id)
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
 
         async fn auth_with_refresh_token(
@@ -513,19 +525,14 @@ mod auth {
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
 
         async fn auth_with_refresh_token_profile_id(
@@ -553,19 +560,14 @@ mod auth {
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
 
         async fn auth_with_etp_rt(
@@ -585,19 +587,49 @@ mod auth {
                 .header(header::COOKIE, format!("etp_rt={etp_rt}"))
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
+        }
+
+        async fn auth_with_oauth_code(
+            client: &Client,
+            code: &str,
+            code_verifier: &str,
+            device_identifier: &DeviceIdentifier,
+            basic_auth_token: &str,
+            #[cfg(feature = "tower")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            >,
+        ) -> Result<AuthResponse> {
+            let endpoint = "https://www.crunchyroll.com/auth/v1/token";
+            let body = Self::auth_body(
+                vec![
+                    ("code", code),
+                    ("code_verifier", code_verifier),
+                    ("grant_type", "authorization_code"),
+                ],
+                device_identifier,
+            );
+            let req = client
+                .post(endpoint)
+                .header(header::AUTHORIZATION, format!("Basic {basic_auth_token}"))
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(serde_urlencoded::to_string(body).unwrap())
+                .build()?;
+
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
     }
 
@@ -1034,6 +1066,31 @@ mod auth {
                 .await
         }
 
+        pub async fn login_with_oauth_code<S: AsRef<str>>(
+            self,
+            code: S,
+            code_verifier: S,
+            device_identifier: DeviceIdentifier,
+        ) -> Result<Crunchyroll> {
+            self.pre_login().await?;
+
+            let login_response = Executor::auth_with_oauth_code(
+                &self.client,
+                code.as_ref(),
+                code_verifier.as_ref(),
+                &device_identifier,
+                &self.basic_auth_token,
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
+            )
+            .await?;
+            let session_token =
+                SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
+
+            self.post_login(login_response, session_token, device_identifier)
+                .await
+        }
+
         async fn pre_login(&self) -> Result<()> {
             // Request the index page to set cookies which are required to bypass the cloudflare bot
             // check
@@ -1168,3 +1225,4 @@ mod auth {
 
 pub(crate) use auth::Executor;
 pub use auth::{CrunchyrollBuilder, DeviceIdentifier, SessionToken};
+use crate::media::StreamPlatform;
