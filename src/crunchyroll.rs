@@ -436,7 +436,12 @@ mod auth {
             let resp = {
                 use std::ops::DerefMut;
                 if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
+                    middleware
+                        .lock()
+                        .await
+                        .deref_mut()
+                        .call(crate::middleware::MiddlewareContext::new(client, req))
+                        .await?
                 } else {
                     client.execute(req).await?
                 }
@@ -734,7 +739,10 @@ mod auth {
                 return Ok(middleware
                     .lock()
                     .await
-                    .call(self.builder.build()?)
+                    .call(crate::middleware::MiddlewareContext::new(
+                        &self.executor.client,
+                        self.builder.build()?,
+                    ))
                     .await?
                     .bytes()
                     .await?
@@ -888,10 +896,10 @@ mod auth {
         #[cfg_attr(docsrs, doc(cfg(feature = "tower")))]
         pub fn middleware<F, S>(mut self, service: S) -> CrunchyrollBuilder
         where
-            F: std::future::Future<Output = Result<reqwest::Response, Error>> + Send + 'static,
-            S: tower_service::Service<
-                    reqwest::Request,
-                    Response = reqwest::Response,
+            F: Future<Output = crate::internal::tower::ServiceFutureOutput> + Send + 'static,
+            S: for<'a> tower_service::Service<
+                    crate::middleware::MiddlewareContext<'a>,
+                    Response = crate::internal::tower::ServiceResponse,
                     Error = Error,
                     Future = F,
                 > + Send
@@ -1164,7 +1172,12 @@ mod auth {
         let resp = {
             use std::ops::DerefMut;
             if let Some(middleware) = middleware {
-                middleware.lock().await.deref_mut().call(built_req).await?
+                middleware
+                    .lock()
+                    .await
+                    .deref_mut()
+                    .call(crate::middleware::MiddlewareContext::new(client, built_req))
+                    .await?
             } else {
                 client.execute(built_req).await?
             }
@@ -1228,6 +1241,6 @@ mod auth {
     }
 }
 
+use crate::media::StreamPlatform;
 pub(crate) use auth::Executor;
 pub use auth::{CrunchyrollBuilder, DeviceIdentifier, SessionToken};
-use crate::media::StreamPlatform;

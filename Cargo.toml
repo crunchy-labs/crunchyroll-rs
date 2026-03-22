@@ -18,7 +18,7 @@ default = ["parse"]
 
 # Add functionality to parse Crunchyroll urls.
 parse = ["dep:regex"]
-# Add the ability to specify custom middleware.
+# Add the ability to specify custom tower based middleware.
 tower = ["dep:tower-service"]
 # Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
 experimental-stabilizations = []

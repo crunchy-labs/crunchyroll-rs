@@ -1,5 +1,6 @@
 use crate::error::Error;
-use reqwest::{Request, Response};
+use crate::middleware::MiddlewareContext;
+use reqwest::Response;
 use std::fmt::{Debug, Formatter};
 use std::future::Future;
 use std::ops::{Deref, DerefMut};
@@ -7,12 +8,15 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use tower_service::Service;
 
+pub(crate) type ServiceResponse = Response;
+pub(crate) type ServiceFutureOutput = Result<Response, Error>;
+
 pub(crate) type MiddlewareType = Box<
-    dyn Service<
-            Request,
-            Response = Response,
+    dyn for<'a> Service<
+            MiddlewareContext<'a>,
+            Response = ServiceResponse,
             Error = Error,
-            Future = Pin<Box<dyn Future<Output = Result<Response, Error>> + Send>>,
+            Future = Pin<Box<dyn Future<Output = ServiceFutureOutput> + Send>>,
         > + Send,
 >;
 
@@ -20,26 +24,39 @@ pub(crate) struct Middleware(MiddlewareType);
 
 struct ServiceDynProxy<F, S>
 where
-    F: Future<Output = Result<Response, Error>> + Send + 'static,
-    S: Service<Request, Response = Response, Error = Error, Future = F> + Send + 'static,
+    F: Future<Output = ServiceFutureOutput> + Send + 'static,
+    S: for<'a> Service<
+            MiddlewareContext<'a>,
+            Response = ServiceResponse,
+            Error = Error,
+            Future = F,
+        > + Send
+        + 'static,
 {
     inner: S,
 }
 
-impl<F, S> Service<Request> for ServiceDynProxy<F, S>
+impl<F, S> Service<MiddlewareContext<'_>> for ServiceDynProxy<F, S>
 where
-    F: Future<Output = Result<Response, Error>> + Send + 'static,
-    S: Service<Request, Response = Response, Error = Error, Future = F> + Send + 'static,
+    F: Future<Output = ServiceFutureOutput> + Send + 'static,
+    S: for<'a> Service<
+            MiddlewareContext<'a>,
+            Response = ServiceResponse,
+            Error = Error,
+            Future = F,
+        > + Send
+        + 'static,
 {
-    type Response = Response;
+    type Response = ServiceResponse;
     type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = crate::error::Result<Response, Error>> + Send>>;
+    type Future =
+        Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send + 'static>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, req: Request) -> Self::Future {
+    fn call(&mut self, req: MiddlewareContext<'_>) -> Self::Future {
         Box::pin(self.inner.call(req))
     }
 }
@@ -47,8 +64,14 @@ where
 impl Middleware {
     pub(crate) fn new<F, S>(service: S) -> Self
     where
-        F: Future<Output = Result<Response, Error>> + Send + 'static,
-        S: Service<Request, Response = Response, Error = Error, Future = F> + Send + 'static,
+        F: Future<Output = ServiceFutureOutput> + Send + 'static,
+        S: for<'a> Service<
+                MiddlewareContext<'a>,
+                Response = ServiceResponse,
+                Error = Error,
+                Future = F,
+            > + Send
+            + 'static,
     {
         Self(Box::new(ServiceDynProxy { inner: service }))
     }
