@@ -153,6 +153,11 @@ impl Crunchyroll {
     pub fn device_identifier(&self) -> DeviceIdentifier {
         self.executor.details.device_identifier.clone()
     }
+
+    /// Return the stream platform for the current session.
+    pub fn stream_platform(&self) -> StreamPlatform {
+        self.executor.details.stream_platform.clone()
+    }
 }
 
 mod auth {
