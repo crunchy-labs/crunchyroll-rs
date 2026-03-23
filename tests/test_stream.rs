@@ -28,7 +28,7 @@ static VIDEO_STREAM: Store<VideoMediaStream> = Store::new(|| {
 static STREAM_SEGMENTS: Store<Vec<StreamSegment>> = Store::new(|| {
     Box::pin(async {
         let media_stream = VIDEO_STREAM.get().await?;
-        Ok(media_stream.segments())
+        Ok(media_stream.segments().await?)
     })
 });
 

@@ -28,9 +28,11 @@ __test = []
 __test_strict = []
 
 [dependencies]
+byteorder = "1.5"
 chrono = { version = ">=0.4.35", features = ["serde"] }
 dash-mpd = { version = "0.20", default-features = false }
 futures-util = { version = "0.3", features = ["std"], default-features = false }
+http = "1.4"
 jsonwebtoken = { version = "10.3", default-features = false, features = ["rust_crypto"] }
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
@@ -48,6 +50,7 @@ crunchyroll-rs-internal = { version = "0.17.3", path = "internal" }
 
 regex = { version = "1.12", default-features = false, features = ["std"], optional = true }
 tower-service = { version = "0.3", optional = true }
+log = "0.4.29"
 
 [dev-dependencies]
 anyhow = "1.0"

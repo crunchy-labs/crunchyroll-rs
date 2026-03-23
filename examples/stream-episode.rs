@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
         .sort_by(|a, b| a.resolution.width.cmp(&b.resolution.width).reverse());
 
     // get video segments of the stream with the best available resolution
-    let segments = stream_data.video[0].segments();
+    let segments = stream_data.video[0].segments().await?;
 
     let sink = &mut std::io::sink();
     for (i, segment) in segments.iter().enumerate() {

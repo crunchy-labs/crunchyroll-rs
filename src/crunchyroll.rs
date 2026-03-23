@@ -711,6 +711,18 @@ mod auth {
             self
         }
 
+        pub(crate) fn header<K, V>(mut self, key: K, value: V) -> ExecutorRequestBuilder
+        where
+            HeaderName: TryFrom<K>,
+            <HeaderName as TryFrom<K>>::Error: Into<http::Error>,
+            HeaderValue: TryFrom<V>,
+            <HeaderValue as TryFrom<V>>::Error: Into<http::Error>,
+        {
+            self.builder = self.builder.header(key, value);
+
+            self
+        }
+
         pub(crate) async fn request<T: Request + DeserializeOwned>(self) -> Result<T> {
             self.executor.request(self.builder).await
         }
