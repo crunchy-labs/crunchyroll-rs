@@ -1,5 +1,5 @@
 use crate::common::V2BulkResult;
-use crate::error::Error;
+use crate::error::{Error, Kind};
 use crate::{
     Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result, enum_values, options,
 };
@@ -51,9 +51,10 @@ impl WatchlistEntry {
         match self.panel.clone() {
             MediaCollection::Series(series) => Ok(series.id),
             MediaCollection::MovieListing(movie_listing) => Ok(movie_listing.id),
-            _ => Err(Error::Internal {
-                message: "panel is not series nor movie listing".to_string(),
-            }),
+            _ => Err(Error::error_from_kind(
+                Kind::Internal,
+                "panel is not series nor movie listing",
+            )),
         }
     }
 }
@@ -151,7 +152,7 @@ impl Crunchyroll {
 
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/discover/{}/watchlist",
-            self.executor.details.account_id.clone()?
+            self.executor.details.account_id()?
         );
         Ok(self
             .executor
@@ -171,7 +172,7 @@ macro_rules! add_to_watchlist {
             impl $s {
                 #[doc = $add]
                 pub async fn add_to_watchlist(&self) -> Result<()> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/watchlist", self.executor.details.account_id.clone()?);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/watchlist", self.executor.details.account_id()?);
                     let _: EmptyJsonProxy = self.executor.post(endpoint)
                         .json(&json!({"content_id": &self.id}))
                         .apply_locale_query()
@@ -182,7 +183,7 @@ macro_rules! add_to_watchlist {
 
                 #[doc = $as]
                 pub async fn into_watchlist_entry(&self) -> Result<Option<SimpleWatchlistEntry>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/watchlist", self.executor.details.account_id.clone()?);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/watchlist", self.executor.details.account_id()?);
                     Ok(self.executor
                         .get(endpoint)
                         .query(&[("content_ids", &self.id)])
@@ -214,7 +215,7 @@ async fn mark_favorite_watchlist(
 ) -> Result<()> {
     let endpoint = format!(
         "https://www.crunchyroll.com/content/v2/{}/watchlist/{}",
-        executor.details.account_id.clone()?,
+        executor.details.account_id()?,
         id
     );
     executor
@@ -228,7 +229,7 @@ async fn mark_favorite_watchlist(
 async fn remove_from_watchlist(executor: Arc<Executor>, id: String) -> Result<()> {
     let endpoint = format!(
         "https://www.crunchyroll.com/content/v2/{}/watchlist/{}",
-        executor.details.account_id.clone()?,
+        executor.details.account_id()?,
         id
     );
     executor

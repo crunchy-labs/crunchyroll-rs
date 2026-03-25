@@ -350,7 +350,7 @@ impl Crunchyroll {
                 async move {
                     let endpoint = format!(
                         "https://www.crunchyroll.com/content/v2/discover/{}/home_feed",
-                        options.executor.details.account_id.clone()?
+                        options.executor.details.account_id()?
                     );
                     let result = options
                         .executor
@@ -441,7 +441,7 @@ impl Crunchyroll {
                 async move {
                     let endpoint = format!(
                         "https://www.crunchyroll.com/content/v2/discover/{}/recommendations",
-                        options.executor.details.account_id.clone()?
+                        options.executor.details.account_id()?
                     );
                     let result: V2BulkResult<MediaCollection, PaginationBulkResultMeta> = options
                         .executor

@@ -1,138 +1,201 @@
 //! Library specific errors.
 
-use reqwest::{Response, StatusCode};
+use reqwest::{Response, StatusCode, Url};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
+use std::error::Error as StdError;
 use std::fmt::{Debug, Display, Formatter};
 
 pub(crate) type Result<T, E = Error> = core::result::Result<T, E>;
 
-/// Crate specific error types.
-#[derive(Clone, Debug)]
-pub enum Error {
-    /// Error was caused by something library internal. This only happens if something was
-    /// implemented incorrectly (which hopefully should never be the case) or if Crunchyroll
-    /// surprisingly changed specific parts of their api which broke a part of this crate.
-    Internal { message: String },
+/// Errors that may occur.
+#[derive(Debug)]
+pub struct Error {
+    kind: Kind,
+    source: Option<Box<dyn StdError + Send + Sync>>,
+    url: Option<String>,
 
-    /// Some sort of error occurred while requesting the Crunchyroll api.
-    Request {
-        message: String,
-        status: Option<StatusCode>,
-        /// The url which caused the error.
-        url: String,
-    },
-    /// While decoding the api response body something went wrong.
-    Decode {
-        message: String,
-        /// The content which failed to get decoded. Might be empty if the error got triggered by
-        /// the [`From<serde_json::Error>`] implementation for this enum.
-        content: Vec<u8>,
-        /// The url which caused the error. Might be empty if the error got triggered by the
-        /// [`From<serde_json::Error>`] implementation for this enum.
-        url: String,
-    },
-
-    /// Something went wrong while logging in.
-    Authentication { message: String },
-
-    /// Generally malformed or invalid user input.
-    Input { message: String },
-
-    /// When the request got blocked. Currently this only triggers when the cloudflare bot
-    /// protection is detected.
-    Block {
-        message: String,
-        /// HTML/text body of the block response.
-        body: String,
-        /// The url which caused the error.
-        url: String,
-    },
+    message: Option<String>,
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::Internal { message } => write!(f, "{message}"),
-            Error::Request { message, url, .. } => {
-                // the url can be 'n/a' when the error got triggered by the [`From<reqwest::Error>`]
-                // implementation for this error struct
-                if url != "n/a" {
-                    write!(f, "{message} ({url})")
+        let msg_fn = |default: &'static str| {
+            self.message.as_ref().cloned().unwrap_or_else(|| {
+                self.source
+                    .as_ref()
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| default.to_string())
+            })
+        };
+
+        let (message, suffix) = match &self.kind {
+            Kind::Internal => (msg_fn("internal error"), None),
+            Kind::Request { status } => {
+                let message = msg_fn("request error");
+                if let Some(status) = &status {
+                    (message, Some(format!(" (http {})", status.as_u16())))
                 } else {
-                    write!(f, "{message}")
+                    (message, None)
                 }
             }
-            Error::Decode {
-                message,
-                content,
-                url,
-            } => {
-                let mut msg = message.clone();
-                // the url is 'n/a' when the error got triggered by the [`From<serde_json::Error>`]
-                // implementation for this error struct or [`VariantSegment::decrypt`]
-                if url != "n/a" {
-                    msg.push_str(&format!(" ({url})"))
-                }
-                if content.is_empty() {
-                    write!(f, "{msg}")
+            Kind::Decode { content } => {
+                let message = msg_fn("decoding error");
+                if let Some(content) = content {
+                    (
+                        message,
+                        Some(format!(": {}", String::from_utf8_lossy(content.as_slice()))),
+                    )
                 } else {
-                    write!(f, "{}: {}", msg, String::from_utf8_lossy(content.as_ref()))
+                    (message, None)
                 }
             }
-            Error::Authentication { message } => write!(f, "{message}"),
-            Error::Input { message } => write!(f, "{message}"),
-            Error::Block { message, body, url } => write!(f, "{message} ({url}): {body}"),
+            Kind::Authentication => (msg_fn("authentication error"), None),
+            Kind::Input => (msg_fn("input error"), None),
+            Kind::Block { body } => {
+                let message = msg_fn("cloudflare blocked");
+                (message, Some(format!(": {}", body)))
+            }
+        };
+
+        if let Some(url) = &self.url {
+            write!(f, "{} at {}{}", message, url, suffix.unwrap_or_default())
+        } else {
+            write!(f, "{}{}", message, suffix.unwrap_or_default())
         }
     }
 }
 
-impl std::error::Error for Error {}
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        self.source.as_ref().map(|e| &**e as _)
+    }
+}
 
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
-        Self::Decode {
-            message: err.to_string(),
-            content: vec![],
-            url: "n/a".to_string(),
+        Self {
+            kind: Kind::Decode { content: None },
+            source: Some(err.into()),
+            url: None,
+            message: None,
         }
     }
 }
 
 impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Self {
-        if err.is_request()
+        let (kind, message) = if err.is_request()
             || err.is_redirect()
             || err.is_timeout()
             || err.is_connect()
             || err.is_body()
             || err.is_status()
         {
-            Error::Request {
-                message: err.to_string(),
-                status: err.status(),
-                url: err.url().map_or("n/a".to_string(), |url| url.to_string()),
-            }
+            (
+                Kind::Request {
+                    status: err.status(),
+                },
+                None,
+            )
         } else if err.is_decode() {
-            Error::Decode {
-                message: err.to_string(),
-                content: vec![],
-                url: err.url().map_or("n/a".to_string(), |url| url.to_string()),
-            }
+            (Kind::Decode { content: None }, None)
         } else if err.is_builder() {
-            Error::Internal {
-                message: err.to_string(),
-            }
+            (Kind::Internal, None)
         } else {
-            Error::Internal {
-                message: "Could not determine request error type - {err}".to_string(),
-            }
+            (
+                Kind::Internal,
+                Some("Could not determine request error type - {err}".to_string()),
+            )
+        };
+
+        let url = err.url().map(Url::to_string);
+        Self {
+            kind,
+            source: Some(err.into()),
+            url,
+            message,
         }
     }
 }
 
-pub(crate) fn is_request_error(value: Value, url: &str, status: &StatusCode) -> Result<()> {
+impl Error {
+    pub fn kind(&self) -> &Kind {
+        &self.kind
+    }
+
+    pub fn message(&self) -> Option<&str> {
+        self.message.as_deref()
+    }
+
+    pub(crate) fn error_from_kind<S: AsRef<str>>(kind: Kind, msg: S) -> Self {
+        Self {
+            kind,
+            source: None,
+            url: None,
+            message: Some(msg.as_ref().to_string()),
+        }
+    }
+
+    pub(crate) fn error_from_other_error_and_url<
+        E: Into<Box<dyn StdError + Send + Sync>>,
+        U: AsRef<str>,
+    >(
+        other_error: E,
+        kind: Kind,
+        url: U,
+    ) -> Self {
+        Self {
+            kind,
+            source: Some(other_error.into()),
+            url: Some(url.as_ref().to_string()),
+            message: None,
+        }
+    }
+
+    pub(crate) fn error_from_kind_and_url<S: AsRef<str>, U: AsRef<str>>(
+        kind: Kind,
+        url: U,
+        msg: S,
+    ) -> Self {
+        Self {
+            kind,
+            source: None,
+            url: Some(url.as_ref().to_string()),
+            message: Some(msg.as_ref().to_string()),
+        }
+    }
+}
+
+/// Specific error types.
+#[derive(Debug)]
+pub enum Kind {
+    /// Error was caused by something library internal. This only happens if something was
+    /// implemented incorrectly (which hopefully should never be the case) or if Crunchyroll
+    /// surprisingly changed specific parts of their api which broke a part of this crate.
+    Internal,
+    /// Some sort of error occurred while requesting the Crunchyroll api.
+    Request { status: Option<StatusCode> },
+    /// While decoding the api response body something went wrong.
+    Decode { content: Option<Vec<u8>> },
+    /// Something went wrong while logging in.
+    Authentication,
+    /// Malformed or invalid user input.
+    Input,
+    /// When a request got blocked. Currently, this only triggers when the cloudflare bot
+    /// protection is detected.
+    Block {
+        /// HTML/text body of the block response.
+        body: String,
+    },
+}
+
+pub(crate) fn is_request_error<U: AsRef<str>>(
+    value: Value,
+    url: U,
+    status: &StatusCode,
+) -> Result<()> {
     #[derive(Debug, Deserialize)]
     #[serde(untagged)]
     #[allow(clippy::enum_variant_names)]
@@ -193,14 +256,18 @@ pub(crate) fn is_request_error(value: Value, url: &str, status: &StatusCode) -> 
         }
         Err(_) => return Ok(()),
     };
-    Err(Error::Request {
-        message: error_msg,
-        status: Some(*status),
-        url: url.to_string(),
+    Err(Error {
+        kind: Kind::Request {
+            status: Some(*status),
+        },
+        source: None,
+        url: Some(url.as_ref().to_string()),
+        message: Some(error_msg),
     })
 }
 
-pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Response) -> Result<T> {
+pub(crate) async fn check_request<T: DeserializeOwned>(resp: Response) -> Result<T> {
+    let url = resp.url().clone();
     let content_length = resp.content_length().unwrap_or(0);
     let status = resp.status();
     let _raw = match resp.status().as_u16() {
@@ -211,19 +278,25 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
                     .windows(31)
                     .any(|w| w == b"<title>Just a moment...</title>")
             {
-                return Err(Error::Block {
-                    message: "Triggered Cloudflare bot protection".to_string(),
-                    body: String::from_utf8_lossy(raw.as_ref()).to_string(),
-                    url,
+                return Err(Error {
+                    kind: Kind::Block {
+                        body: String::from_utf8_lossy(raw.as_ref()).to_string(),
+                    },
+                    source: None,
+                    url: Some(url.to_string()),
+                    message: Some("Triggered Cloudflare bot protection".to_string()),
                 });
             }
             raw
         }
         404 => {
-            return Err(Error::Request {
-                message: "The requested resource is not present".to_string(),
-                status: Some(resp.status()),
-                url,
+            return Err(Error {
+                kind: Kind::Request {
+                    status: Some(resp.status()),
+                },
+                source: None,
+                url: Some(url.to_string()),
+                message: Some("The requested resource is not present".to_string()),
             });
         }
         429 => {
@@ -236,15 +309,18 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
                     None
                 };
 
-            return Err(Error::Request {
-                message: format!(
+            return Err(Error {
+                kind: Kind::Request {
+                    status: Some(resp.status()),
+                },
+                source: None,
+                url: Some(url.to_string()),
+                message: Some(format!(
                     "Rate limit detected. {}",
                     retry_secs.map_or("Try again later".to_string(), |secs| format!(
                         "Try again in {secs} seconds"
                     ))
-                ),
-                status: Some(resp.status()),
-                url,
+                )),
             });
         }
         _ => resp.bytes().await?,
@@ -256,15 +332,21 @@ pub(crate) async fn check_request<T: DeserializeOwned>(url: String, resp: Respon
         raw = "{}".as_bytes();
     }
 
-    let value: Value = serde_json::from_slice(raw).map_err(|e| Error::Decode {
-        message: format!("{} at {}:{}", e, e.line(), e.column()),
-        content: raw.to_vec(),
-        url: url.clone(),
+    let value: Value = serde_json::from_slice(raw).map_err(|e| Error {
+        kind: Kind::Decode {
+            content: Some(raw.to_vec()),
+        },
+        source: Some(e.into()),
+        url: Some(url.to_string()),
+        message: None,
     })?;
     is_request_error(value.clone(), &url, &status)?;
-    serde_json::from_value::<T>(value).map_err(|e| Error::Decode {
-        message: format!("{} at {}:{}", e, e.line(), e.column()),
-        content: raw.to_vec(),
-        url,
+    serde_json::from_value::<T>(value).map_err(|e| Error {
+        kind: Kind::Decode {
+            content: Some(raw.to_vec()),
+        },
+        source: Some(e.into()),
+        url: Some(url.to_string()),
+        message: None,
     })
 }

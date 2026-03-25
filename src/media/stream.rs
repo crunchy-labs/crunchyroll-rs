@@ -1,4 +1,4 @@
-use crate::error::{Error, is_request_error};
+use crate::error::{Error, Kind, is_request_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use byteorder::{BigEndian, ReadBytesExt};
 use dash_mpd::{ContentProtection, MPD};
@@ -205,13 +205,16 @@ impl Stream {
         let mut stream = match crunchyroll.executor.get(endpoint).request::<Stream>().await {
             Ok(stream) => stream,
             Err(e) => {
-                return match &e {
+                return match e.kind() {
                     // try to invalidate the session if the decoding failed. a decoding failure
                     // usually means that the request was successful but returned unexpected data.
                     // thus, an active session is issued to the server, but it isn't usable because
                     // this functions returns an error. further stream requests may be blocked until
                     // crunchyroll invalidates the session server-side if it isn't done manually
-                    Error::Decode { content, .. } => {
+                    Kind::Decode { content } => {
+                        let Some(content) = content else {
+                            return Err(e);
+                        };
                         let Ok(content_map) = serde_json::from_slice::<Map<String, Value>>(content)
                         else {
                             return Err(e);
@@ -254,9 +257,10 @@ impl Stream {
     /// can use [`Stream::invalidate`] to invalidate all stream data for this stream.
     pub async fn stream_data(&self, hardsub: Option<Locale>) -> Result<Option<StreamData>> {
         if self.playback_type == "live" {
-            return Err(Error::Input {
-                message: "Livestream cannot be downloaded".to_string(),
-            });
+            return Err(Error::error_from_kind(
+                Kind::Input,
+                "livestream download isn't supported",
+            ));
         }
 
         if let Some(hardsub) = hardsub {
@@ -351,23 +355,12 @@ impl StreamData {
         let mut audio = vec![];
         let mut subtitle = None;
 
-        let err_fn = |msg: &str| Error::Request {
-            message: msg.to_string(),
-            status: None,
-            url: url.as_ref().to_string(),
-        };
-
         let raw_mpd = executor
             .get(url.as_ref())
             .query(&[
                 (
                     "accountid",
-                    executor
-                        .details
-                        .account_id
-                        .clone()
-                        .unwrap_or_default()
-                        .as_str(),
+                    executor.details.account_id().unwrap_or_default().as_str(),
                 ),
                 ("playbackGuid", token.as_ref()),
             ])
@@ -377,12 +370,27 @@ impl StreamData {
         if let Ok(json) = serde_json::from_slice(&raw_mpd) {
             is_request_error(json, url.as_ref(), &StatusCode::FORBIDDEN)?;
         }
-        let mut mpd: MPD =
-            dash_mpd::parse(&String::from_utf8_lossy(&raw_mpd)).map_err(|e| Error::Decode {
-                message: e.to_string(),
-                content: raw_mpd,
-                url: url.as_ref().to_string(),
-            })?;
+
+        let mut mpd: MPD = dash_mpd::parse(&String::from_utf8_lossy(&raw_mpd)).map_err(|e| {
+            Error::error_from_other_error_and_url(
+                e,
+                Kind::Decode {
+                    content: Some(raw_mpd.clone()),
+                },
+                url.as_ref(),
+            )
+        })?;
+
+        let err_fn = |msg: &str| {
+            Error::error_from_kind_and_url(
+                Kind::Decode {
+                    content: Some(raw_mpd.clone()),
+                },
+                url.as_ref(),
+                msg,
+            )
+        };
+
         let period = mpd.periods.remove(0);
 
         for adaption in period.adaptations {
@@ -849,10 +857,14 @@ impl MediaStream {
             .request_raw(false)
             .await?;
 
-        let sidx_box = SidxBox::parse(&sidx_data).map_err(|_| Error::Request {
-            message: "unable to parse sidx box".to_string(),
-            status: None,
-            url: url.to_string(),
+        let sidx_box = SidxBox::parse(&sidx_data).map_err(|_| {
+            Error::error_from_kind_and_url(
+                Kind::Decode {
+                    content: Some(sidx_data),
+                },
+                url,
+                "unable to parse sidx box",
+            )
         })?;
 
         let mut segments = Vec::with_capacity(sidx_box.references.len() + 1);

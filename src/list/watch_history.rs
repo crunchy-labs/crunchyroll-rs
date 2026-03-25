@@ -36,7 +36,7 @@ impl Crunchyroll {
                 async move {
                     let endpoint = format!(
                         "https://www.crunchyroll.com/content/v2/{}/watch-history",
-                        options.executor.details.account_id.clone()?
+                        options.executor.details.account_id()?
                     );
                     let result: V2BulkResult<WatchHistoryEntry, PaginationBulkResultMeta> = options
                         .executor
@@ -59,7 +59,7 @@ impl Crunchyroll {
     pub async fn clear_watch_history(&self) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/{}/watch-history",
-            self.executor.details.account_id.clone()?
+            self.executor.details.account_id()?
         );
         self.executor
             .delete(endpoint)

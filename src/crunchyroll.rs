@@ -161,7 +161,7 @@ impl Crunchyroll {
 }
 
 mod auth {
-    use crate::error::{Error, check_request};
+    use crate::error::{Error, Kind, check_request};
     use crate::media::StreamPlatform;
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
@@ -248,7 +248,18 @@ mod auth {
         /// [`CrunchyrollBuilder::login_anonymously`] doesn't return an account id and to prevent
         /// writing error messages multiple times in functions which require the account id to be
         /// set they can just get the id or return the fix set error message.
-        pub(crate) account_id: Result<String>,
+        account_id: Option<String>,
+    }
+
+    impl ExecutorDetails {
+        pub(crate) fn account_id(&self) -> Result<String> {
+            self.account_id.as_ref().cloned().ok_or_else(|| {
+                Error::error_from_kind(
+                    Kind::Input,
+                    "Login with a user account to use this function",
+                )
+            })
+        }
     }
 
     #[cfg(feature = "experimental-stabilizations")]
@@ -436,18 +447,20 @@ mod auth {
             let resp = {
                 use std::ops::DerefMut;
                 if let Some(middleware) = middleware {
+                    let url = req.url().to_string();
                     middleware
                         .lock()
                         .await
                         .deref_mut()
                         .call(crate::middleware::MiddlewareContext::new(client, req))
-                        .await?
+                        .await
+                        .map_err(|e| crate::internal::tower::service_error_to_error(e, url))?
                 } else {
                     client.execute(req).await?
                 }
             };
 
-            check_request(resp.url().to_string(), resp).await
+            check_request(resp).await
         }
 
         async fn auth_anonymously(
@@ -659,7 +672,7 @@ mod auth {
                     device_identifier: DeviceIdentifier::default(),
                     stream_platform: Default::default(),
                     basic_auth_token: CrunchyrollBuilder::BASIC_AUTH_TOKEN.to_string(),
-                    account_id: Ok("".to_string()),
+                    account_id: None,
                 },
                 #[cfg(feature = "tower")]
                 middleware: None,
@@ -748,14 +761,18 @@ mod auth {
 
             #[cfg(feature = "tower")]
             if let Some(middleware) = &self.executor.middleware {
+                let req = self.builder.build()?;
+                let url = req.url().to_string();
+
                 return Ok(middleware
                     .lock()
                     .await
                     .call(crate::middleware::MiddlewareContext::new(
                         &self.executor.client,
-                        self.builder.build()?,
+                        req,
                     ))
-                    .await?
+                    .await
+                    .map_err(|e| crate::internal::tower::service_error_to_error(e, url))?
                     .bytes()
                     .await?
                     .to_vec());
@@ -906,13 +923,14 @@ mod auth {
         /// request.
         #[cfg(feature = "tower")]
         #[cfg_attr(docsrs, doc(cfg(feature = "tower")))]
-        pub fn middleware<F, S>(mut self, service: S) -> CrunchyrollBuilder
+        pub fn middleware<E, F, S>(mut self, service: S) -> CrunchyrollBuilder
         where
-            F: Future<Output = crate::internal::tower::ServiceFutureOutput> + Send + 'static,
+            E: Into<Box<dyn std::error::Error + Send + Sync + 'static>> + 'static,
+            F: Future<Output = Result<reqwest::Response, E>> + Send + 'static,
             S: for<'a> tower_service::Service<
                     crate::middleware::MiddlewareContext<'a>,
-                    Response = crate::internal::tower::ServiceResponse,
-                    Error = Error,
+                    Response = reqwest::Response,
+                    Error = E,
                     Future = F,
                 > + Send
                 + 'static,
@@ -1150,12 +1168,7 @@ mod auth {
                         stream_platform: self.stream_platform,
                         basic_auth_token: self.basic_auth_token,
 
-                        account_id: login_response.account_id.ok_or_else(|| {
-                            Error::Authentication {
-                                message: "Login with a user account to use this function"
-                                    .to_string(),
-                            }
-                        }),
+                        account_id: None,
                     },
                     #[cfg(feature = "tower")]
                     middleware: self.middleware,
@@ -1176,41 +1189,47 @@ mod auth {
             &tokio::sync::Mutex<crate::internal::tower::Middleware>,
         >,
     ) -> Result<T> {
-        let built_req = req.build()?;
-        let url = built_req.url().to_string();
+        let req = req.build()?;
         #[cfg(not(feature = "tower"))]
-        let resp = client.execute(built_req).await?;
+        let resp = client.execute(req).await?;
         #[cfg(feature = "tower")]
         let resp = {
             use std::ops::DerefMut;
+            let url = req.url().to_string();
             if let Some(middleware) = middleware {
                 middleware
                     .lock()
                     .await
                     .deref_mut()
-                    .call(crate::middleware::MiddlewareContext::new(client, built_req))
-                    .await?
+                    .call(crate::middleware::MiddlewareContext::new(client, req))
+                    .await
+                    .map_err(|e| crate::internal::tower::service_error_to_error(e, url))?
             } else {
-                client.execute(built_req).await?
+                client.execute(req).await?
             }
         };
 
         #[cfg(not(feature = "__test_strict"))]
         {
-            check_request(url, resp).await
+            check_request(resp).await
         }
         #[cfg(feature = "__test_strict")]
         {
-            let result = check_request(url.clone(), resp).await?;
+            let url = resp.url().to_string();
+            let result = check_request(resp).await?;
 
             let cleaned = clean_request(result);
             // convert the map back to a string. by doing this, the error message contains the span
             // where the error occurred which improves debuggability
-            let cleaned_string = serde_json::to_string(&cleaned).unwrap();
-            serde_json::from_str(&cleaned_string).map_err(|e| Error::Decode {
-                message: e.to_string(),
-                content: cleaned_string.into_bytes(),
-                url,
+            let cleaned_string = serde_json::to_string(&cleaned)?;
+            serde_json::from_str(&cleaned_string).map_err(|e| {
+                Error::error_from_other_error_and_url(
+                    e,
+                    Kind::Decode {
+                        content: Some(cleaned_string.into_bytes()),
+                    },
+                    url,
+                )
             })
         }
     }
