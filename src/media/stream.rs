@@ -95,6 +95,15 @@ impl StreamVersion {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct StreamDrm {
+    /// Name of the drm provider, e.g. 'widevine'
+    name: String,
+    /// Url to request a drm license
+    drm_url: String,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StreamSession {
     pub renew_seconds: u32,
     pub no_network_retry_interval_seconds: u32,
@@ -144,6 +153,8 @@ pub struct Stream {
 
     /// All versions of this stream (same stream but each entry has a different language).
     pub versions: Vec<StreamVersion>,
+
+    pub drm: StreamDrm,
 
     #[serde(skip)]
     id: String,
