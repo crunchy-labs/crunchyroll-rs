@@ -745,9 +745,9 @@ mod auth {
 
     impl CrunchyrollBuilder {
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const BASIC_AUTH_TOKEN: &'static str = "bzd1b3d5N3E0bGdsdGJhdnloanE6bHFyakVUTng2Vzd1Um5wY0RtOHdSVmo4QkNoakMxZXI=";
+        pub const BASIC_AUTH_TOKEN: &'static str = "eTJhcnZqYjBoMHJndnRpemxvdnk6SlZMdndkSXBYdnhVLXFJQnZUMU04b1FUcjFxbFFKWDI=";
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.58.0_22336 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
+        pub const USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.59.0_22338 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
 
         pub const DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
             (
