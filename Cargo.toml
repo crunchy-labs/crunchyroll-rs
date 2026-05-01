@@ -1,7 +1,7 @@
 [package]
 name = "crunchyroll-rs"
 # increase version of internal package as well when updating
-version = "0.17.2"
+version = "0.17.3"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
 rust-version = "1.88.0"
@@ -34,17 +34,17 @@ futures-util = { version = "0.3", features = ["std"], default-features = false }
 jsonwebtoken = { version = "10.3", default-features = false, features = ["rust_crypto"] }
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
-reqwest = { version = "0.13.2", features = ["cookies", "json", "multipart", "query", "rustls"] }
+reqwest = { version = "0.13.3", features = ["cookies", "json", "multipart", "query", "rustls"] }
 rustls = { version = "0.23.4", default-features = false, features = ["std", "ring", "tls12"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 smart-default = "0.7"
-tokio = { version = "1.50", features = ["sync"] }
+tokio = { version = "1.52", features = ["sync"] }
 uuid = { version = "1.23", features = ["v4"] }
 webpki-roots = "1.0"
 
-crunchyroll-rs-internal = { version = "0.17.2", path = "internal" }
+crunchyroll-rs-internal = { version = "0.17.3", path = "internal" }
 
 regex = { version = "1.12", default-features = false, features = ["std"], optional = true }
 tower-service = { version = "0.3", optional = true }
@@ -52,7 +52,7 @@ tower-service = { version = "0.3", optional = true }
 [dev-dependencies]
 anyhow = "1.0"
 rand = "0.10"
-tokio = { version = "1.50", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { version = "1.52", features = ["macros", "rt", "rt-multi-thread"] }
 
 [workspace]
 members = ["internal"]

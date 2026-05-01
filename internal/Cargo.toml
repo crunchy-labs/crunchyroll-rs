@@ -1,6 +1,6 @@
 [package]
 name = "crunchyroll-rs-internal"
-version = "0.17.2"
+version = "0.17.3"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
 rust-version = "1.88.0"
