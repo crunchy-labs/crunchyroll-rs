@@ -1,3 +1,6 @@
+// Currently there aren't any movies available.
+
+/*
 use crate::utils::SESSION;
 use crate::utils::Store;
 use crunchyroll_rs::Movie;
@@ -22,3 +25,4 @@ async fn movie_stream() {
     let stream = MOVIE.get().await.unwrap().stream().await.unwrap();
     stream.invalidate().await.unwrap()
 }
+*/
