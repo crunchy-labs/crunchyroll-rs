@@ -1,17 +1,28 @@
 [package]
 name = "crunchyroll-rs"
-# increase version of internal package as well when updating
+description = "Pure Rust implementation of the crunchyroll api."
+documentation = "https://docs.rs/crunchyroll-rs"
+readme = "README.md"
+keywords = ["crunchyroll", "anime", "downloader"]
+categories = ["api-bindings"]
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[workspace]
+members = ["internal"]
+
+[workspace.package]
+# increase version of 'crunchyroll-rs-internal' dependency when updating
 version = "0.17.3"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
 rust-version = "1.88.0"
-description = "Pure Rust implementation of the crunchyroll api."
-readme = "README.md"
 repository = "https://github.com/crunchy-labs/crunchyroll-rs"
-documentation = "https://docs.rs/crunchyroll-rs"
 license = "MIT OR Apache-2.0"
-keywords = ["crunchyroll", "anime", "downloader"]
-categories = ["api-bindings"]
 
 [features]
 default = ["parse"]
@@ -53,9 +64,6 @@ tower-service = { version = "0.3", optional = true }
 anyhow = "1.0"
 rand = "0.10"
 tokio = { version = "1.52", features = ["macros", "rt", "rt-multi-thread"] }
-
-[workspace]
-members = ["internal"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]
