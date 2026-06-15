@@ -144,6 +144,9 @@ pub struct Series {
     seo_title: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     seo_description: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    // always empty if present, not clear what guid this is
+    linked_guid: Option<String>,
 }
 
 impl Series {

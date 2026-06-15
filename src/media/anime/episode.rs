@@ -33,7 +33,7 @@ pub struct EpisodeRating {
     total: u32,
 
     #[cfg(feature = "__test_strict")]
-    rating: crate::StrictValue,
+    rating: Option<crate::StrictValue>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
@@ -242,6 +242,12 @@ pub struct Episode {
     hd_flag: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     recent_variant: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    // always empty if present, not clear what guid this is
+    linked_guid: Option<String>,
+    #[cfg(feature = "__test_strict")]
+    // only present when using the browse endpoint. isn't a valid stream id
+    stream_guid: Option<String>,
 }
 
 impl Episode {
