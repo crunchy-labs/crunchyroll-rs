@@ -1143,6 +1143,11 @@ mod auth {
                 .await
         }
 
+        /// Log in with an OAuth authorization code and matching `code_verifier`, as returned by
+        /// Crunchyroll's SSO endpoint.
+        ///
+        /// See the `sso-login` directory in the example folder for a complete example that performs
+        /// the full OAuth flow via an embedded webview.
         pub async fn login_with_oauth_code<S: AsRef<str>>(
             self,
             code: S,
