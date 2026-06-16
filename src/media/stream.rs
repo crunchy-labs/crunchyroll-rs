@@ -942,7 +942,7 @@ copying is more lightweight
 // A Segment Index Box provides a compact index of one media stream within the media segment to which
 // it applies.
 #[derive(Debug, Clone, PartialEq)]
-pub struct SidxBox {
+struct SidxBox {
     pub version: u8,
     pub flags: u32, // actually only u24
     pub reference_id: u32,
@@ -954,7 +954,7 @@ pub struct SidxBox {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SidxReference {
+struct SidxReference {
     pub reference_type: u8,
     pub referenced_size: u32,
     pub subsegment_duration: u32,
@@ -964,7 +964,7 @@ pub struct SidxReference {
 }
 
 impl SidxBox {
-    pub fn parse(data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+    fn parse(data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         let mut rdr = Cursor::new(data);
         let _box_size = rdr.read_u32::<BigEndian>()?;
         let mut box_header = [0u8; 4];
