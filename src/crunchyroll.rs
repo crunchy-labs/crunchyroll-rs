@@ -245,7 +245,7 @@ mod auth {
         pub(crate) stream_platform: StreamPlatform,
         pub(crate) basic_auth_token: String,
 
-        /// The account id is wrapped in a [`Result`] since [`Executor::auth_anonymously`] /
+        /// The account id is wrapped in a [`Option`] since [`Executor::auth_anonymously`] /
         /// [`CrunchyrollBuilder::login_anonymously`] doesn't return an account id and to prevent
         /// writing error messages multiple times in functions which require the account id to be
         /// set they can just get the id or return the fix set error message.
@@ -1207,7 +1207,7 @@ mod auth {
                         stream_platform: self.stream_platform,
                         basic_auth_token: self.basic_auth_token,
 
-                        account_id: None,
+                        account_id: login_response.account_id,
                     },
                     #[cfg(feature = "tower")]
                     middleware: self.middleware,
