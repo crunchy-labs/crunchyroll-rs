@@ -154,7 +154,8 @@ impl Crunchyroll {
         self.executor.details.device_identifier.clone()
     }
 
-    /// Return the stream platform for the current session.
+    /// Return the stream platform for the current session. This is the platform that was
+    /// configured via [`CrunchyrollBuilder::platform`].
     pub fn stream_platform(&self) -> StreamPlatform {
         self.executor.details.stream_platform.clone()
     }
@@ -190,7 +191,7 @@ mod auth {
         /// Using [`uuid::Uuid::new_v4`] for it works fine.
         pub device_id: String,
         /// Type of the device which issues the session, e.g. `ANDROIDTV` (recommended, this is on
-        /// par with the default user agent and [`CrunchyrollBuilder::stream_platform`]),
+        /// par with the default user agent and [`CrunchyrollBuilder::platform`]),
         /// `Chrome on Windows`, `iPhone 15` or `SM-G980F` (Samsung Galaxy S20).
         pub device_type: String,
         /// Name of the device which issues the session. This may be empty, for example all session
@@ -671,7 +672,8 @@ mod auth {
                     preferred_audio_locale: None,
                     device_identifier: DeviceIdentifier::default(),
                     stream_platform: Default::default(),
-                    basic_auth_token: CrunchyrollBuilder::BASIC_AUTH_TOKEN.to_string(),
+                    basic_auth_token: CrunchyrollBuilder::ANDROID_PHONE_BASIC_AUTH_TOKEN
+                        .to_string(),
                     account_id: None,
                 },
                 #[cfg(feature = "tower")]
@@ -805,7 +807,7 @@ mod auth {
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
                 stream_platform: StreamPlatform::default(),
-                basic_auth_token: CrunchyrollBuilder::BASIC_AUTH_TOKEN.to_string(),
+                basic_auth_token: CrunchyrollBuilder::ANDROID_PHONE_BASIC_AUTH_TOKEN.to_string(),
                 #[cfg(feature = "tower")]
                 middleware: None,
                 #[cfg(feature = "experimental-stabilizations")]
@@ -818,15 +820,22 @@ mod auth {
     }
 
     impl CrunchyrollBuilder {
+        /// The default basic auth token bundled with this crate. It is valid for
+        /// [`StreamPlatform::TvAndroid`] and is what the builder uses if
+        /// [`CrunchyrollBuilder::platform`] is never called.
+        ///
+        /// Crunchyroll rotates basic auth tokens from time to time; this constant is kept
+        /// up-to-date by this crate but may still become invalid between releases. If logins
+        /// start to fail, you may need to supply a fresh token via [`CrunchyrollBuilder::platform`].
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const BASIC_AUTH_TOKEN: &'static str = "bm1oaGcwbDZ4eXhjZm02aHQ2aGY6SjR6bU1mdjNkMVFkWHk4dDk2d1NjeDdoUnkzclBHLTM=";
+        pub const ANDROID_PHONE_BASIC_AUTH_TOKEN: &'static str = "cmpzMGx0eDBkYndrbGl3eGR6ZGY6NFY3cmYyMS1VRlhlWi01WEFkMFhfUVB3cjFndV9pMXM=";
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.61.0_22341 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
+        pub const ANDROID_PHONE_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.65.0_22347 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
 
-        pub const DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
+        pub const ANDROID_PHONE_DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
             (
                 header::USER_AGENT,
-                HeaderValue::from_static(CrunchyrollBuilder::USER_AGENT),
+                HeaderValue::from_static(CrunchyrollBuilder::ANDROID_PHONE_USER_AGENT),
             ),
             (header::ACCEPT, HeaderValue::from_static("*/*")),
             (
@@ -861,7 +870,9 @@ mod auth {
             Client::builder()
                 .https_only(true)
                 .cookie_store(true)
-                .default_headers(HeaderMap::from_iter(CrunchyrollBuilder::DEFAULT_HEADERS))
+                .default_headers(HeaderMap::from_iter(
+                    CrunchyrollBuilder::ANDROID_PHONE_DEFAULT_HEADERS,
+                ))
                 .use_preconfigured_tls(tls_config)
         }
 
@@ -895,27 +906,39 @@ mod auth {
             self
         }
 
-        /// Set the platform for which a stream should be requested. The platform should match the
-        /// user agent, else requesting streams doesn't work. The user agent must be manually edited
-        /// by using [`CrunchyrollBuilder::client`] (you can use
-        /// [`CrunchyrollBuilder::predefined_client_builder`], update the user agent header and
-        /// the pass it to [`CrunchyrollBuilder::client`]).
-        pub fn stream_platform(mut self, stream_platform: StreamPlatform) -> CrunchyrollBuilder {
-            self.stream_platform = stream_platform;
-            self
-        }
-
-        /// Overwrite the basic auth token that is used to issue session. Crunchyroll rotates them
-        /// from time to time, which will result in failing logins.
-        /// This crate tries to keep the token up-to-date and push updates as soon as a new token is
-        /// available, but this doesn't always work. So in case such a case happens, or if you don't
-        /// want/can update to a newer crate version, you can use this method to overwrite said
-        /// token.
+        /// Sets the platform for which a session should be issued for.
         ///
-        /// Tools you can use to get new tokens:
-        /// - <https://github.com/crunchy-labs/crunchyroll-scripts>
-        pub fn basic_auth_token(mut self, basic_auth_token: String) -> CrunchyrollBuilder {
-            self.basic_auth_token = basic_auth_token;
+        /// The two arguments belong together: a basic auth token is only valid for the stream
+        /// platform it was issued for. For example, the basic auth token bundled with the Android
+        /// phone app is only valid for [`StreamPlatform::AndroidPhone`]; using it with any other
+        /// platform (e.g. [`StreamPlatform::TvAndroid`]) will cause stream requests to fail with an
+        /// error.
+        ///
+        /// The user agent should match the stream platform as well, otherwise requests may fail. To
+        /// use a custom user agent, build a client with
+        /// [`CrunchyrollBuilder::predefined_client_builder`], update the user agent header, and
+        /// pass the client via [`CrunchyrollBuilder::client`].
+        ///
+        /// Crunchyroll rotates the basic auth tokens from time to time, which will result in
+        /// failing logins. This crate tries to keep the bundled default token
+        /// ([`CrunchyrollBuilder::BASIC_AUTH_TOKEN`], valid for [`StreamPlatform::TvAndroid`])
+        /// up-to-date and pushes updates as soon as a new token is available, but this doesn't
+        /// always work. If the login fails with the bundled token, or if you need a token for a
+        /// platform that is not bundled, you have to obtain one yourself. The
+        /// [crunchyroll-scripts](https://github.com/crunchy-labs/crunchyroll-scripts) repository
+        /// contains tools to extract tokens.
+        ///
+        /// Not every login method is available with every basic auth token. For example, the
+        /// Android phone basic auth token only supports
+        /// [`CrunchyrollBuilder::login_with_oauth_code`] and the refresh token based methods;
+        /// [`CrunchyrollBuilder::login_with_credentials`] will be rejected.
+        pub fn platform(
+            mut self,
+            stream_platform: StreamPlatform,
+            basic_auth_token: &str,
+        ) -> CrunchyrollBuilder {
+            self.stream_platform = stream_platform;
+            self.basic_auth_token = basic_auth_token.to_string();
             self
         }
 
@@ -966,6 +989,9 @@ mod auth {
 
         /// Login without an account. This is just like if you would visit crunchyroll.com without
         /// an account. Some functions won't work if logged in with this method.
+        ///
+        /// This method won't respect [`CrunchyrollBuilder::platform`] as anonymous login is only
+        /// available on the web platform and thus, the credentials are hard-coded.
         pub async fn login_anonymously(
             self,
             device_identifier: DeviceIdentifier,
@@ -989,6 +1015,10 @@ mod auth {
         ///
         /// *Note*: All logins you do with the generated refresh token must have the same
         /// `device_identifier`, otherwise the login will fail.
+        ///
+        /// *Note*: Many platforms aren't supporting this login method. Expect login errors when
+        /// using a custom [`CrunchyrollBuilder::platform`]. Consider using
+        /// [`CrunchyrollBuilder::login_with_oauth_code`] instead.
         pub async fn login_with_credentials<S: AsRef<str>>(
             self,
             email: S,
@@ -1085,6 +1115,10 @@ mod auth {
         /// Logs in with the `etp_rt` cookie that is generated when logging in with the browser and
         /// returns a new [`Crunchyroll`] instance. This cookie can be extracted if you copy the
         /// `etp_rt` cookie from your browser.
+        ///
+        /// This method uses a hardcoded basic auth token which is independent of the one set
+        /// via [`CrunchyrollBuilder::platform`]. The [`StreamPlatform`] configured via
+        /// [`CrunchyrollBuilder::platform`] does still apply.
         ///
         /// *Note*: You need to set the `device_identifier` to the same identifier which were used
         /// in the login that initially created the `etp_rt` cookie, otherwise the login will fail.
