@@ -935,7 +935,7 @@ mod auth {
         pub fn platform(
             mut self,
             stream_platform: StreamPlatform,
-            basic_auth_token: &str,
+            basic_auth_token: String,
         ) -> CrunchyrollBuilder {
             self.stream_platform = stream_platform;
             self.basic_auth_token = basic_auth_token.to_string();
