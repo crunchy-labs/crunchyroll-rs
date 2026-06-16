@@ -53,7 +53,7 @@ update_tv() {
   vercode="$2"
   url="$3"
 
-  crate_vername="$(grep -oP '(?<=const ANDROID_PHONE_USER_AGENT: &'"'"'static str = "Crunchyroll/ANDROIDTV/)[^_]+' src/crunchyroll.rs || true)"
+  crate_vername="$(grep -oP '(?<=const ANDROID_TV_USER_AGENT: &'"'"'static str = "Crunchyroll/ANDROIDTV/)[^_]+' src/crunchyroll.rs || true)"
   crate_vername="${crate_vername:-0}"
 
   if ! version_gt "$vername" "$crate_vername"; then
@@ -71,8 +71,8 @@ update_tv() {
   read -r _client_id basic_auth <<< "$creds"
 
   log "Updating src/crunchyroll.rs"
-  sed -i -E "s|(pub const ANDROID_PHONE_BASIC_AUTH_TOKEN: &'static str = \").+(\";)|\1${basic_auth}\2|" src/crunchyroll.rs
-  sed -i -E "s|(pub const ANDROID_PHONE_USER_AGENT: &'static str = \"Crunchyroll/ANDROIDTV/).+( \()|\1${vername}_${vercode}\2|" src/crunchyroll.rs
+  sed -i -E "s|(pub const ANDROID_TV_BASIC_AUTH_TOKEN: &'static str = \").+(\";)|\1${basic_auth}\2|" src/crunchyroll.rs
+  sed -i -E "s|(pub const ANDROID_TV_USER_AGENT: &'static str = \"Crunchyroll/ANDROIDTV/).+( \()|\1${vername}_${vercode}\2|" src/crunchyroll.rs
 
   echo "true"
 }

@@ -672,8 +672,7 @@ mod auth {
                     preferred_audio_locale: None,
                     device_identifier: DeviceIdentifier::default(),
                     stream_platform: Default::default(),
-                    basic_auth_token: CrunchyrollBuilder::ANDROID_PHONE_BASIC_AUTH_TOKEN
-                        .to_string(),
+                    basic_auth_token: CrunchyrollBuilder::ANDROID_TV_BASIC_AUTH_TOKEN.to_string(),
                     account_id: None,
                 },
                 #[cfg(feature = "tower")]
@@ -807,7 +806,7 @@ mod auth {
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
                 stream_platform: StreamPlatform::default(),
-                basic_auth_token: CrunchyrollBuilder::ANDROID_PHONE_BASIC_AUTH_TOKEN.to_string(),
+                basic_auth_token: CrunchyrollBuilder::ANDROID_TV_BASIC_AUTH_TOKEN.to_string(),
                 #[cfg(feature = "tower")]
                 middleware: None,
                 #[cfg(feature = "experimental-stabilizations")]
@@ -828,14 +827,14 @@ mod auth {
         /// up-to-date by this crate but may still become invalid between releases. If logins
         /// start to fail, you may need to supply a fresh token via [`CrunchyrollBuilder::platform`].
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const ANDROID_PHONE_BASIC_AUTH_TOKEN: &'static str = "cmpzMGx0eDBkYndrbGl3eGR6ZGY6NFY3cmYyMS1VRlhlWi01WEFkMFhfUVB3cjFndV9pMXM=";
+        pub const ANDROID_TV_BASIC_AUTH_TOKEN: &'static str = "cmpzMGx0eDBkYndrbGl3eGR6ZGY6NFY3cmYyMS1VRlhlWi01WEFkMFhfUVB3cjFndV9pMXM=";
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const ANDROID_PHONE_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.65.0_22347 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
+        pub const ANDROID_TV_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.65.0_22347 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
 
-        pub const ANDROID_PHONE_DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
+        pub const ANDROID_TV_DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
             (
                 header::USER_AGENT,
-                HeaderValue::from_static(CrunchyrollBuilder::ANDROID_PHONE_USER_AGENT),
+                HeaderValue::from_static(CrunchyrollBuilder::ANDROID_TV_USER_AGENT),
             ),
             (header::ACCEPT, HeaderValue::from_static("*/*")),
             (
@@ -871,7 +870,7 @@ mod auth {
                 .https_only(true)
                 .cookie_store(true)
                 .default_headers(HeaderMap::from_iter(
-                    CrunchyrollBuilder::ANDROID_PHONE_DEFAULT_HEADERS,
+                    CrunchyrollBuilder::ANDROID_TV_DEFAULT_HEADERS,
                 ))
                 .use_preconfigured_tls(tls_config)
         }
