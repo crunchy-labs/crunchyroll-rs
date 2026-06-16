@@ -127,6 +127,8 @@ fi
 github_output changed "$changed"
 github_output tv_updated "$tv_updated"
 github_output phone_updated "$phone_updated"
+github_output tv_vername "$tv_vername"
+github_output phone_vername "$phone_vername"
 
 if [ "$changed" = "false" ]; then
   log "Nothing to update"
