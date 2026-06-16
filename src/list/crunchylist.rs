@@ -1,5 +1,5 @@
 use crate::common::V2BulkResult;
-use crate::error::Error;
+use crate::error::{Error, Kind};
 use crate::{Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -30,7 +30,7 @@ impl CrunchylistEntry {
     pub async fn delete(self) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}/{}",
-            self.executor.details.account_id.clone()?,
+            self.executor.details.account_id()?,
             self.list_id,
             self.id
         );
@@ -77,7 +77,7 @@ impl Crunchylists {
     pub async fn create<S: AsRef<str>>(&self, title: S) -> Result<CrunchylistPreview> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/{}/custom-lists",
-            self.executor.details.account_id.clone()?
+            self.executor.details.account_id()?
         );
         let create_result = self
             .executor
@@ -127,7 +127,7 @@ impl Crunchylist {
     pub async fn add(&self, media: MediaCollection) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}",
-            self.executor.details.account_id.clone()?,
+            self.executor.details.account_id()?,
             self.id
         );
         let id = match media {
@@ -137,9 +137,10 @@ impl Crunchylist {
             MediaCollection::MovieListing(movie_listing) => movie_listing.id,
             MediaCollection::Movie(movie) => movie.movie_listing_id,
             _ => {
-                return Err(Error::Input {
-                    message: "music related media isn't supported".to_string(),
-                });
+                return Err(Error::error_from_kind(
+                    Kind::Input,
+                    "music related media can't be added to a crunchylist",
+                ));
             }
         };
         self.executor
@@ -155,7 +156,7 @@ impl Crunchylist {
     pub async fn rename<S: AsRef<str>>(&self, name: S) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}",
-            self.executor.details.account_id.clone()?,
+            self.executor.details.account_id()?,
             self.id
         );
         self.executor
@@ -171,7 +172,7 @@ impl Crunchylist {
     pub async fn delete(self) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}",
-            self.executor.details.account_id.clone()?,
+            self.executor.details.account_id()?,
             self.id
         );
         self.executor
@@ -220,7 +221,7 @@ impl CrunchylistPreview {
 
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/{}/custom-lists/{}",
-            self.executor.details.account_id.clone()?,
+            self.executor.details.account_id()?,
             self.list_id
         );
         let crunchylist: V2BulkResult<CrunchylistEntry, Meta> = self
@@ -254,7 +255,7 @@ impl Crunchyroll {
 
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/{}/custom-lists",
-            self.executor.details.account_id.clone()?
+            self.executor.details.account_id()?
         );
         let crunchylists: V2BulkResult<CrunchylistPreview, Meta> = self
             .executor

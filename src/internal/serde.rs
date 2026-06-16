@@ -1,5 +1,5 @@
 use crate::common::Image;
-use crate::error::Error;
+use crate::error::{Error, Kind};
 use crate::media::Subtitle;
 use crate::profile::Wallpaper;
 use crate::{Locale, Request, Result};
@@ -48,9 +48,10 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
             Value::String(string) => string,
             Value::Null => continue,
             _ => {
-                return Err(Error::Internal {
-                    message: format!("key is not supported to be urlencoded ({key})"),
-                });
+                return Err(Error::error_from_kind(
+                    Kind::Internal,
+                    format!("key is not supported to be urlencoded ({key})"),
+                ));
             }
         };
         let value_as_string = match value {
@@ -62,17 +63,19 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
                 .map(|vv| match vv {
                     Value::Number(number) => Ok(number.to_string()),
                     Value::String(string) => Ok(string),
-                    _ => Err(Error::Internal {
-                        message: format!("value is not supported to be urlencoded ({vv})"),
-                    }),
+                    _ => Err(Error::error_from_kind(
+                        Kind::Internal,
+                        format!("value is not supported to be urlencoded ({vv})"),
+                    )),
                 })
                 .collect::<Result<Vec<String>>>()?
                 .join(","),
             Value::Null => continue,
             _ => {
-                return Err(Error::Internal {
-                    message: format!("value is not supported to be urlencoded ({value})"),
-                });
+                return Err(Error::error_from_kind(
+                    Kind::Internal,
+                    format!("value is not supported to be urlencoded ({value})"),
+                ));
             }
         };
         q.push((key_as_string, value_as_string));

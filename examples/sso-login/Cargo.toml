@@ -1,0 +1,18 @@
+[package]
+name = "sso-login"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+crunchyroll-rs = { path = "../.." }
+
+http = "1.4"
+reqwest = "0.13"
+tao = "0.35"
+tokio = { version = "1.52", features = ["macros", "rt", "rt-multi-thread"] }
+uuid = "1.23"
+wry = "0.55"
+
+[target.'cfg(unix)'.dependencies]
+gtk = { version = "0.18" }

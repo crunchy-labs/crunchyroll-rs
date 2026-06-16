@@ -1,12 +1,15 @@
-use crate::error::{Error, is_request_error};
+use crate::error::{Error, Kind, is_request_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
-use dash_mpd::MPD;
+use byteorder::{BigEndian, ReadBytesExt};
+use dash_mpd::{ContentProtection, MPD};
+use http::header;
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
+use std::io::{Cursor, Read};
 use std::iter;
 use std::ops::Not;
 use std::sync::{Arc, LazyLock};
@@ -201,13 +204,16 @@ impl Stream {
         let mut stream = match crunchyroll.executor.get(endpoint).request::<Stream>().await {
             Ok(stream) => stream,
             Err(e) => {
-                return match &e {
+                return match e.kind() {
                     // try to invalidate the session if the decoding failed. a decoding failure
                     // usually means that the request was successful but returned unexpected data.
                     // thus, an active session is issued to the server, but it isn't usable because
                     // this functions returns an error. further stream requests may be blocked until
                     // crunchyroll invalidates the session server-side if it isn't done manually
-                    Error::Decode { content, .. } => {
+                    Kind::Decode { content } => {
+                        let Some(content) = content else {
+                            return Err(e);
+                        };
                         let Ok(content_map) = serde_json::from_slice::<Map<String, Value>>(content)
                         else {
                             return Err(e);
@@ -250,9 +256,10 @@ impl Stream {
     /// can use [`Stream::invalidate`] to invalidate all stream data for this stream.
     pub async fn stream_data(&self, hardsub: Option<Locale>) -> Result<Option<StreamData>> {
         if self.playback_type == "live" {
-            return Err(Error::Input {
-                message: "Livestream cannot be downloaded".to_string(),
-            });
+            return Err(Error::error_from_kind(
+                Kind::Input,
+                "livestream download isn't supported",
+            ));
         }
 
         if let Some(hardsub) = hardsub {
@@ -347,23 +354,12 @@ impl StreamData {
         let mut audio = vec![];
         let mut subtitle = None;
 
-        let err_fn = |msg: &str| Error::Request {
-            message: msg.to_string(),
-            status: None,
-            url: url.as_ref().to_string(),
-        };
-
         let raw_mpd = executor
             .get(url.as_ref())
             .query(&[
                 (
                     "accountid",
-                    executor
-                        .details
-                        .account_id
-                        .clone()
-                        .unwrap_or_default()
-                        .as_str(),
+                    executor.details.account_id().unwrap_or_default().as_str(),
                 ),
                 ("playbackGuid", token.as_ref()),
             ])
@@ -373,12 +369,27 @@ impl StreamData {
         if let Ok(json) = serde_json::from_slice(&raw_mpd) {
             is_request_error(json, url.as_ref(), &StatusCode::FORBIDDEN)?;
         }
-        let mut mpd: MPD =
-            dash_mpd::parse(&String::from_utf8_lossy(&raw_mpd)).map_err(|e| Error::Decode {
-                message: e.to_string(),
-                content: raw_mpd,
-                url: url.as_ref().to_string(),
-            })?;
+
+        let mut mpd: MPD = dash_mpd::parse(&String::from_utf8_lossy(&raw_mpd)).map_err(|e| {
+            Error::error_from_other_error_and_url(
+                e,
+                Kind::Decode {
+                    content: Some(raw_mpd.clone()),
+                },
+                url.as_ref(),
+            )
+        })?;
+
+        let err_fn = |msg: &str| {
+            Error::error_from_kind_and_url(
+                Kind::Decode {
+                    content: Some(raw_mpd.clone()),
+                },
+                url.as_ref(),
+                msg,
+            )
+        };
+
         let period = mpd.periods.remove(0);
 
         for adaption in period.adaptations {
@@ -406,59 +417,127 @@ impl StreamData {
                 continue;
             }
 
-            let segment_template = adaption
-                .SegmentTemplate
-                .ok_or("no segment template found")
-                .map_err(err_fn)?;
-            let segment_lengths = segment_template
-                .SegmentTimeline
-                .as_ref()
-                .ok_or("no segment timeline found")
-                .map_err(err_fn)?
-                .segments
-                .iter()
-                .flat_map(|s| {
-                    iter::repeat_n(s.d as u32, s.r.unwrap_or_default() as usize + 1)
-                        .collect::<Vec<u32>>()
-                })
-                .collect::<Vec<u32>>();
-            let segment_init_url = segment_template
-                .initialization
-                .ok_or("no init url found")
-                .map_err(err_fn)?;
-            let segment_media_url = segment_template
-                .media
-                .ok_or("no media url found")
-                .map_err(err_fn)?;
-            let drm_types = adaption
-                .ContentProtection
-                .into_iter()
-                .filter_map(|cp| match cp.schemeIdUri.as_str() {
-                    "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95" => {
-                        Some(MediaStreamDRMType::Playready {
-                            pro: cp.msprpro.and_then(|pro| pro.content),
-                            pssh: cp.cenc_pssh.is_empty().not().then(|| {
-                                cp.cenc_pssh
-                                    .into_iter()
-                                    .filter_map(|pssh| pssh.content)
-                                    .collect()
-                            }),
-                        })
-                    }
-                    "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed" => {
-                        Some(MediaStreamDRMType::Widevine {
-                            pssh: cp
-                                .cenc_pssh
-                                .into_iter()
-                                .filter_map(|pssh| pssh.content)
-                                .collect(),
-                        })
-                    }
-                    _ => None,
-                })
-                .collect::<Vec<_>>();
-
             for representation in adaption.representations {
+                let drm_types = adaption
+                    .ContentProtection
+                    .iter()
+                    .chain(representation.ContentProtection.iter())
+                    .filter_map(Self::drm_type_from_content_protection)
+                    .collect::<Vec<_>>();
+
+                let segment_template = representation
+                    .SegmentTemplate
+                    .as_ref()
+                    .or(adaption.SegmentTemplate.as_ref());
+                let segment_base = representation
+                    .SegmentBase
+                    .as_ref()
+                    .or(adaption.SegmentBase.as_ref());
+
+                let segment_info = if let Some(template) = segment_template {
+                    let segment_lengths = template
+                        .SegmentTimeline
+                        .as_ref()
+                        .ok_or("no segment timeline found")
+                        .map_err(err_fn)?
+                        .segments
+                        .iter()
+                        .flat_map(|s| {
+                            iter::repeat_n(s.d as u32, s.r.unwrap_or_default() as usize + 1)
+                                .collect::<Vec<u32>>()
+                        })
+                        .collect::<Vec<u32>>();
+
+                    MediaStreamSegmentInfo::Template {
+                        representation_id: representation
+                            .id
+                            .clone()
+                            .ok_or("no representation id found")
+                            .map_err(err_fn)?,
+                        segment_start: template
+                            .startNumber
+                            .ok_or("no start number found")
+                            .map_err(err_fn)? as u32,
+                        segment_lengths,
+                        segment_init_url: template
+                            .initialization
+                            .clone()
+                            .ok_or("no init url found")
+                            .map_err(err_fn)?,
+                        segment_media_url: template
+                            .media
+                            .clone()
+                            .ok_or("no media url found")
+                            .map_err(err_fn)?,
+                        segment_timescale: template
+                            .timescale
+                            .ok_or("no timescale found")
+                            .map_err(err_fn)? as u32,
+                    }
+                } else if let Some(base) = segment_base {
+                    let initialization = base
+                        .Initialization
+                        .as_ref()
+                        .ok_or("no initialization found")
+                        .map_err(err_fn)?;
+                    let base_url = representation
+                        .BaseURL
+                        .first()
+                        .ok_or("no base url found")
+                        .map_err(err_fn)?
+                        .base
+                        .clone();
+
+                    let index_range = {
+                        let index_range = base
+                            .indexRange
+                            .as_ref()
+                            .ok_or("no index range found")
+                            .map_err(err_fn)?;
+                        let (index_range_start, index_range_end) = index_range
+                            .split_once('-')
+                            .ok_or("invalid index range found")
+                            .map_err(err_fn)?;
+
+                        (
+                            index_range_start
+                                .parse::<u64>()
+                                .map_err(|_| err_fn("invalid index range start"))?,
+                            index_range_end
+                                .parse::<u64>()
+                                .map_err(|_| err_fn("invalid index range end"))?,
+                        )
+                    };
+                    let init_range = {
+                        let init_range = initialization
+                            .range
+                            .as_ref()
+                            .ok_or("no init range found")
+                            .map_err(err_fn)?;
+                        let (init_range_start, init_range_end) = init_range
+                            .split_once('-')
+                            .ok_or("invalid init range found")
+                            .map_err(err_fn)?;
+
+                        (
+                            init_range_start
+                                .parse::<u64>()
+                                .map_err(|_| err_fn("invalid init range start"))?,
+                            init_range_end
+                                .parse::<u64>()
+                                .map_err(|_| err_fn("invalid init range end"))?,
+                        )
+                    };
+
+                    MediaStreamSegmentInfo::Base {
+                        url: base_url,
+                        index_range,
+                        init_range,
+                    }
+                } else {
+                    return Err(err_fn("unsupported manifest"));
+                };
+
                 let media_stream = MediaStream {
                     executor: executor.clone(),
                     bandwidth: representation
@@ -474,15 +553,6 @@ impl StreamData {
                         types: drm_types.clone(),
                     }),
                     watch_id: watch_id.as_ref().to_string(),
-                    representation_id: representation
-                        .id
-                        .ok_or("no representation id found")
-                        .map_err(err_fn)?,
-                    segment_start: segment_template
-                        .startNumber
-                        .ok_or("no start number found")
-                        .map_err(err_fn)? as u32,
-                    segment_lengths: segment_lengths.clone(),
                     segment_base_url: representation
                         .BaseURL
                         .first()
@@ -490,12 +560,7 @@ impl StreamData {
                         .map_err(err_fn)?
                         .base
                         .clone(),
-                    segment_init_url: segment_init_url.clone(),
-                    segment_media_url: segment_media_url.clone(),
-                    segment_timescale: segment_template
-                        .timescale
-                        .ok_or("no timescale found")
-                        .map_err(err_fn)? as u32,
+                    segment_info,
                 };
 
                 if let Some(sampling_rate) = representation.audioSamplingRate {
@@ -542,6 +607,38 @@ impl StreamData {
             video,
             subtitle,
         })
+    }
+
+    fn drm_type_from_content_protection(
+        content_protection: &ContentProtection,
+    ) -> Option<MediaStreamDRMType> {
+        match content_protection.schemeIdUri.as_str() {
+            "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95" => {
+                Some(MediaStreamDRMType::Playready {
+                    pro: content_protection
+                        .msprpro
+                        .clone()
+                        .and_then(|pro| pro.content),
+                    pssh: content_protection.cenc_pssh.is_empty().not().then(|| {
+                        content_protection
+                            .cenc_pssh
+                            .iter()
+                            .cloned()
+                            .filter_map(|pssh| pssh.content)
+                            .collect()
+                    }),
+                })
+            }
+            "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed" => Some(MediaStreamDRMType::Widevine {
+                pssh: content_protection
+                    .cenc_pssh
+                    .iter()
+                    .cloned()
+                    .filter_map(|pssh| pssh.content)
+                    .collect(),
+            }),
+            _ => None,
+        }
     }
 }
 
@@ -590,6 +687,23 @@ pub struct VideoMediaStream {
 
 media_stream_types!(VideoMediaStream => media_stream);
 
+#[derive(Clone, Debug, Serialize)]
+pub(crate) enum MediaStreamSegmentInfo {
+    Template {
+        representation_id: String,
+        segment_start: u32,
+        segment_lengths: Vec<u32>,
+        segment_init_url: String,
+        segment_media_url: String,
+        segment_timescale: u32,
+    },
+    Base {
+        url: String,
+        index_range: (u64, u64),
+        init_range: (u64, u64),
+    },
+}
+
 #[derive(Clone, Debug, Serialize, Request)]
 pub struct MediaStream {
     #[serde(skip)]
@@ -605,19 +719,10 @@ pub struct MediaStream {
     pub watch_id: String,
 
     #[serde(skip_serializing)]
-    representation_id: String,
-    #[serde(skip_serializing)]
-    segment_start: u32,
-    #[serde(skip_serializing)]
-    segment_lengths: Vec<u32>,
-    #[serde(skip_serializing)]
     segment_base_url: String,
+
     #[serde(skip_serializing)]
-    segment_init_url: String,
-    #[serde(skip_serializing)]
-    segment_media_url: String,
-    #[serde(skip_serializing)]
-    segment_timescale: u32,
+    segment_info: MediaStreamSegmentInfo,
 }
 
 #[derive(Clone, Debug, Serialize, Request)]
@@ -645,42 +750,62 @@ static SEGMENT_MEDIA_URL_TEMPLATE: LazyLock<Regex> = LazyLock::new(|| {
 
 impl MediaStream {
     /// Returns all segment this stream is made of.
-    pub fn segments(&self) -> Vec<StreamSegment> {
+    pub async fn segments(&self) -> Result<Vec<StreamSegment>> {
+        Ok(match &self.segment_info {
+            MediaStreamSegmentInfo::Template { .. } => self.template_segments(),
+            MediaStreamSegmentInfo::Base { .. } => self.base_segments().await?,
+        })
+    }
+
+    fn template_segments(&self) -> Vec<StreamSegment> {
+        let MediaStreamSegmentInfo::Template {
+            representation_id,
+            segment_start,
+            segment_lengths,
+            segment_init_url,
+            segment_media_url,
+            segment_timescale,
+        } = &self.segment_info
+        else {
+            unreachable!()
+        };
+
         let mut segments = vec![StreamSegment {
             executor: self.executor.clone(),
             url: format!(
                 "{}{}",
                 self.segment_base_url,
-                self.segment_init_url
-                    .replace("$RepresentationID$", &self.representation_id)
+                segment_init_url
+                    .replace("$RepresentationID$", representation_id)
                     .replace("$Bandwidth$", &self.bandwidth.to_string())
             ),
             length: Duration::from_secs(0),
+            range: None,
         }];
 
         let captures = SEGMENT_MEDIA_URL_TEMPLATE
-            .captures_iter(&self.segment_media_url)
+            .captures_iter(segment_media_url)
             .collect::<Vec<_>>();
-        for i in 0..self.segment_lengths.len() {
-            let mut segment_media_url = self.segment_media_url.clone();
+        for (i, _) in segment_lengths.iter().enumerate() {
+            let mut media_url = segment_media_url.clone();
             let mut offset = 0;
             for capture in &captures {
                 let replace_string = match &capture["placeholder"] {
                     "Number" => format!(
                         "{:0width$}",
-                        self.segment_start + i as u32,
+                        segment_start + i as u32,
                         width = capture
                             .name("padding")
                             .map_or(0, |p| p.as_str().parse().unwrap())
                     ),
                     "Time" => format!(
                         "{:0width$}",
-                        i * self.segment_timescale as usize,
+                        i * *segment_timescale as usize,
                         width = capture
                             .name("padding")
                             .map_or(0, |p| p.as_str().parse().unwrap())
                     ),
-                    "RepresentationID" => self.representation_id.clone(),
+                    "RepresentationID" => representation_id.clone(),
                     "Bandwidth" => self.bandwidth.to_string(),
                     _ => unreachable!(),
                 };
@@ -689,26 +814,91 @@ impl MediaStream {
                 let replace_start = (mat.start() as i32 + offset) as usize;
                 let replace_end = (mat.end() as i32 + offset) as usize;
 
-                let len_before = segment_media_url.len() as i32;
-                segment_media_url.replace_range(replace_start..replace_end, &replace_string);
-                let len_after = segment_media_url.len() as i32;
+                let len_before = media_url.len() as i32;
+                media_url.replace_range(replace_start..replace_end, &replace_string);
+                let len_after = media_url.len() as i32;
 
                 offset += len_after - len_before;
             }
 
             segments.push(StreamSegment {
                 executor: self.executor.clone(),
-                url: format!("{}{}", self.segment_base_url, segment_media_url),
-                length: Duration::from_millis(self.segment_lengths[i] as u64),
+                url: format!("{}{}", self.segment_base_url, media_url),
+                length: Duration::from_millis(
+                    ((segment_lengths[i] as f64 / *segment_timescale as f64) * 1000.) as u64,
+                ),
+                range: None,
             })
         }
 
         segments
     }
+
+    async fn base_segments(&self) -> Result<Vec<StreamSegment>> {
+        let MediaStreamSegmentInfo::Base {
+            url,
+            index_range,
+            init_range,
+        } = &self.segment_info
+        else {
+            unreachable!()
+        };
+
+        let (index_range_start, index_range_end) = index_range;
+
+        let sidx_data = self
+            .executor
+            .get(url)
+            .header(
+                header::RANGE,
+                format!("bytes={index_range_start}-{index_range_end}"),
+            )
+            .request_raw(false)
+            .await?;
+
+        let sidx_box = SidxBox::parse(&sidx_data).map_err(|_| {
+            Error::error_from_kind_and_url(
+                Kind::Decode {
+                    content: Some(sidx_data),
+                },
+                url,
+                "unable to parse sidx box",
+            )
+        })?;
+
+        let mut segments = Vec::with_capacity(sidx_box.references.len() + 1);
+        segments.push(StreamSegment {
+            executor: self.executor.clone(),
+            url: url.clone(),
+            length: Duration::default(),
+            range: Some(*init_range),
+        });
+
+        let mut current_byte_offset = *index_range_end + sidx_box.first_offset + 1;
+        for reference in &sidx_box.references {
+            let duration = Duration::from_millis(
+                ((reference.subsegment_duration as f64 / sidx_box.timescale as f64) * 1000.) as u64,
+            );
+
+            let range_start = current_byte_offset;
+            let range_end = current_byte_offset + reference.referenced_size as u64 - 1;
+
+            segments.push(StreamSegment {
+                executor: self.executor.clone(),
+                url: url.clone(),
+                length: duration,
+                range: Some((range_start, range_end)),
+            });
+
+            current_byte_offset += reference.referenced_size as u64;
+        }
+
+        Ok(segments)
+    }
 }
 
 /// Video resolution.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub struct Resolution {
     pub width: u64,
     pub height: u64,
@@ -729,11 +919,111 @@ pub struct StreamSegment {
     pub url: String,
     /// Video length of this segment.
     pub length: Duration,
+    /// Byte range of this segment.
+    pub range: Option<(u64, u64)>,
 }
 
 impl StreamSegment {
     /// Get the raw data for the current segment.
     pub async fn data(&self) -> Result<Vec<u8>> {
-        self.executor.get(&self.url).request_raw(false).await
+        let mut builder = self.executor.get(&self.url);
+        if let Some((start, end)) = &self.range {
+            builder = builder.header(header::RANGE, format!("bytes={}-{}", start, end));
+        }
+        builder.request_raw(false).await
+    }
+}
+
+/* -----
+copied (and partially modified) from dash-mpd (https://github.com/emarsden/dash-mpd-rs/blob/d19fab6d57c3feac1aa13efa753c197f7baeab92/src/sidx.rs#L13-L101)
+atm the struct is gated behind a flag that adds a bunch of dependencies that aren't needed, so
+copying is more lightweight
+------- */
+// A Segment Index Box provides a compact index of one media stream within the media segment to which
+// it applies.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SidxBox {
+    pub version: u8,
+    pub flags: u32, // actually only u24
+    pub reference_id: u32,
+    pub timescale: u32,
+    pub earliest_presentation_time: u64,
+    pub first_offset: u64,
+    pub reference_count: u16,
+    pub references: Vec<SidxReference>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SidxReference {
+    pub reference_type: u8,
+    pub referenced_size: u32,
+    pub subsegment_duration: u32,
+    pub starts_with_sap: u8, // (actually a boolean)
+    pub sap_type: u8,
+    pub sap_delta_time: u32,
+}
+
+impl SidxBox {
+    pub fn parse(data: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut rdr = Cursor::new(data);
+        let _box_size = rdr.read_u32::<BigEndian>()?;
+        let mut box_header = [0u8; 4];
+        if rdr.read_exact(&mut box_header).is_err() {
+            return Err("reading box header".into());
+        }
+        if !box_header.eq(b"sidx") {
+            return Err("expecting sidx BMFF header".into());
+        }
+        let version = rdr.read_u8()?;
+        let flags = rdr.read_u24::<BigEndian>()?;
+        let reference_id = rdr.read_u32::<BigEndian>()?;
+        let timescale = rdr.read_u32::<BigEndian>()?;
+        let earliest_presentation_time = if version == 0 {
+            u64::from(rdr.read_u32::<BigEndian>()?)
+        } else {
+            rdr.read_u64::<BigEndian>()?
+        };
+        let first_offset = if version == 0 {
+            u64::from(rdr.read_u32::<BigEndian>()?)
+        } else {
+            rdr.read_u64::<BigEndian>()?
+        };
+        let _reserved = rdr.read_u16::<BigEndian>()?;
+        let reference_count = rdr.read_u16::<BigEndian>()?;
+        let mut references = Vec::with_capacity(reference_count as usize);
+        for _ in 0..reference_count {
+            // chunk is 1 bit for reference_type, and 31 bits for referenced_size.
+            let chunk = rdr.read_u32::<BigEndian>()?;
+            // Reference_type = 1 means a reference to another sidx (hierarchical sidx)
+            let reference_type = ((chunk & 0x8000_0000) >> 31) as u8;
+            if reference_type != 0 {
+                return Err("Don't know how to handle hierarchical sidx".into());
+            }
+            let referenced_size = chunk & 0x7FFF_FFFF;
+            let subsegment_duration = rdr.read_u32::<BigEndian>()?;
+            let fields = rdr.read_u32::<BigEndian>()?;
+            let starts_with_sap = if (fields >> 31) == 1 { 1 } else { 0 };
+            let sap_type = ((fields >> 28) & 0b0111) as u8;
+            let sap_delta_time = fields & !(0b1111 << 28);
+
+            references.push(SidxReference {
+                reference_type,
+                referenced_size,
+                subsegment_duration,
+                starts_with_sap,
+                sap_type,
+                sap_delta_time,
+            });
+        }
+        Ok(SidxBox {
+            version,
+            flags,
+            reference_id,
+            timescale,
+            earliest_presentation_time,
+            first_offset,
+            reference_count,
+            references,
+        })
     }
 }

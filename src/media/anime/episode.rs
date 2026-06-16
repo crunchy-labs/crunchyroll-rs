@@ -279,7 +279,7 @@ impl Episode {
     pub async fn rating(&self) -> Result<EpisodeRating> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content-reviews/v3/user/{}/rating/episode/{}",
-            self.executor.details.account_id.clone()?,
+            self.executor.details.account_id()?,
             self.id
         );
         self.executor.get(endpoint).request().await

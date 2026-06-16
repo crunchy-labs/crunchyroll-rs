@@ -142,6 +142,9 @@ pub mod error;
 pub mod feed;
 pub mod list;
 pub mod media;
+#[cfg(feature = "tower")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tower")))]
+pub mod middleware;
 #[cfg(feature = "parse")]
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub mod parse;

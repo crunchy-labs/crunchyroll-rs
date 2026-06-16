@@ -138,7 +138,7 @@ macro_rules! impl_media_video_collection {
 
                     $crate::common::Pagination::new(|options| {
                         async move {
-                            let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", options.executor.details.account_id.clone()?, options.extra.get("id").unwrap());
+                            let endpoint = format!("https://www.crunchyroll.com/content/v2/discover/{}/similar_to/{}", options.executor.details.account_id()?, options.extra.get("id").unwrap());
                             let result: $crate::common::V2BulkResult<SearchMediaCollection, PaginationBulkResultMeta> = options
                                 .executor
                                 .get(endpoint)
@@ -156,7 +156,7 @@ macro_rules! impl_media_video_collection {
                 pub async fn rating(&self) -> Result<Rating> {
                     let endpoint = format!(
                         "https://www.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
-                        self.executor.details.account_id.clone()?, $endpoint, self.id
+                        self.executor.details.account_id()?, $endpoint, self.id
                     );
                     self.executor.get(endpoint).request().await
                 }
@@ -164,7 +164,7 @@ macro_rules! impl_media_video_collection {
                 pub async fn rate(&self, stars: RatingStar) -> Result<Rating> {
                     let endpoint = format!(
                         "https://www.crunchyroll.com/content-reviews/v2/user/{}/rating/{}/{}",
-                        self.executor.details.account_id.clone()?, $endpoint, self.id
+                        self.executor.details.account_id()?, $endpoint, self.id
                     );
                     self.executor.put(endpoint)
                         .json(&serde_json::json!({"rating": stars}))
@@ -244,7 +244,7 @@ macro_rules! impl_media_video {
 
                 /// Get playhead information.
                 pub async fn playhead(&self) -> Result<Option<PlayheadInformation>> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/playheads", self.executor.details.account_id.clone()?);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/playheads", self.executor.details.account_id()?);
                     Ok(self.executor.get(endpoint)
                         .query(&[("content_ids", &self.id)])
                         .apply_locale_query()
@@ -260,7 +260,7 @@ macro_rules! impl_media_video {
                 /// integration so if you update the playhead and have Crunchyroll connected to
                 /// Discord, this episode / movie will be shown as your Discord status.
                 pub async fn set_playhead(&self, position: u32) -> Result<()> {
-                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/playheads", self.executor.details.account_id.clone()?);
+                    let endpoint = format!("https://www.crunchyroll.com/content/v2/{}/playheads", self.executor.details.account_id()?);
                     self.executor.post(endpoint)
                         .apply_locale_query()
                         .json(&serde_json::json!({"content_id": &self.id, "playhead": position}))

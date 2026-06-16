@@ -153,10 +153,16 @@ impl Crunchyroll {
     pub fn device_identifier(&self) -> DeviceIdentifier {
         self.executor.details.device_identifier.clone()
     }
+
+    /// Return the stream platform for the current session. This is the platform that was
+    /// configured via [`CrunchyrollBuilder::platform`].
+    pub fn stream_platform(&self) -> StreamPlatform {
+        self.executor.details.stream_platform.clone()
+    }
 }
 
 mod auth {
-    use crate::error::{Error, check_request};
+    use crate::error::{Error, Kind, check_request};
     use crate::media::StreamPlatform;
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
@@ -185,7 +191,7 @@ mod auth {
         /// Using [`uuid::Uuid::new_v4`] for it works fine.
         pub device_id: String,
         /// Type of the device which issues the session, e.g. `ANDROIDTV` (recommended, this is on
-        /// par with the default user agent and [`CrunchyrollBuilder::stream_platform`]),
+        /// par with the default user agent and [`CrunchyrollBuilder::platform`]),
         /// `Chrome on Windows`, `iPhone 15` or `SM-G980F` (Samsung Galaxy S20).
         pub device_type: String,
         /// Name of the device which issues the session. This may be empty, for example all session
@@ -243,7 +249,18 @@ mod auth {
         /// [`CrunchyrollBuilder::login_anonymously`] doesn't return an account id and to prevent
         /// writing error messages multiple times in functions which require the account id to be
         /// set they can just get the id or return the fix set error message.
-        pub(crate) account_id: Result<String>,
+        account_id: Option<String>,
+    }
+
+    impl ExecutorDetails {
+        pub(crate) fn account_id(&self) -> Result<String> {
+            self.account_id.as_ref().cloned().ok_or_else(|| {
+                Error::error_from_kind(
+                    Kind::Input,
+                    "Login with a user account to use this function",
+                )
+            })
+        }
     }
 
     #[cfg(feature = "experimental-stabilizations")]
@@ -418,6 +435,35 @@ mod auth {
             pre_body
         }
 
+        async fn send_auth_req(
+            client: &Client,
+            req: reqwest::Request,
+            #[cfg(feature = "tower")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            >,
+        ) -> Result<AuthResponse> {
+            #[cfg(not(feature = "tower"))]
+            let resp = client.execute(req).await?;
+            #[cfg(feature = "tower")]
+            let resp = {
+                use std::ops::DerefMut;
+                if let Some(middleware) = middleware {
+                    let url = req.url().to_string();
+                    middleware
+                        .lock()
+                        .await
+                        .deref_mut()
+                        .call(crate::middleware::MiddlewareContext::new(client, req))
+                        .await
+                        .map_err(|e| crate::internal::tower::service_error_to_error(e, url))?
+                } else {
+                    client.execute(req).await?
+                }
+            };
+
+            check_request(resp).await
+        }
+
         async fn auth_anonymously(
             client: &Client,
             device_identifier: &DeviceIdentifier,
@@ -434,19 +480,14 @@ mod auth {
                 .header("ETP-Anonymous-ID", &device_identifier.device_id)
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
 
         async fn auth_with_credentials(
@@ -475,19 +516,14 @@ mod auth {
                 .header("ETP-Anonymous-ID", &device_identifier.device_id)
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
 
         async fn auth_with_refresh_token(
@@ -513,19 +549,14 @@ mod auth {
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
 
         async fn auth_with_refresh_token_profile_id(
@@ -553,19 +584,14 @@ mod auth {
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
 
         async fn auth_with_etp_rt(
@@ -585,19 +611,49 @@ mod auth {
                 .header(header::COOKIE, format!("etp_rt={etp_rt}"))
                 .body(serde_urlencoded::to_string(body).unwrap())
                 .build()?;
-            #[cfg(not(feature = "tower"))]
-            let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
-            let resp = {
-                use std::ops::DerefMut;
-                if let Some(middleware) = middleware {
-                    middleware.lock().await.deref_mut().call(req).await?
-                } else {
-                    client.execute(req).await?
-                }
-            };
 
-            check_request(endpoint.to_string(), resp).await
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
+        }
+
+        async fn auth_with_oauth_code(
+            client: &Client,
+            code: &str,
+            code_verifier: &str,
+            device_identifier: &DeviceIdentifier,
+            basic_auth_token: &str,
+            #[cfg(feature = "tower")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            >,
+        ) -> Result<AuthResponse> {
+            let endpoint = "https://www.crunchyroll.com/auth/v1/token";
+            let body = Self::auth_body(
+                vec![
+                    ("code", code),
+                    ("code_verifier", code_verifier),
+                    ("grant_type", "authorization_code"),
+                ],
+                device_identifier,
+            );
+            let req = client
+                .post(endpoint)
+                .header(header::AUTHORIZATION, format!("Basic {basic_auth_token}"))
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(serde_urlencoded::to_string(body).unwrap())
+                .build()?;
+
+            Self::send_auth_req(
+                client,
+                req,
+                #[cfg(feature = "tower")]
+                middleware,
+            )
+            .await
         }
     }
 
@@ -616,8 +672,9 @@ mod auth {
                     preferred_audio_locale: None,
                     device_identifier: DeviceIdentifier::default(),
                     stream_platform: Default::default(),
-                    basic_auth_token: CrunchyrollBuilder::BASIC_AUTH_TOKEN.to_string(),
-                    account_id: Ok("".to_string()),
+                    basic_auth_token: CrunchyrollBuilder::ANDROID_PHONE_BASIC_AUTH_TOKEN
+                        .to_string(),
+                    account_id: None,
                 },
                 #[cfg(feature = "tower")]
                 middleware: None,
@@ -669,6 +726,18 @@ mod auth {
             self
         }
 
+        pub(crate) fn header<K, V>(mut self, key: K, value: V) -> ExecutorRequestBuilder
+        where
+            HeaderName: TryFrom<K>,
+            <HeaderName as TryFrom<K>>::Error: Into<http::Error>,
+            HeaderValue: TryFrom<V>,
+            <HeaderValue as TryFrom<V>>::Error: Into<http::Error>,
+        {
+            self.builder = self.builder.header(key, value);
+
+            self
+        }
+
         pub(crate) async fn request<T: Request + DeserializeOwned>(self) -> Result<T> {
             self.executor.request(self.builder).await
         }
@@ -694,11 +763,18 @@ mod auth {
 
             #[cfg(feature = "tower")]
             if let Some(middleware) = &self.executor.middleware {
+                let req = self.builder.build()?;
+                let url = req.url().to_string();
+
                 return Ok(middleware
                     .lock()
                     .await
-                    .call(self.builder.build()?)
-                    .await?
+                    .call(crate::middleware::MiddlewareContext::new(
+                        &self.executor.client,
+                        req,
+                    ))
+                    .await
+                    .map_err(|e| crate::internal::tower::service_error_to_error(e, url))?
                     .bytes()
                     .await?
                     .to_vec());
@@ -731,7 +807,7 @@ mod auth {
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
                 stream_platform: StreamPlatform::default(),
-                basic_auth_token: CrunchyrollBuilder::BASIC_AUTH_TOKEN.to_string(),
+                basic_auth_token: CrunchyrollBuilder::ANDROID_PHONE_BASIC_AUTH_TOKEN.to_string(),
                 #[cfg(feature = "tower")]
                 middleware: None,
                 #[cfg(feature = "experimental-stabilizations")]
@@ -744,15 +820,22 @@ mod auth {
     }
 
     impl CrunchyrollBuilder {
+        /// The default basic auth token bundled with this crate. It is valid for
+        /// [`StreamPlatform::TvAndroid`] and is what the builder uses if
+        /// [`CrunchyrollBuilder::platform`] is never called.
+        ///
+        /// Crunchyroll rotates basic auth tokens from time to time; this constant is kept
+        /// up-to-date by this crate but may still become invalid between releases. If logins
+        /// start to fail, you may need to supply a fresh token via [`CrunchyrollBuilder::platform`].
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const BASIC_AUTH_TOKEN: &'static str = "cmpzMGx0eDBkYndrbGl3eGR6ZGY6NFY3cmYyMS1VRlhlWi01WEFkMFhfUVB3cjFndV9pMXM=";
+        pub const ANDROID_PHONE_BASIC_AUTH_TOKEN: &'static str = "cmpzMGx0eDBkYndrbGl3eGR6ZGY6NFY3cmYyMS1VRlhlWi01WEFkMFhfUVB3cjFndV9pMXM=";
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.65.0_22347 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
+        pub const ANDROID_PHONE_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.65.0_22347 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
 
-        pub const DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
+        pub const ANDROID_PHONE_DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
             (
                 header::USER_AGENT,
-                HeaderValue::from_static(CrunchyrollBuilder::USER_AGENT),
+                HeaderValue::from_static(CrunchyrollBuilder::ANDROID_PHONE_USER_AGENT),
             ),
             (header::ACCEPT, HeaderValue::from_static("*/*")),
             (
@@ -787,7 +870,9 @@ mod auth {
             Client::builder()
                 .https_only(true)
                 .cookie_store(true)
-                .default_headers(HeaderMap::from_iter(CrunchyrollBuilder::DEFAULT_HEADERS))
+                .default_headers(HeaderMap::from_iter(
+                    CrunchyrollBuilder::ANDROID_PHONE_DEFAULT_HEADERS,
+                ))
                 .use_preconfigured_tls(tls_config)
         }
 
@@ -821,27 +906,39 @@ mod auth {
             self
         }
 
-        /// Set the platform for which a stream should be requested. The platform should match the
-        /// user agent, else requesting streams doesn't work. The user agent must be manually edited
-        /// by using [`CrunchyrollBuilder::client`] (you can use
-        /// [`CrunchyrollBuilder::predefined_client_builder`], update the user agent header and
-        /// the pass it to [`CrunchyrollBuilder::client`]).
-        pub fn stream_platform(mut self, stream_platform: StreamPlatform) -> CrunchyrollBuilder {
-            self.stream_platform = stream_platform;
-            self
-        }
-
-        /// Overwrite the basic auth token that is used to issue session. Crunchyroll rotates them
-        /// from time to time, which will result in failing logins.
-        /// This crate tries to keep the token up-to-date and push updates as soon as a new token is
-        /// available, but this doesn't always work. So in case such a case happens, or if you don't
-        /// want/can update to a newer crate version, you can use this method to overwrite said
-        /// token.
+        /// Sets the platform for which a session should be issued for.
         ///
-        /// Tools you can use to get new tokens:
-        /// - <https://github.com/crunchy-labs/crunchyroll-scripts>
-        pub fn basic_auth_token(mut self, basic_auth_token: String) -> CrunchyrollBuilder {
-            self.basic_auth_token = basic_auth_token;
+        /// The two arguments belong together: a basic auth token is only valid for the stream
+        /// platform it was issued for. For example, the basic auth token bundled with the Android
+        /// phone app is only valid for [`StreamPlatform::AndroidPhone`]; using it with any other
+        /// platform (e.g. [`StreamPlatform::TvAndroid`]) will cause stream requests to fail with an
+        /// error.
+        ///
+        /// The user agent should match the stream platform as well, otherwise requests may fail. To
+        /// use a custom user agent, build a client with
+        /// [`CrunchyrollBuilder::predefined_client_builder`], update the user agent header, and
+        /// pass the client via [`CrunchyrollBuilder::client`].
+        ///
+        /// Crunchyroll rotates the basic auth tokens from time to time, which will result in
+        /// failing logins. This crate tries to keep the bundled default token
+        /// ([`CrunchyrollBuilder::BASIC_AUTH_TOKEN`], valid for [`StreamPlatform::TvAndroid`])
+        /// up-to-date and pushes updates as soon as a new token is available, but this doesn't
+        /// always work. If the login fails with the bundled token, or if you need a token for a
+        /// platform that is not bundled, you have to obtain one yourself. The
+        /// [crunchyroll-scripts](https://github.com/crunchy-labs/crunchyroll-scripts) repository
+        /// contains tools to extract tokens.
+        ///
+        /// Not every login method is available with every basic auth token. For example, the
+        /// Android phone basic auth token only supports
+        /// [`CrunchyrollBuilder::login_with_oauth_code`] and the refresh token based methods;
+        /// [`CrunchyrollBuilder::login_with_credentials`] will be rejected.
+        pub fn platform(
+            mut self,
+            stream_platform: StreamPlatform,
+            basic_auth_token: &str,
+        ) -> CrunchyrollBuilder {
+            self.stream_platform = stream_platform;
+            self.basic_auth_token = basic_auth_token.to_string();
             self
         }
 
@@ -849,13 +946,14 @@ mod auth {
         /// request.
         #[cfg(feature = "tower")]
         #[cfg_attr(docsrs, doc(cfg(feature = "tower")))]
-        pub fn middleware<F, S>(mut self, service: S) -> CrunchyrollBuilder
+        pub fn middleware<E, F, S>(mut self, service: S) -> CrunchyrollBuilder
         where
-            F: std::future::Future<Output = Result<reqwest::Response, Error>> + Send + 'static,
-            S: tower_service::Service<
-                    reqwest::Request,
+            E: Into<Box<dyn std::error::Error + Send + Sync + 'static>> + 'static,
+            F: Future<Output = Result<reqwest::Response, E>> + Send + 'static,
+            S: for<'a> tower_service::Service<
+                    crate::middleware::MiddlewareContext<'a>,
                     Response = reqwest::Response,
-                    Error = Error,
+                    Error = E,
                     Future = F,
                 > + Send
                 + 'static,
@@ -891,6 +989,9 @@ mod auth {
 
         /// Login without an account. This is just like if you would visit crunchyroll.com without
         /// an account. Some functions won't work if logged in with this method.
+        ///
+        /// This method won't respect [`CrunchyrollBuilder::platform`] as anonymous login is only
+        /// available on the web platform and thus, the credentials are hard-coded.
         pub async fn login_anonymously(
             self,
             device_identifier: DeviceIdentifier,
@@ -914,6 +1015,10 @@ mod auth {
         ///
         /// *Note*: All logins you do with the generated refresh token must have the same
         /// `device_identifier`, otherwise the login will fail.
+        ///
+        /// *Note*: Many platforms aren't supporting this login method. Expect login errors when
+        /// using a custom [`CrunchyrollBuilder::platform`]. Consider using
+        /// [`CrunchyrollBuilder::login_with_oauth_code`] instead.
         pub async fn login_with_credentials<S: AsRef<str>>(
             self,
             email: S,
@@ -1011,6 +1116,10 @@ mod auth {
         /// returns a new [`Crunchyroll`] instance. This cookie can be extracted if you copy the
         /// `etp_rt` cookie from your browser.
         ///
+        /// This method uses a hardcoded basic auth token which is independent of the one set
+        /// via [`CrunchyrollBuilder::platform`]. The [`StreamPlatform`] configured via
+        /// [`CrunchyrollBuilder::platform`] does still apply.
+        ///
         /// *Note*: You need to set the `device_identifier` to the same identifier which were used
         /// in the login that initially created the `etp_rt` cookie, otherwise the login will fail.
         pub async fn login_with_etp_rt<S: AsRef<str>>(
@@ -1029,6 +1138,36 @@ mod auth {
             )
             .await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone().unwrap());
+
+            self.post_login(login_response, session_token, device_identifier)
+                .await
+        }
+
+        /// Log in with an OAuth authorization code and matching `code_verifier`, as returned by
+        /// Crunchyroll's SSO endpoint.
+        ///
+        /// See the `sso-login` directory in the example folder for a complete example that performs
+        /// the full OAuth flow via an embedded webview.
+        pub async fn login_with_oauth_code<S: AsRef<str>>(
+            self,
+            code: S,
+            code_verifier: S,
+            device_identifier: DeviceIdentifier,
+        ) -> Result<Crunchyroll> {
+            self.pre_login().await?;
+
+            let login_response = Executor::auth_with_oauth_code(
+                &self.client,
+                code.as_ref(),
+                code_verifier.as_ref(),
+                &device_identifier,
+                &self.basic_auth_token,
+                #[cfg(feature = "tower")]
+                self.middleware.as_ref(),
+            )
+            .await?;
+            let session_token =
+                SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
             self.post_login(login_response, session_token, device_identifier)
                 .await
@@ -1068,12 +1207,7 @@ mod auth {
                         stream_platform: self.stream_platform,
                         basic_auth_token: self.basic_auth_token,
 
-                        account_id: login_response.account_id.ok_or_else(|| {
-                            Error::Authentication {
-                                message: "Login with a user account to use this function"
-                                    .to_string(),
-                            }
-                        }),
+                        account_id: None,
                     },
                     #[cfg(feature = "tower")]
                     middleware: self.middleware,
@@ -1094,36 +1228,47 @@ mod auth {
             &tokio::sync::Mutex<crate::internal::tower::Middleware>,
         >,
     ) -> Result<T> {
-        let built_req = req.build()?;
-        let url = built_req.url().to_string();
+        let req = req.build()?;
         #[cfg(not(feature = "tower"))]
-        let resp = client.execute(built_req).await?;
+        let resp = client.execute(req).await?;
         #[cfg(feature = "tower")]
         let resp = {
             use std::ops::DerefMut;
+            let url = req.url().to_string();
             if let Some(middleware) = middleware {
-                middleware.lock().await.deref_mut().call(built_req).await?
+                middleware
+                    .lock()
+                    .await
+                    .deref_mut()
+                    .call(crate::middleware::MiddlewareContext::new(client, req))
+                    .await
+                    .map_err(|e| crate::internal::tower::service_error_to_error(e, url))?
             } else {
-                client.execute(built_req).await?
+                client.execute(req).await?
             }
         };
 
         #[cfg(not(feature = "__test_strict"))]
         {
-            check_request(url, resp).await
+            check_request(resp).await
         }
         #[cfg(feature = "__test_strict")]
         {
-            let result = check_request(url.clone(), resp).await?;
+            let url = resp.url().to_string();
+            let result = check_request(resp).await?;
 
             let cleaned = clean_request(result);
             // convert the map back to a string. by doing this, the error message contains the span
             // where the error occurred which improves debuggability
-            let cleaned_string = serde_json::to_string(&cleaned).unwrap();
-            serde_json::from_str(&cleaned_string).map_err(|e| Error::Decode {
-                message: e.to_string(),
-                content: cleaned_string.into_bytes(),
-                url,
+            let cleaned_string = serde_json::to_string(&cleaned)?;
+            serde_json::from_str(&cleaned_string).map_err(|e| {
+                Error::error_from_other_error_and_url(
+                    e,
+                    Kind::Decode {
+                        content: Some(cleaned_string.into_bytes()),
+                    },
+                    url,
+                )
             })
         }
     }
@@ -1166,5 +1311,6 @@ mod auth {
     }
 }
 
+use crate::media::StreamPlatform;
 pub(crate) use auth::Executor;
 pub use auth::{CrunchyrollBuilder, DeviceIdentifier, SessionToken};

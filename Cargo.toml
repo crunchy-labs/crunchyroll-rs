@@ -29,7 +29,7 @@ default = ["parse"]
 
 # Add functionality to parse Crunchyroll urls.
 parse = ["dep:regex"]
-# Add the ability to specify custom middleware.
+# Add the ability to specify custom tower based middleware.
 tower = ["dep:tower-service"]
 # Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
 experimental-stabilizations = []
@@ -39,9 +39,11 @@ __test = []
 __test_strict = []
 
 [dependencies]
+byteorder = "1.5"
 chrono = { version = ">=0.4.35", features = ["serde"] }
 dash-mpd = { version = "0.20", default-features = false }
 futures-util = { version = "0.3", features = ["std"], default-features = false }
+http = "1.4"
 jsonwebtoken = { version = "10.4", default-features = false, features = ["rust_crypto"] }
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)

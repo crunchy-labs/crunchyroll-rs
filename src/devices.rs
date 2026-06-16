@@ -85,7 +85,7 @@ impl Crunchyroll {
     pub async fn active_devices(&self) -> Result<Vec<Device>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/accounts/v1/{}/devices/active",
-            self.executor.details.account_id.clone()?
+            self.executor.details.account_id()?
         );
         Ok(self
             .executor
@@ -111,7 +111,7 @@ impl Crunchyroll {
     pub async fn deactivate_all_devices(&self) -> Result<()> {
         let endpoint = format!(
             "https://www.crunchyroll.com/accounts/v1/{}/devices/deactivate",
-            self.executor.details.account_id.clone()?
+            self.executor.details.account_id()?
         );
         self.executor.post(endpoint).request_raw(true).await?;
         Ok(())
