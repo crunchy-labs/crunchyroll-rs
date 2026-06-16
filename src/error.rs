@@ -12,7 +12,7 @@ pub(crate) type Result<T, E = Error> = core::result::Result<T, E>;
 /// Errors that may occur.
 #[derive(Debug)]
 pub struct Error {
-    kind: Kind,
+    kind: ErrorKind,
     source: Option<Box<dyn StdError + Send + Sync>>,
     url: Option<String>,
 
@@ -31,8 +31,8 @@ impl Display for Error {
         };
 
         let (message, suffix) = match &self.kind {
-            Kind::Internal => (msg_fn("internal error"), None),
-            Kind::Request { status } => {
+            ErrorKind::Internal => (msg_fn("internal error"), None),
+            ErrorKind::Request { status } => {
                 let message = msg_fn("request error");
                 if let Some(status) = &status {
                     (message, Some(format!(" (http {})", status.as_u16())))
@@ -40,7 +40,7 @@ impl Display for Error {
                     (message, None)
                 }
             }
-            Kind::Decode { content } => {
+            ErrorKind::Decode { content } => {
                 let message = msg_fn("decoding error");
                 if let Some(content) = content {
                     (
@@ -51,9 +51,9 @@ impl Display for Error {
                     (message, None)
                 }
             }
-            Kind::Authentication => (msg_fn("authentication error"), None),
-            Kind::Input => (msg_fn("input error"), None),
-            Kind::Block { body } => {
+            ErrorKind::Authentication => (msg_fn("authentication error"), None),
+            ErrorKind::Input => (msg_fn("input error"), None),
+            ErrorKind::Block { body } => {
                 let message = msg_fn("cloudflare blocked");
                 (message, Some(format!(": {}", body)))
             }
@@ -76,7 +76,7 @@ impl StdError for Error {
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
         Self {
-            kind: Kind::Decode { content: None },
+            kind: ErrorKind::Decode { content: None },
             source: Some(err.into()),
             url: None,
             message: None,
@@ -94,18 +94,18 @@ impl From<reqwest::Error> for Error {
             || err.is_status()
         {
             (
-                Kind::Request {
+                ErrorKind::Request {
                     status: err.status(),
                 },
                 None,
             )
         } else if err.is_decode() {
-            (Kind::Decode { content: None }, None)
+            (ErrorKind::Decode { content: None }, None)
         } else if err.is_builder() {
-            (Kind::Internal, None)
+            (ErrorKind::Internal, None)
         } else {
             (
-                Kind::Internal,
+                ErrorKind::Internal,
                 Some("Could not determine request error type - {err}".to_string()),
             )
         };
@@ -121,7 +121,7 @@ impl From<reqwest::Error> for Error {
 }
 
 impl Error {
-    pub fn kind(&self) -> &Kind {
+    pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
 
@@ -129,7 +129,7 @@ impl Error {
         self.message.as_deref()
     }
 
-    pub(crate) fn error_from_kind<S: AsRef<str>>(kind: Kind, msg: S) -> Self {
+    pub(crate) fn error_from_kind<S: AsRef<str>>(kind: ErrorKind, msg: S) -> Self {
         Self {
             kind,
             source: None,
@@ -143,7 +143,7 @@ impl Error {
         U: AsRef<str>,
     >(
         other_error: E,
-        kind: Kind,
+        kind: ErrorKind,
         url: U,
     ) -> Self {
         Self {
@@ -155,7 +155,7 @@ impl Error {
     }
 
     pub(crate) fn error_from_kind_and_url<S: AsRef<str>, U: AsRef<str>>(
-        kind: Kind,
+        kind: ErrorKind,
         url: U,
         msg: S,
     ) -> Self {
@@ -170,7 +170,7 @@ impl Error {
 
 /// Specific error types.
 #[derive(Debug)]
-pub enum Kind {
+pub enum ErrorKind {
     /// Error was caused by something library internal. This only happens if something was
     /// implemented incorrectly (which hopefully should never be the case) or if Crunchyroll
     /// surprisingly changed specific parts of their api which broke a part of this crate.
@@ -257,7 +257,7 @@ pub(crate) fn is_request_error<U: AsRef<str>>(
         Err(_) => return Ok(()),
     };
     Err(Error {
-        kind: Kind::Request {
+        kind: ErrorKind::Request {
             status: Some(*status),
         },
         source: None,
@@ -279,7 +279,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(resp: Response) -> Result
                     .any(|w| w == b"<title>Just a moment...</title>")
             {
                 return Err(Error {
-                    kind: Kind::Block {
+                    kind: ErrorKind::Block {
                         body: String::from_utf8_lossy(raw.as_ref()).to_string(),
                     },
                     source: None,
@@ -291,7 +291,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(resp: Response) -> Result
         }
         404 => {
             return Err(Error {
-                kind: Kind::Request {
+                kind: ErrorKind::Request {
                     status: Some(resp.status()),
                 },
                 source: None,
@@ -310,7 +310,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(resp: Response) -> Result
                 };
 
             return Err(Error {
-                kind: Kind::Request {
+                kind: ErrorKind::Request {
                     status: Some(resp.status()),
                 },
                 source: None,
@@ -333,7 +333,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(resp: Response) -> Result
     }
 
     let value: Value = serde_json::from_slice(raw).map_err(|e| Error {
-        kind: Kind::Decode {
+        kind: ErrorKind::Decode {
             content: Some(raw.to_vec()),
         },
         source: Some(e.into()),
@@ -342,7 +342,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(resp: Response) -> Result
     })?;
     is_request_error(value.clone(), &url, &status)?;
     serde_json::from_value::<T>(value).map_err(|e| Error {
-        kind: Kind::Decode {
+        kind: ErrorKind::Decode {
             content: Some(raw.to_vec()),
         },
         source: Some(e.into()),

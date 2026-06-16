@@ -1,5 +1,5 @@
 use crate::common::Image;
-use crate::error::{Error, Kind};
+use crate::error::{Error, ErrorKind};
 use crate::media::Subtitle;
 use crate::profile::Wallpaper;
 use crate::{Locale, Request, Result};
@@ -49,7 +49,7 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
             Value::Null => continue,
             _ => {
                 return Err(Error::error_from_kind(
-                    Kind::Internal,
+                    ErrorKind::Internal,
                     format!("key is not supported to be urlencoded ({key})"),
                 ));
             }
@@ -64,7 +64,7 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
                     Value::Number(number) => Ok(number.to_string()),
                     Value::String(string) => Ok(string),
                     _ => Err(Error::error_from_kind(
-                        Kind::Internal,
+                        ErrorKind::Internal,
                         format!("value is not supported to be urlencoded ({vv})"),
                     )),
                 })
@@ -73,7 +73,7 @@ pub(crate) fn query_to_urlencoded<K: serde::Serialize, V: serde::Serialize>(
             Value::Null => continue,
             _ => {
                 return Err(Error::error_from_kind(
-                    Kind::Internal,
+                    ErrorKind::Internal,
                     format!("value is not supported to be urlencoded ({value})"),
                 ));
             }

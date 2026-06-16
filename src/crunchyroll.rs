@@ -162,7 +162,7 @@ impl Crunchyroll {
 }
 
 mod auth {
-    use crate::error::{Error, Kind, check_request};
+    use crate::error::{Error, ErrorKind, check_request};
     use crate::media::StreamPlatform;
     use crate::{Crunchyroll, Locale, Request, Result};
     use chrono::{DateTime, Duration, Utc};
@@ -256,7 +256,7 @@ mod auth {
         pub(crate) fn account_id(&self) -> Result<String> {
             self.account_id.as_ref().cloned().ok_or_else(|| {
                 Error::error_from_kind(
-                    Kind::Input,
+                    ErrorKind::Input,
                     "Login with a user account to use this function",
                 )
             })
@@ -1264,7 +1264,7 @@ mod auth {
             serde_json::from_str(&cleaned_string).map_err(|e| {
                 Error::error_from_other_error_and_url(
                     e,
-                    Kind::Decode {
+                    ErrorKind::Decode {
                         content: Some(cleaned_string.into_bytes()),
                     },
                     url,

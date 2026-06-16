@@ -1,6 +1,6 @@
 use crate::common::Request;
 use crate::crunchyroll::Executor;
-use crate::error::{Error, Kind};
+use crate::error::{Error, ErrorKind};
 use crate::media::Media;
 use crate::{
     Artist, Concert, Crunchyroll, Episode, Movie, MovieListing, MusicVideo, Result, Season, Series,
@@ -45,7 +45,7 @@ impl MediaCollection {
             Ok(MediaCollection::MusicVideo(music_video))
         } else {
             Err(Error::error_from_kind(
-                Kind::Input,
+                ErrorKind::Input,
                 format!("failed to find valid media with id '{}'", id.as_ref()),
             ))
         }

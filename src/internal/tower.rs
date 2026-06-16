@@ -1,5 +1,5 @@
 use crate::Error;
-use crate::error::Kind;
+use crate::error::ErrorKind;
 use crate::middleware::MiddlewareContext;
 use futures_util::TryFutureExt;
 use reqwest::Response;
@@ -97,5 +97,5 @@ pub(crate) fn service_error_to_error(
     err: Box<dyn StdError + Send + Sync + 'static>,
     url: String,
 ) -> Error {
-    Error::error_from_other_error_and_url(err, Kind::Request { status: None }, url)
+    Error::error_from_other_error_and_url(err, ErrorKind::Request { status: None }, url)
 }

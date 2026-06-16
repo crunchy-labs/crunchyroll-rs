@@ -1,5 +1,5 @@
 use crate::common::V2BulkResult;
-use crate::error::{Error, Kind};
+use crate::error::{Error, ErrorKind};
 use crate::{
     Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result, enum_values, options,
 };
@@ -52,7 +52,7 @@ impl WatchlistEntry {
             MediaCollection::Series(series) => Ok(series.id),
             MediaCollection::MovieListing(movie_listing) => Ok(movie_listing.id),
             _ => Err(Error::error_from_kind(
-                Kind::Internal,
+                ErrorKind::Internal,
                 "panel is not series nor movie listing",
             )),
         }

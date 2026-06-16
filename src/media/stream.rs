@@ -1,4 +1,4 @@
-use crate::error::{Error, Kind, is_request_error};
+use crate::error::{Error, ErrorKind, is_request_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use byteorder::{BigEndian, ReadBytesExt};
 use dash_mpd::{ContentProtection, MPD};
@@ -210,7 +210,7 @@ impl Stream {
                     // thus, an active session is issued to the server, but it isn't usable because
                     // this functions returns an error. further stream requests may be blocked until
                     // crunchyroll invalidates the session server-side if it isn't done manually
-                    Kind::Decode { content } => {
+                    ErrorKind::Decode { content } => {
                         let Some(content) = content else {
                             return Err(e);
                         };
@@ -257,7 +257,7 @@ impl Stream {
     pub async fn stream_data(&self, hardsub: Option<Locale>) -> Result<Option<StreamData>> {
         if self.playback_type == "live" {
             return Err(Error::error_from_kind(
-                Kind::Input,
+                ErrorKind::Input,
                 "livestream download isn't supported",
             ));
         }
@@ -373,7 +373,7 @@ impl StreamData {
         let mut mpd: MPD = dash_mpd::parse(&String::from_utf8_lossy(&raw_mpd)).map_err(|e| {
             Error::error_from_other_error_and_url(
                 e,
-                Kind::Decode {
+                ErrorKind::Decode {
                     content: Some(raw_mpd.clone()),
                 },
                 url.as_ref(),
@@ -382,7 +382,7 @@ impl StreamData {
 
         let err_fn = |msg: &str| {
             Error::error_from_kind_and_url(
-                Kind::Decode {
+                ErrorKind::Decode {
                     content: Some(raw_mpd.clone()),
                 },
                 url.as_ref(),
@@ -858,7 +858,7 @@ impl MediaStream {
 
         let sidx_box = SidxBox::parse(&sidx_data).map_err(|_| {
             Error::error_from_kind_and_url(
-                Kind::Decode {
+                ErrorKind::Decode {
                     content: Some(sidx_data),
                 },
                 url,

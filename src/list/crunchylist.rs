@@ -1,5 +1,5 @@
 use crate::common::V2BulkResult;
-use crate::error::{Error, Kind};
+use crate::error::{Error, ErrorKind};
 use crate::{Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -138,7 +138,7 @@ impl Crunchylist {
             MediaCollection::Movie(movie) => movie.movie_listing_id,
             _ => {
                 return Err(Error::error_from_kind(
-                    Kind::Input,
+                    ErrorKind::Input,
                     "music related media can't be added to a crunchylist",
                 ));
             }
