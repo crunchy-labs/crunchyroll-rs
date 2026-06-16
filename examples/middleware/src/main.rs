@@ -1,5 +1,3 @@
-#![cfg(feature = "tower")]
-
 use crunchyroll_rs::crunchyroll::DeviceIdentifier;
 use crunchyroll_rs::middleware::MiddlewareContext;
 use crunchyroll_rs::{Crunchyroll, Error};

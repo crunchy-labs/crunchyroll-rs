@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "browse",
+    "middleware",
+    "parse-url",
+    "search-series",
+    "sso-login",
+    "stream-episode"
+]
+resolver = "3"

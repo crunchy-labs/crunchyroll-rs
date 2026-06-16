@@ -1,0 +1,10 @@
+[package]
+name = "browse"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+crunchyroll-rs = { path = "../.." }
+
+tokio = { version = "1.52", features = ["macros", "rt", "rt-multi-thread"] }

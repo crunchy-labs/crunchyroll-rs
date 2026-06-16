@@ -1,11 +1,11 @@
-use anyhow::Result;
 use crunchyroll_rs::Crunchyroll;
 use crunchyroll_rs::common::StreamExt;
 use crunchyroll_rs::crunchyroll::DeviceIdentifier;
 use std::env;
+use std::error::Error;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn Error>> {
     let email = env::var("EMAIL").expect("'EMAIL' environment variable not found");
     let password = env::var("PASSWORD").expect("'PASSWORD' environment variable not found");
 

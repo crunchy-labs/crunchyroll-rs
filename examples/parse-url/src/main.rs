@@ -1,11 +1,9 @@
-#![cfg(feature = "parse")]
-
-use anyhow::Result;
 use crunchyroll_rs::parse::UrlType;
 use std::env;
+use std::error::Error;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn Error>> {
     let url = env::var("URL").expect(
         "please set the 'URL' environment variable to any crunchyroll url which points to a media",
     );
