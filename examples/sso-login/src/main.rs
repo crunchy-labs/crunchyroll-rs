@@ -1,3 +1,6 @@
+use crunchyroll_rs::Crunchyroll;
+use crunchyroll_rs::crunchyroll::{CrunchyrollBuilder, DeviceIdentifier};
+use crunchyroll_rs::media::StreamPlatform;
 use http::Request;
 use reqwest::Url;
 use std::borrow::Cow;
@@ -10,11 +13,9 @@ use tao::platform::unix::WindowExtUnix;
 use tao::window::WindowBuilder;
 use uuid::Uuid;
 use wry::{WebViewBuilder, WebViewBuilderExtUnix, WebViewId};
-use crunchyroll_rs::Crunchyroll;
-use crunchyroll_rs::crunchyroll::{CrunchyrollBuilder, DeviceIdentifier};
-use crunchyroll_rs::media::StreamPlatform;
 
-const ANDROID_PHONE_BASIC_AUTH: &str = "dWN2dmU0NXJtcG9wa29pZm83cDM6ck1wV0hIaFRJaG5Ga2dGSG1lMjJaUS12VzlRaE5HZVE=";
+const ANDROID_PHONE_BASIC_AUTH: &str =
+    "dWN2dmU0NXJtcG9wa29pZm83cDM6ck1wV0hIaFRJaG5Ga2dGSG1lMjJaUS12VzlRaE5HZVE=";
 const ANDROID_PHONE_SSO_CLIENT_ID: &str = "ucvve45rmpopkoifo7p3";
 const ANDROID_PHONE_USER_AGENT: &str = "Crunchyroll/3.110.1 Android/11 okhttp/5.3.2";
 
@@ -29,12 +30,21 @@ async fn main() -> Result<()> {
         ..Default::default()
     };
 
-    let client = CrunchyrollBuilder::predefined_client_builder().user_agent(ANDROID_PHONE_USER_AGENT).build()?;
+    let client = CrunchyrollBuilder::predefined_client_builder()
+        .user_agent(ANDROID_PHONE_USER_AGENT)
+        .build()?;
 
     let _crunchyroll = Crunchyroll::builder()
         .client(client)
-        .platform(StreamPlatform::AndroidPhone, ANDROID_PHONE_BASIC_AUTH)
-        .login_with_oauth_code(sso_credentials.code, sso_credentials.code_verifier, device_identifier)
+        .platform(
+            StreamPlatform::AndroidPhone,
+            ANDROID_PHONE_BASIC_AUTH.to_string(),
+        )
+        .login_with_oauth_code(
+            sso_credentials.code,
+            sso_credentials.code_verifier,
+            device_identifier,
+        )
         .await?;
 
     println!("Successfully logged in with SSO");
@@ -87,7 +97,8 @@ fn get_sso_login_credentials_via_webview(client_id: &str) -> Result<SSOLoginCred
             .find_map(|(key, value)| key.eq("code").then_some(value))
             .unwrap();
 
-        let _ = protocol_handler_event_loop_proxy.send_event(UserEvent::OAuthSuccess(code.to_string()));
+        let _ =
+            protocol_handler_event_loop_proxy.send_event(UserEvent::OAuthSuccess(code.to_string()));
 
         http::Response::builder()
             .status(200)
