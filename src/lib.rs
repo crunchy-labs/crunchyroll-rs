@@ -150,6 +150,9 @@ pub mod middleware;
 pub mod parse;
 pub mod payment;
 pub mod profile;
+#[cfg(feature = "release-calendar")]
+#[cfg_attr(docsrs, doc(cfg(feature = "release-calendar")))]
+pub mod release_calendar;
 pub mod search;
 
 // internal

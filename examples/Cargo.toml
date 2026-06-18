@@ -3,6 +3,7 @@ members = [
     "browse",
     "middleware",
     "parse-url",
+    "release-calendar",
     "search-series",
     "sso-login",
     "stream-episode"

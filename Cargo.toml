@@ -29,6 +29,8 @@ default = ["parse"]
 
 # Add functionality to parse Crunchyroll urls.
 parse = ["dep:regex"]
+# Add functionality to get the release calendar.
+release-calendar = ["parse", "dep:scraper"]
 # Add the ability to specify custom tower based middleware.
 tower = ["dep:tower-service"]
 # Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
@@ -59,6 +61,7 @@ webpki-roots = "1.0"
 
 crunchyroll-rs-internal = { version = "0.17.4", path = "internal" }
 
+scraper = { version = "0.27", optional = true }
 regex = { version = "1.12", default-features = false, features = ["std"], optional = true }
 tower-service = { version = "0.3", optional = true }
 
