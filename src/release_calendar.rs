@@ -108,7 +108,7 @@ impl Crunchyroll {
                 4 => &mut release_calendar_week.friday,
                 5 => &mut release_calendar_week.saturday,
                 6 => &mut release_calendar_week.sunday,
-                _ => unreachable!(),
+                _ => return Err(map_err_fn("got more than 7 weekdays")),
             };
 
             let release_selector = Selector::parse("ol.releases").unwrap();
