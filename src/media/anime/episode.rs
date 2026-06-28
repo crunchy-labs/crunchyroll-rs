@@ -3,7 +3,7 @@ use crate::common::{Image, Request};
 use crate::crunchyroll::Executor;
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
-use crate::media::{AdBreak, LanguagePresentation, Media};
+use crate::media::{AdBreak, ContentDescriptorsWithSymbol, LanguagePresentation, Media};
 use crate::{Crunchyroll, Locale, Result, Season, Series};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -145,6 +145,9 @@ pub struct Episode {
     /// Descriptors about the episode content, e.g. 'Violence' or 'Sexualized Imagery'.
     #[serde(default)]
     pub content_descriptors: Vec<String>,
+    /// At the time of writing, exactly the same as [`Episode::content_descriptors`].
+    #[serde(default)]
+    pub content_descriptors_with_symbol: Vec<ContentDescriptorsWithSymbol>,
 
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]

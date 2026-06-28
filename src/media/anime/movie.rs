@@ -1,6 +1,6 @@
 use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
-use crate::media::{AdBreak, Media, ThumbnailImages};
+use crate::media::{AdBreak, ContentDescriptorsWithSymbol, Media, ThumbnailImages};
 use crate::{Crunchyroll, MovieListing, Result};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -41,6 +41,9 @@ pub struct Movie {
     /// Descriptors about the movie content, e.g. 'Violence' or 'Sexualized Imagery'.
     #[serde(default)]
     pub content_descriptors: Vec<String>,
+    /// At the time of writing, exactly the same as [`Movie::content_descriptors`].
+    #[serde(default)]
+    pub content_descriptors_with_symbol: Vec<ContentDescriptorsWithSymbol>,
 
     #[default(DateTime::< Utc >::from(std::time::SystemTime::UNIX_EPOCH))]
     pub free_available_date: DateTime<Utc>,

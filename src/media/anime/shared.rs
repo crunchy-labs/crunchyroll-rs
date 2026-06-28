@@ -188,3 +188,9 @@ pub struct LanguagePresentation {
     /// The language of the text fields in the parent [`crate::Series`].
     pub text_notation: String,
 }
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ContentDescriptorsWithSymbol {
+    /// Description of content, e.g. 'Violence'.
+    pub label: String,
+}

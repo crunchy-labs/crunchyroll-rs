@@ -2,7 +2,7 @@ use crate::common::Request;
 use crate::crunchyroll::Executor;
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
-use crate::media::{LanguagePresentation, Media};
+use crate::media::{ContentDescriptorsWithSymbol, LanguagePresentation, Media};
 use crate::{Crunchyroll, Episode, Locale, Result, Series};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -95,6 +95,9 @@ pub struct Season {
     /// Descriptors about the season episodes' content, e.g. 'Violence' or 'Sexualized Imagery'.
     #[serde(default)]
     pub content_descriptors: Vec<String>,
+    /// At the time of writing, exactly the same as [`Season::content_descriptors`].
+    #[serde(default)]
+    pub content_descriptors_with_symbol: Vec<ContentDescriptorsWithSymbol>,
 
     pub is_subbed: bool,
     pub is_dubbed: bool,

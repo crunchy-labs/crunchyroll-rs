@@ -2,7 +2,7 @@ use crate::categories::Category;
 use crate::common::Request;
 use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
-use crate::media::{Media, PosterImages};
+use crate::media::{ContentDescriptorsWithSymbol, Media, PosterImages};
 use crate::{Crunchyroll, Locale, Movie, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -78,6 +78,9 @@ pub struct MovieListing {
     /// Descriptors about the movie listing content, e.g. 'Violence' or 'Sexualized Imagery'.
     #[serde(default)]
     pub content_descriptors: Vec<String>,
+    /// At the time of writing, exactly the same as [`MovieListing::content_descriptors`].
+    #[serde(default)]
+    pub content_descriptors_with_symbol: Vec<ContentDescriptorsWithSymbol>,
 
     #[serde(default)]
     pub keywords: Vec<String>,
