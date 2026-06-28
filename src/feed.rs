@@ -10,6 +10,9 @@ use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
 
+#[allow(unused)]
+use crate::media::Media; // needed for doc links
+
 /// Images for a [`FeedCarousel`].
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -159,7 +162,7 @@ impl Request for HomeFeed {
                     feed_carousel.__set_executor(executor.clone()).await;
                 }
             }
-            HomeFeed::Series(series) => series.__set_executor(executor.clone()).await,
+            HomeFeed::Series(series) => Request::__set_executor(series, executor.clone()).await,
             _ => (),
         }
     }

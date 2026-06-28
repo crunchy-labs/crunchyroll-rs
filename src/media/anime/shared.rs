@@ -98,11 +98,11 @@ pub struct RelatedMedia<T: Request + DeserializeOwned> {
     #[serde(deserialize_with = "crate::internal::serde::deserialize_panel")]
     pub media: T,
 
-    /// Only populated if called with [`Episode::next`] or [`Movie::next`].
+    /// Only populated if called with [`crate::Episode::next`] or [`crate::Movie::next`].
     pub shortcut: Option<bool>,
 }
 
-/// Information about the playhead of an [`Episode`] or [`Movie`].
+/// Information about the playhead of an [`crate::Episode`] or [`crate::Movie`].
 #[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -185,6 +185,6 @@ pub struct AdBreak {
 pub struct LanguagePresentation {
     /// The selected series audio.
     pub audio_notation: String,
-    /// The language of the text fields in the parent [`Series`].
+    /// The language of the text fields in the parent [`crate::Series`].
     pub text_notation: String,
 }

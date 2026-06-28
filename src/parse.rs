@@ -3,6 +3,9 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
+#[allow(unused)]
+use crate::media::Media; // needed for doc links
+
 static SERIES_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^https?://(www\.)?crunchyroll\.com/([a-zA-Z]{2}(-[a-zA-Z]{2})?/)?(?P<type>series|movie_listing|artist)/(?P<id>[^/]+).*$").unwrap()
 });

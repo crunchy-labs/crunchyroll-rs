@@ -922,12 +922,12 @@ mod auth {
         ///
         /// Crunchyroll rotates the basic auth tokens from time to time, which will result in
         /// failing logins. This crate tries to keep the bundled default token
-        /// ([`CrunchyrollBuilder::BASIC_AUTH_TOKEN`], valid for [`StreamPlatform::TvAndroid`])
-        /// up-to-date and pushes updates as soon as a new token is available, but this doesn't
-        /// always work. If the login fails with the bundled token, or if you need a token for a
-        /// platform that is not bundled, you have to obtain one yourself. The
-        /// [crunchyroll-scripts](https://github.com/crunchy-labs/crunchyroll-scripts) repository
-        /// contains tools to extract tokens.
+        /// ([`CrunchyrollBuilder::ANDROID_TV_BASIC_AUTH_TOKEN`], valid for
+        /// [`StreamPlatform::TvAndroid`]) up-to-date and pushes updates as soon as a new token is
+        /// available, but this doesn't always work. If the login fails with the bundled token, or
+        /// if you need a token for a platform that is not bundled, you have to obtain one yourself.
+        /// The [crunchyroll-scripts](https://github.com/crunchy-labs/crunchyroll-scripts)
+        /// repository contains tools to extract tokens.
         ///
         /// Not every login method is available with every basic auth token. For example, the
         /// Android phone basic auth token only supports
