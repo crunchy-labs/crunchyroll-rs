@@ -129,6 +129,11 @@ impl Error {
         self.message.as_deref()
     }
 
+    pub(crate) fn update_msg(mut self, update_fn: fn(Option<String>) -> Option<String>) -> Self {
+        self.message = update_fn(self.message);
+        self
+    }
+
     pub(crate) fn error_from_kind<S: AsRef<str>>(kind: ErrorKind, msg: S) -> Self {
         Self {
             kind,

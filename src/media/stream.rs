@@ -234,6 +234,12 @@ impl Stream {
                         }
                         Err(e)
                     }
+                    ErrorKind::Request { status }
+                        if status.is_some_and(|s| {
+                            s == 400 && e.to_string().starts_with("error 40016")
+                        }) => {
+                        Err(e.update_msg(|msg| msg.map(|msg| msg + " - This probably means that a custom platform was set and the provided basic auth token is wrong, or the default basic auth token is outdated (if this is the case, check if the library is up-to-date)")))
+                    }
                     _ => Err(e),
                 };
             }
