@@ -199,7 +199,7 @@ pub(crate) fn is_request_error<U: AsRef<str>>(
     #[derive(Debug, Deserialize)]
     #[serde(untagged)]
     #[allow(clippy::enum_variant_names)]
-    enum ErrorTypes {
+    enum ErrorType {
         MessageTypeError {
             message: String,
             r#type: String,
@@ -211,7 +211,7 @@ pub(crate) fn is_request_error<U: AsRef<str>>(
             message: Option<String>,
         },
         GenericError {
-            error: String,
+            error: Value,
             #[serde(flatten)]
             other: Map<String, Value>,
         },
@@ -224,15 +224,18 @@ pub(crate) fn is_request_error<U: AsRef<str>>(
         other: Map<String, Value>,
     }
 
-    let error_msg = match serde_json::from_value::<ErrorTypes>(value) {
-        Ok(ErrorTypes::MessageTypeError { message, r#type }) => {
+    let Ok(error_type) = serde_json::from_value::<ErrorType>(value) else {
+        return Ok(());
+    };
+    let error_msg = match error_type {
+        ErrorType::MessageTypeError { message, r#type } => {
             format!("{type} - {message}")
         }
-        Ok(ErrorTypes::CodeError {
+        ErrorType::CodeError {
             code,
             context,
             message,
-        }) => {
+        } => {
             let mut msg = if let Some(message) = message {
                 format!("{message} - {code}")
             } else {
@@ -243,19 +246,22 @@ pub(crate) fn is_request_error<U: AsRef<str>>(
                     .into_iter()
                     .map(|c| format!("{}: {}", c.code, serde_json::to_string(&c.other).unwrap()))
                     .collect();
-                msg += &format!(" ({})", details.join(", "))
+                msg += &format!(": ({})", details.join(", "))
             }
             msg
         }
-        Ok(ErrorTypes::GenericError { error, other }) => {
-            let mut msg = error;
+        ErrorType::GenericError { error, other } => {
+            let mut msg = match error {
+                Value::Number(num) => format!("error {num}"),
+                _ => error.to_string(),
+            };
             if !other.is_empty() {
-                msg += &format!(" ({})", serde_json::to_string(&other).unwrap())
+                msg += &format!(": {}", serde_json::to_string(&other).unwrap())
             }
             msg
         }
-        Err(_) => return Ok(()),
     };
+
     Err(Error {
         kind: ErrorKind::Request {
             status: Some(*status),
