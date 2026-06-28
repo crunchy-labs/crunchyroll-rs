@@ -283,8 +283,8 @@ mod auth {
 
         pub(crate) details: ExecutorDetails,
 
-        #[cfg(feature = "tower")]
-        pub(crate) middleware: Option<tokio::sync::Mutex<crate::internal::tower::Middleware>>,
+        #[cfg(feature = "middleware")]
+        pub(crate) middleware: Option<tokio::sync::Mutex<crate::internal::middleware::Middleware>>,
         #[cfg(feature = "experimental-stabilizations")]
         pub(crate) fixes: ExecutorFixes,
     }
@@ -320,7 +320,7 @@ mod auth {
             let mut resp: T = request(
                 &self.client,
                 req,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 self.middleware.as_ref(),
             )
             .await?;
@@ -343,7 +343,7 @@ mod auth {
                             refresh_token.as_str(),
                             &self.details.device_identifier,
                             &self.details.basic_auth_token,
-                            #[cfg(feature = "tower")]
+                            #[cfg(feature = "middleware")]
                             self.middleware.as_ref(),
                         )
                         .await?
@@ -353,7 +353,7 @@ mod auth {
                             &self.client,
                             etp_rt.as_str(),
                             &self.details.device_identifier,
-                            #[cfg(feature = "tower")]
+                            #[cfg(feature = "middleware")]
                             self.middleware.as_ref(),
                         )
                         .await?
@@ -362,7 +362,7 @@ mod auth {
                         Executor::auth_anonymously(
                             &self.client,
                             &self.details.device_identifier,
-                            #[cfg(feature = "tower")]
+                            #[cfg(feature = "middleware")]
                             self.middleware.as_ref(),
                         )
                         .await?
@@ -438,13 +438,13 @@ mod auth {
         async fn send_auth_req(
             client: &Client,
             req: reqwest::Request,
-            #[cfg(feature = "tower")] middleware: Option<
-                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            #[cfg(feature = "middleware")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
             >,
         ) -> Result<AuthResponse> {
-            #[cfg(not(feature = "tower"))]
+            #[cfg(not(feature = "middleware"))]
             let resp = client.execute(req).await?;
-            #[cfg(feature = "tower")]
+            #[cfg(feature = "middleware")]
             let resp = {
                 use std::ops::DerefMut;
                 if let Some(middleware) = middleware {
@@ -455,7 +455,9 @@ mod auth {
                         .deref_mut()
                         .call(crate::middleware::MiddlewareContext::new(client, req))
                         .await
-                        .map_err(|e| crate::internal::tower::service_error_to_error(e, url))?
+                        .map_err(|e| {
+                            crate::internal::middleware::middleware_error_to_error(e, url)
+                        })?
                 } else {
                     client.execute(req).await?
                 }
@@ -467,8 +469,8 @@ mod auth {
         async fn auth_anonymously(
             client: &Client,
             device_identifier: &DeviceIdentifier,
-            #[cfg(feature = "tower")] middleware: Option<
-                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            #[cfg(feature = "middleware")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
@@ -484,7 +486,7 @@ mod auth {
             Self::send_auth_req(
                 client,
                 req,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 middleware,
             )
             .await
@@ -496,8 +498,8 @@ mod auth {
             password: &str,
             device_identifier: &DeviceIdentifier,
             basic_auth_token: &str,
-            #[cfg(feature = "tower")] middleware: Option<
-                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            #[cfg(feature = "middleware")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
@@ -520,7 +522,7 @@ mod auth {
             Self::send_auth_req(
                 client,
                 req,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 middleware,
             )
             .await
@@ -531,8 +533,8 @@ mod auth {
             refresh_token: &str,
             device_identifier: &DeviceIdentifier,
             basic_auth_token: &str,
-            #[cfg(feature = "tower")] middleware: Option<
-                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            #[cfg(feature = "middleware")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
@@ -553,7 +555,7 @@ mod auth {
             Self::send_auth_req(
                 client,
                 req,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 middleware,
             )
             .await
@@ -565,8 +567,8 @@ mod auth {
             profile_id: &str,
             device_identifier: &DeviceIdentifier,
             basic_auth_token: &str,
-            #[cfg(feature = "tower")] middleware: Option<
-                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            #[cfg(feature = "middleware")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
@@ -588,7 +590,7 @@ mod auth {
             Self::send_auth_req(
                 client,
                 req,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 middleware,
             )
             .await
@@ -598,8 +600,8 @@ mod auth {
             client: &Client,
             etp_rt: &str,
             device_identifier: &DeviceIdentifier,
-            #[cfg(feature = "tower")] middleware: Option<
-                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            #[cfg(feature = "middleware")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
@@ -615,7 +617,7 @@ mod auth {
             Self::send_auth_req(
                 client,
                 req,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 middleware,
             )
             .await
@@ -627,8 +629,8 @@ mod auth {
             code_verifier: &str,
             device_identifier: &DeviceIdentifier,
             basic_auth_token: &str,
-            #[cfg(feature = "tower")] middleware: Option<
-                &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+            #[cfg(feature = "middleware")] middleware: Option<
+                &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
             >,
         ) -> Result<AuthResponse> {
             let endpoint = "https://www.crunchyroll.com/auth/v1/token";
@@ -650,7 +652,7 @@ mod auth {
             Self::send_auth_req(
                 client,
                 req,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 middleware,
             )
             .await
@@ -675,7 +677,7 @@ mod auth {
                     basic_auth_token: CrunchyrollBuilder::ANDROID_TV_BASIC_AUTH_TOKEN.to_string(),
                     account_id: None,
                 },
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 middleware: None,
                 #[cfg(feature = "experimental-stabilizations")]
                 fixes: ExecutorFixes {
@@ -760,7 +762,7 @@ mod auth {
                 self.builder = self.executor.auth_req(self.builder).await?;
             }
 
-            #[cfg(feature = "tower")]
+            #[cfg(feature = "middleware")]
             if let Some(middleware) = &self.executor.middleware {
                 let req = self.builder.build()?;
                 let url = req.url().to_string();
@@ -773,7 +775,7 @@ mod auth {
                         req,
                     ))
                     .await
-                    .map_err(|e| crate::internal::tower::service_error_to_error(e, url))?
+                    .map_err(|e| crate::internal::middleware::middleware_error_to_error(e, url))?
                     .bytes()
                     .await?
                     .to_vec());
@@ -791,8 +793,8 @@ mod auth {
         stream_platform: StreamPlatform,
         basic_auth_token: String,
 
-        #[cfg(feature = "tower")]
-        middleware: Option<tokio::sync::Mutex<crate::internal::tower::Middleware>>,
+        #[cfg(feature = "middleware")]
+        middleware: Option<tokio::sync::Mutex<crate::internal::middleware::Middleware>>,
         #[cfg(feature = "experimental-stabilizations")]
         fixes: ExecutorFixes,
     }
@@ -807,7 +809,7 @@ mod auth {
                 preferred_audio_locale: None,
                 stream_platform: StreamPlatform::default(),
                 basic_auth_token: CrunchyrollBuilder::ANDROID_TV_BASIC_AUTH_TOKEN.to_string(),
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 middleware: None,
                 #[cfg(feature = "experimental-stabilizations")]
                 fixes: ExecutorFixes {
@@ -941,10 +943,10 @@ mod auth {
             self
         }
 
-        /// Adds a [tower](https://docs.rs/tower/latest/tower/) middleware which is called on every
-        /// request.
-        #[cfg(feature = "tower")]
-        #[cfg_attr(docsrs, doc(cfg(feature = "tower")))]
+        /// Adds a [tower-service](https://docs.rs/tower-service) middleware which is called on
+        /// every request.
+        #[cfg(feature = "middleware")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "middleware")))]
         pub fn middleware<E, F, S>(mut self, service: S) -> CrunchyrollBuilder
         where
             E: Into<Box<dyn std::error::Error + Send + Sync + 'static>> + 'static,
@@ -958,7 +960,7 @@ mod auth {
                 + 'static,
         {
             self.middleware = Some(tokio::sync::Mutex::new(
-                crate::internal::tower::Middleware::new(service),
+                crate::internal::middleware::Middleware::new(service),
             ));
             self
         }
@@ -1000,7 +1002,7 @@ mod auth {
             let login_response = Executor::auth_anonymously(
                 &self.client,
                 &device_identifier,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 self.middleware.as_ref(),
             )
             .await?;
@@ -1032,7 +1034,7 @@ mod auth {
                 password.as_ref(),
                 &device_identifier,
                 &self.basic_auth_token,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 self.middleware.as_ref(),
             )
             .await?;
@@ -1065,7 +1067,7 @@ mod auth {
                 refresh_token.as_ref(),
                 &device_identifier,
                 &self.basic_auth_token,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 self.middleware.as_ref(),
             )
             .await?;
@@ -1100,7 +1102,7 @@ mod auth {
                 profile_id.as_ref(),
                 &device_identifier,
                 &self.basic_auth_token,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 self.middleware.as_ref(),
             )
             .await?;
@@ -1132,7 +1134,7 @@ mod auth {
                 &self.client,
                 etp_rt.as_ref(),
                 &device_identifier,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 self.middleware.as_ref(),
             )
             .await?;
@@ -1161,7 +1163,7 @@ mod auth {
                 code_verifier.as_ref(),
                 &device_identifier,
                 &self.basic_auth_token,
-                #[cfg(feature = "tower")]
+                #[cfg(feature = "middleware")]
                 self.middleware.as_ref(),
             )
             .await?;
@@ -1208,7 +1210,7 @@ mod auth {
 
                         account_id: login_response.account_id,
                     },
-                    #[cfg(feature = "tower")]
+                    #[cfg(feature = "middleware")]
                     middleware: self.middleware,
                     #[cfg(feature = "experimental-stabilizations")]
                     fixes: self.fixes,
@@ -1223,14 +1225,14 @@ mod auth {
     async fn request<T: Request + DeserializeOwned>(
         client: &Client,
         req: RequestBuilder,
-        #[cfg(feature = "tower")] middleware: Option<
-            &tokio::sync::Mutex<crate::internal::tower::Middleware>,
+        #[cfg(feature = "middleware")] middleware: Option<
+            &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
         >,
     ) -> Result<T> {
         let req = req.build()?;
-        #[cfg(not(feature = "tower"))]
+        #[cfg(not(feature = "middleware"))]
         let resp = client.execute(req).await?;
-        #[cfg(feature = "tower")]
+        #[cfg(feature = "middleware")]
         let resp = {
             use std::ops::DerefMut;
             let url = req.url().to_string();
@@ -1241,7 +1243,7 @@ mod auth {
                     .deref_mut()
                     .call(crate::middleware::MiddlewareContext::new(client, req))
                     .await
-                    .map_err(|e| crate::internal::tower::service_error_to_error(e, url))?
+                    .map_err(|e| crate::internal::middleware::middleware_error_to_error(e, url))?
             } else {
                 client.execute(req).await?
             }

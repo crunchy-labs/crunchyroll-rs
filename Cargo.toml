@@ -31,8 +31,8 @@ default = ["parse"]
 parse = ["dep:regex"]
 # Add functionality to get the release calendar.
 release-calendar = ["parse", "dep:scraper"]
-# Add the ability to specify custom tower based middleware.
-tower = ["dep:tower-service"]
+# Add the ability to specify (tower based) custom middleware services.
+middleware = ["dep:tower-service"]
 # Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
 experimental-stabilizations = []
 

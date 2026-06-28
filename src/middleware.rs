@@ -1,3 +1,5 @@
+//! Middleware related.
+
 use reqwest::{Client, Request};
 
 pub struct MiddlewareContext<'a> {

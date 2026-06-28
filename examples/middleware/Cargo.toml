@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-crunchyroll-rs = { path = "../..", features = ["tower"] }
+crunchyroll-rs = { path = "../..", features = ["middleware"] }
 reqwest = "0.13"
 serde_json = "1.0"
 tower-service = "0.3"

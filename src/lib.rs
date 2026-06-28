@@ -119,7 +119,7 @@
 //! # Features
 //!
 //! - **parse** *(enabled by default)*: Enables url parsing.
-//! - **tower**: Enables the usage of a [tower](https://docs.rs/tower) compatible middleware.
+//! - **middleware**: Enables the usage of a [tower-service](https://docs.rs/tower-service) compatible middleware.
 //! - **experimental-stabilizations**: Provides some functions to maybe fix broken api results. See
 //!   [Bugs](#bugs) for more information.
 //!
@@ -142,8 +142,8 @@ pub mod error;
 pub mod feed;
 pub mod list;
 pub mod media;
-#[cfg(feature = "tower")]
-#[cfg_attr(docsrs, doc(cfg(feature = "tower")))]
+#[cfg(feature = "middleware")]
+#[cfg_attr(docsrs, doc(cfg(feature = "middleware")))]
 pub mod middleware;
 #[cfg(feature = "parse")]
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]

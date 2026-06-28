@@ -93,7 +93,7 @@ where
     }
 }
 
-pub(crate) fn service_error_to_error(
+pub(crate) fn middleware_error_to_error(
     err: Box<dyn StdError + Send + Sync + 'static>,
     url: String,
 ) -> Error {
