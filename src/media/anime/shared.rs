@@ -131,7 +131,7 @@ enum_values! {
     }
 }
 
-/// Details about a star rating of [`crate::media::Rating`].
+/// Details about a star rating of [`Rating`].
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
@@ -144,7 +144,7 @@ pub struct RatingStarDetails {
     pub unit: String,
 
     /// How many percent of user voted this star. Only populated if this struct is obtained via
-    /// [`crate::media::Rating`].
+    /// [`Rating`].
     pub percentage: Option<u8>,
 }
 

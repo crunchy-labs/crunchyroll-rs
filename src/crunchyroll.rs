@@ -277,7 +277,7 @@ mod auth {
     pub struct Executor {
         pub(crate) client: Client,
 
-        /// Must be a [`RwLock`] because `Executor` is always passed inside `Arc` which does not
+        /// Must be a [`RwLock`] because `Executor` is always passed inside [`Arc`] which does not
         /// allow direct changes to the struct.
         pub(crate) session: RwLock<ExecutorSession>,
 

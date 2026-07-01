@@ -142,7 +142,7 @@ where
     }
 }
 
-/// Deserializes a empty string (`""`) to `None`.
+/// Deserializes an empty string to `None`.
 pub(crate) fn deserialize_empty_pre_string_to_none<'de, D, T>(
     deserializer: D,
 ) -> Result<Option<T>, D::Error>

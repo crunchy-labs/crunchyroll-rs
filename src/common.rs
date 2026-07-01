@@ -266,8 +266,8 @@ pub struct Image {
     pub width: u32,
 }
 
-/// Helper trait for [`Crunchyroll::request`] generic returns.
-/// Must be implemented for every struct which is used as generic parameter for [`Crunchyroll::request`].
+/// Helper trait for [`Executor::request`] generic returns.
+/// Must be implemented for every struct which is used as generic parameter for [`Executor::request`].
 #[doc(hidden)]
 pub trait Request {
     /// Set a usable [`Executor`] instance to the struct if required
