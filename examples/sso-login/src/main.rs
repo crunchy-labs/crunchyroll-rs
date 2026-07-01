@@ -14,9 +14,11 @@ use tao::window::WindowBuilder;
 use uuid::Uuid;
 use wry::{WebViewBuilder, WebViewBuilderExtUnix, WebViewId};
 
-const ANDROID_PHONE_BASIC_AUTH: &str =
-    "dWN2dmU0NXJtcG9wa29pZm83cDM6ck1wV0hIaFRJaG5Ga2dGSG1lMjJaUS12VzlRaE5HZVE=";
+#[rustfmt::skip] // for scripts that may fetch this
+const ANDROID_PHONE_BASIC_AUTH: &str = "azNqZnZsN2txcTdtcHhzd3VlZWg6Y2RJQnRNZjd1ZE9Td0pJcXE3ZnhiNktqQl9DbG5Fb0U=";
+#[rustfmt::skip] // for scripts that may fetch this
 const ANDROID_PHONE_SSO_CLIENT_ID: &str = "k3jfvl7kqq7mpxswueeh";
+#[rustfmt::skip] // for scripts that may fetch this
 const ANDROID_PHONE_USER_AGENT: &str = "Crunchyroll/3.112.1 Android/11 okhttp/5.3.2";
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
