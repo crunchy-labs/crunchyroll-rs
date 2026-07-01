@@ -16,8 +16,8 @@ use wry::{WebViewBuilder, WebViewBuilderExtUnix, WebViewId};
 
 const ANDROID_PHONE_BASIC_AUTH: &str =
     "dWN2dmU0NXJtcG9wa29pZm83cDM6ck1wV0hIaFRJaG5Ga2dGSG1lMjJaUS12VzlRaE5HZVE=";
-const ANDROID_PHONE_SSO_CLIENT_ID: &str = "ucvve45rmpopkoifo7p3";
-const ANDROID_PHONE_USER_AGENT: &str = "Crunchyroll/3.110.1 Android/11 okhttp/5.3.2";
+const ANDROID_PHONE_SSO_CLIENT_ID: &str = "k3jfvl7kqq7mpxswueeh";
+const ANDROID_PHONE_USER_AGENT: &str = "Crunchyroll/3.112.1 Android/11 okhttp/5.3.2";
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
