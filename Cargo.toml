@@ -5,6 +5,14 @@ documentation = "https://docs.rs/crunchyroll-rs"
 readme = "README.md"
 keywords = ["crunchyroll", "anime", "downloader"]
 categories = ["api-bindings"]
+include = [
+    "/Cargo.toml",
+    "/LICENSE-APACHE",
+    "/LICENSE-MIT",
+    "/README.md",
+    "/src/**",
+    "/tests/**"
+]
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

@@ -1,6 +1,12 @@
 [package]
 name = "crunchyroll-rs-internal"
 description = "Internal crate for crunchyroll-rs. Do not use directly."
+include = [
+    "/Cargo.toml",
+    "/LICENSE-APACHE",
+    "/LICENSE-MIT",
+    "/src/**"
+]
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
