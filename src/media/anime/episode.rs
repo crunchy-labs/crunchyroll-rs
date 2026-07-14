@@ -27,10 +27,10 @@ pub struct EpisodeRatingType {
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct EpisodeRating {
-    up: EpisodeRatingType,
-    down: EpisodeRatingType,
+    pub up: EpisodeRatingType,
+    pub down: EpisodeRatingType,
 
-    total: u32,
+    pub total: u32,
 
     #[cfg(feature = "__test_strict")]
     rating: Option<crate::StrictValue>,

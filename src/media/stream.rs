@@ -100,9 +100,9 @@ impl StreamVersion {
 #[serde(rename_all = "camelCase")]
 pub struct StreamDrm {
     /// Name of the drm provider, e.g. 'widevine'
-    name: String,
+    pub name: String,
     /// Url to request a drm license
-    drm_url: String,
+    pub drm_url: String,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
