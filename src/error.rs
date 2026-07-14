@@ -334,11 +334,36 @@ pub(crate) async fn check_request<T: DeserializeOwned>(resp: Response) -> Result
                 )),
             });
         }
+        500..600 => {
+            let status = resp.status();
+            let raw = resp.bytes().await?;
+            let msg = if raw.starts_with(b"<!DOCTYPE html>")
+                && raw
+                    .windows(39)
+                    .any(|w| w == b"<title>Crunchyroll - Overloaded</title>")
+            {
+                "Internal server error, server is overloaded. Try again later".to_string()
+            } else {
+                format!(
+                    "Internal server error: {}",
+                    String::from_utf8_lossy(raw.as_ref())
+                )
+            };
+
+            return Err(Error {
+                kind: ErrorKind::Request {
+                    status: Some(status),
+                },
+                source: None,
+                url: Some(url.to_string()),
+                message: Some(msg),
+            });
+        }
         _ => resp.bytes().await?,
     };
     let mut raw: &[u8] = _raw.as_ref();
 
-    // to ensure compatibility with `T`, convert a empty response to {}
+    // to ensure compatibility with `T`, convert an empty response to {}
     if raw.is_empty() && (content_length == 0) {
         raw = "{}".as_bytes();
     }
