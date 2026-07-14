@@ -115,7 +115,7 @@ impl Artist {
     pub async fn concerts(&self) -> Result<Vec<Concert>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/music/artists/{}/concerts",
-            &self.id
+            self.id
         );
         Ok(self
             .executor
@@ -130,7 +130,7 @@ impl Artist {
     pub async fn music_videos(&self) -> Result<Vec<MusicVideo>> {
         let endpoint = format!(
             "https://www.crunchyroll.com/content/v2/music/artists/{}/music_videos",
-            &self.id
+            self.id
         );
         Ok(self
             .executor
