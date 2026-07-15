@@ -25,7 +25,7 @@ members = ["internal"]
 
 [workspace.package]
 # increase version of 'crunchyroll-rs-internal' dependency when updating
-version = "0.18.0"
+version = "0.18.1"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
 rust-version = "1.88.0"
@@ -67,7 +67,7 @@ tokio = { version = "1.52", features = ["sync"] }
 uuid = { version = "1.23", features = ["v4"] }
 webpki-roots = "1.0"
 
-crunchyroll-rs-internal = { version = "0.18.0", path = "internal" }
+crunchyroll-rs-internal = { version = "0.18.1", path = "internal" }
 
 scraper = { version = "0.27", optional = true }
 regex = { version = "1.12", default-features = false, features = ["std"], optional = true }
