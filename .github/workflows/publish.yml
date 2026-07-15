@@ -31,13 +31,17 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Publish internal
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
         run: |
           DRY_RUN=${{ github.event.inputs.dry_run }}
           DRY_RUN=${DRY_RUN:-"false"}
-          cd internal && cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
+          cd internal && cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi)
 
       - name: Publish main
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}
         run: |
           DRY_RUN=${{ github.event.inputs.dry_run }}
           DRY_RUN=${DRY_RUN:-"false"}
-          cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi) --token ${{ secrets.CRATES_TOKEN }}
+          cargo publish $(if $DRY_RUN; then echo "--dry-run"; fi)
