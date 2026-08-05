@@ -159,6 +159,12 @@ pub struct Stream {
 
     pub drm: StreamDrm,
 
+    /// Always 'static' in my tests.
+    pub packaging_profile: String,
+    pub encoding_profile: String,
+    /// Always 'dash'.
+    pub video_container: String,
+
     #[serde(skip)]
     id: String,
 

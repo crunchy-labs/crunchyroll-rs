@@ -3,7 +3,7 @@
 use crate::crunchyroll::MaturityRating;
 use crate::{Crunchyroll, Executor, Locale, Request, Result, options};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::json;
 use std::sync::Arc;
 
 options! {
@@ -12,7 +12,11 @@ options! {
     /// Updates the language in which audio should be played.
     audio_language(Locale, "preferred_content_audio_language") = None,
     /// Updates the language in which subtitles should be shown if available.
-    subtitle_language(Locale, "preferred_content_subtitle_language") = None
+    subtitle_language(Locale, "preferred_content_subtitle_language") = None,
+    /// Prefer playgin audio descriptions when available
+    prefer_audio_descriptions(bool, "prefer_description_audio_role") = None,
+    /// Automatically display closed captions when available
+    prefer_closed_captions(bool, "prefer_closed_captions") = None
 }
 
 /// An account profile.
@@ -23,6 +27,8 @@ pub struct Profile {
     #[serde(skip)]
     executor: Arc<Executor>,
 
+    #[deprecated = "Crunchyroll removed the 'username' field, use `profile_name` instead"]
+    #[serde(default)]
     pub username: String,
     pub email: String,
 
@@ -40,10 +46,15 @@ pub struct Profile {
     pub wallpaper: Wallpaper,
 
     pub maturity_rating: MaturityRating,
+    pub manga_maturity_rating: String,
 
     pub preferred_communication_language: Option<Locale>,
     pub preferred_content_audio_language: Option<Locale>,
     pub preferred_content_subtitle_language: Option<Locale>,
+
+    #[serde(rename = "prefer_description_audio_role")]
+    pub prefer_audio_descriptions: bool,
+    pub prefer_closed_captions: bool,
 
     #[cfg(feature = "__test_strict")]
     account_id: Option<crate::StrictValue>,
@@ -53,6 +64,8 @@ pub struct Profile {
     do_not_sell: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     age_consent: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    profile_type: Option<crate::StrictValue>,
 }
 
 impl Profile {
@@ -95,25 +108,12 @@ impl Profile {
             self.profile_id
         );
 
-        let mut updates = serde_json::Map::new();
-
-        if let Some(audio_language) = preferences.audio_language {
-            updates.insert(
-                "preferred_content_audio_language".into(),
-                audio_language.to_string().into(),
-            );
-        }
-        if let Some(subtitle_language) = preferences.subtitle_language {
-            updates.insert(
-                "preferred_content_subtitle_language".into(),
-                subtitle_language.to_string().into(),
-            );
-        }
+        let updates = preferences.into_json();
 
         let updated_self: Self = self
             .executor
             .patch(endpoint)
-            .json(&Value::Object(updates))
+            .json(&updates)
             .request()
             .await?;
         self.preferred_content_audio_language = updated_self.preferred_content_audio_language;
