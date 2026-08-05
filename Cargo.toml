@@ -25,7 +25,7 @@ members = ["internal"]
 
 [workspace.package]
 # increase version of 'crunchyroll-rs-internal' dependency when updating
-version = "0.18.1"
+version = "0.18.2"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
 rust-version = "1.88.0"
@@ -54,7 +54,7 @@ chrono = { version = ">=0.4.35", features = ["serde"] }
 dash-mpd = { version = "0.20", default-features = false }
 futures-util = { version = "0.3", features = ["std"], default-features = false }
 http = "1.4"
-jsonwebtoken = { version = "10.4", default-features = false, features = ["rust_crypto"] }
+jsonwebtoken = { version = "11.0", default-features = false, features = ["rust_crypto"] }
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
 reqwest = { version = "0.13.4", features = ["cookies", "json", "multipart", "query", "rustls"] }
@@ -67,7 +67,7 @@ tokio = { version = "1.52", features = ["sync"] }
 uuid = { version = "1.23", features = ["v4"] }
 webpki-roots = "1.0"
 
-crunchyroll-rs-internal = { version = "0.18.1", path = "internal" }
+crunchyroll-rs-internal = { version = "0.18.2", path = "internal" }
 
 scraper = { version = "0.27", optional = true }
 regex = { version = "1.12", default-features = false, features = ["std"], optional = true }
