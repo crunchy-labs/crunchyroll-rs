@@ -141,6 +141,8 @@ pub struct Series {
     #[cfg(feature = "__test_strict")]
     search_metadata: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
+    localized_images: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
     #[serde(rename = "type")]
     _type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
