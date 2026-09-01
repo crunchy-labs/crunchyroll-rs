@@ -829,9 +829,9 @@ mod auth {
         /// up-to-date by this crate but may still become invalid between releases. If logins
         /// start to fail, you may need to supply a fresh token via [`CrunchyrollBuilder::platform`].
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const ANDROID_TV_BASIC_AUTH_TOKEN: &'static str = "YWJvdGxoMXdlcTByNGxudm5haHo6dWlLSjJqUXRVX0FQYzdZa0hqSWlDTFoyMjhnbGxOY2o=";
+        pub const ANDROID_TV_BASIC_AUTH_TOKEN: &'static str = "ZXZ4YzVybGN1bnd4cm91YWpmeHI6NkJGWGM1SUk3UWx2Z3NFbzdiVjBuWUNfN1VRLXVlSVM=";
         #[rustfmt::skip] // for scripts that may fetch this
-        pub const ANDROID_TV_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.67.0_22350 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
+        pub const ANDROID_TV_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.70.0_22358 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
 
         pub const ANDROID_TV_DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
             (
