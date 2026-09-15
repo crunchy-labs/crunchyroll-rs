@@ -15,11 +15,11 @@ use uuid::Uuid;
 use wry::{WebViewBuilder, WebViewBuilderExtUnix, WebViewId};
 
 #[rustfmt::skip] // for scripts that may fetch this
-const ANDROID_PHONE_BASIC_AUTH: &str = "aGJxbGVseXhscThqMnkwbmx2YjI6cVBJOWpuTlRILVNtcFQycXVXR1k3Mi1RUGtvQjFEVUs=";
+const ANDROID_PHONE_BASIC_AUTH: &str = "ZWhldHBwZWl0dndnY2JnN21waWc6QklkSXM5Njlib0U1SWhGQ2ZyRU92VUxiVTJqcjg0QUw=";
 #[rustfmt::skip] // for scripts that may fetch this
-const ANDROID_PHONE_SSO_CLIENT_ID: &str = "hbqlelyxlq8j2y0nlvb2";
+const ANDROID_PHONE_SSO_CLIENT_ID: &str = "ehetppeitvwgcbg7mpig";
 #[rustfmt::skip] // for scripts that may fetch this
-const ANDROID_PHONE_USER_AGENT: &str = "Crunchyroll/3.118.0 Android/11 okhttp/5.3.2";
+const ANDROID_PHONE_USER_AGENT: &str = "Crunchyroll/3.120.1 Android/11 okhttp/5.3.2";
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
