@@ -29,6 +29,7 @@ enum_values! {
         ta_IN = "ta-IN"
         te_IN = "te-IN"
         th_TH = "th-TH"
+        tl_PH = "tl-PH"
         tr_TR = "tr-TR"
         vi_VN = "vi-VN"
         zh_CN = "zh-CN"
@@ -62,6 +63,7 @@ impl Locale {
             Locale::ta_IN,
             Locale::te_IN,
             Locale::th_TH,
+            Locale::tl_PH,
             Locale::tr_TR,
             Locale::vi_VN,
             Locale::zh_CN,
@@ -94,6 +96,7 @@ impl Locale {
             Locale::ta_IN => "Tamil",
             Locale::te_IN => "Telugu",
             Locale::th_TH => "Thai",
+            Locale::tl_PH => "Filipino",
             Locale::tr_TR => "Turkish",
             Locale::vi_VN => "Vietnamese",
             Locale::zh_CN => "Chinese (China)",
