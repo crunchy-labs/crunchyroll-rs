@@ -1,3 +1,6 @@
+//! Credentials and user agents of the official Crunchyroll apps, fetched from the
+//! [crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts) repository.
+
 use serde::Deserialize;
 
 #[derive(Deserialize)]

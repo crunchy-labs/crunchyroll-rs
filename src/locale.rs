@@ -1,3 +1,5 @@
+//! Locales of the languages which Crunchyroll supports.
+
 use crate::enum_values;
 
 enum_values! {
