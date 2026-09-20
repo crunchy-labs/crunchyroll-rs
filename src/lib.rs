@@ -15,7 +15,7 @@
 //! # Getting started
 //!
 //! Before you can do anything, you have to instantiate a new [`Crunchyroll`] struct at first. This
-//! internally creates a new [`crunchyroll::CrunchyrollBuilder`] instance. All functions of this
+//! internally creates a new [`auth::CrunchyrollBuilder`] instance. All functions of this
 //! struct are chaining, which means you can build a working Crunchyroll instance in one expression.
 //!
 //! ```
@@ -119,7 +119,7 @@
 //! # Features
 //!
 //! - **parse** *(enabled by default)*: Enables url parsing.
-//! - **release-calendar**: Enables the [`release_calendar`] module to get upcoming episode releases.
+//! - **release-calendar**: Enables the `release_calendar` module to get upcoming episode releases.
 //! - **middleware**: Enables the usage of a [tower-service](https://docs.rs/tower-service) compatible middleware.
 //! - **experimental-stabilizations**: Provides some functions to maybe fix broken api results. See
 //!   [Bugs](#bugs) for more information.

@@ -17,8 +17,8 @@ pub struct AppCredentials {
 
 impl AppCredentials {
     /// Returns the user agent of the Crunchyroll app for android phones. It should be used
-    /// together with [`crate::crunchyroll::DevicePlatform::AndroidPhone`] via
-    /// [`crate::crunchyroll::CrunchyrollBuilder::platform`].
+    /// together with [`crate::auth::DevicePlatform::AndroidPhone`] via
+    /// [`crate::auth::CrunchyrollBuilder::platform`].
     pub fn android_phone_user_agent(&self) -> String {
         format!(
             "Crunchyroll/{} Android/11 okhttp/5.3.2",
@@ -27,8 +27,8 @@ impl AppCredentials {
     }
 
     /// Returns the user agent of the Crunchyroll app for android tv. It should be used
-    /// together with [`crate::crunchyroll::DevicePlatform::TvAndroid`] via
-    /// [`crate::crunchyroll::CrunchyrollBuilder::platform`].
+    /// together with [`crate::auth::DevicePlatform::TvAndroid`] via
+    /// [`crate::auth::CrunchyrollBuilder::platform`].
     pub fn android_tv_user_agent(&self) -> String {
         format!(
             "Crunchyroll/ANDROIDTV/{}_{} (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)",

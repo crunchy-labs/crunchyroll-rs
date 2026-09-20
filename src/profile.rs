@@ -194,7 +194,7 @@ impl Profiles {
 
 impl Crunchyroll {
     /// Returns the id of the currently used profile. Returns an empty string if logged in with
-    /// [`crate::crunchyroll::CrunchyrollBuilder::login_anonymously`].
+    /// [`crate::auth::CrunchyrollBuilder::login_anonymously`].
     pub async fn profile_id(&self) -> String {
         self.executor
             .jwt_claim::<String>("profile_id")
