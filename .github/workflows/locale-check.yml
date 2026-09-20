@@ -77,6 +77,3 @@ jobs:
           gh issue create \
             --title "[automatic] Locale update" \
             --body "$BODY"
-          fi
-
-          exit 1
