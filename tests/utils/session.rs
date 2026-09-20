@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
 use crate::utils::store::{Store, get_store, has_store, set_store};
-use crunchyroll_rs::Crunchyroll;
-use crunchyroll_rs::crunchyroll::{DeviceIdentifier, SessionToken};
+use crunchyroll_rs::{
+    Crunchyroll,
+    auth::{DeviceIdentifier, SessionToken},
+};
 use std::ops::Not;
 
 pub static SESSION: Store<Crunchyroll> = Store::new(|| {

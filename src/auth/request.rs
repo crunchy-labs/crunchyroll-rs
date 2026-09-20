@@ -89,7 +89,7 @@ impl ExecutorRequestBuilder {
             return Ok(middleware
                 .lock()
                 .await
-                .call(crate::middleware::MiddlewareContext::new(
+                .call(crate::auth::middleware::MiddlewareContext::new(
                     &self.executor.client,
                     req,
                 ))
@@ -123,7 +123,7 @@ pub(super) async fn request<T: Request + DeserializeOwned>(
                 .lock()
                 .await
                 .deref_mut()
-                .call(crate::middleware::MiddlewareContext::new(client, req))
+                .call(crate::auth::middleware::MiddlewareContext::new(client, req))
                 .await
                 .map_err(|e| crate::internal::middleware::middleware_error_to_error(e, url))?
         } else {

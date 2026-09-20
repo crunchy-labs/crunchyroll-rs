@@ -146,9 +146,6 @@ pub mod feed;
 pub mod list;
 pub mod locale;
 pub mod media;
-#[cfg(feature = "middleware")]
-#[cfg_attr(docsrs, doc(cfg(feature = "middleware")))]
-pub mod middleware;
 #[cfg(feature = "parse")]
 #[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub mod parse;

@@ -1,6 +1,6 @@
 use crate::Error;
+use crate::auth::middleware::MiddlewareContext;
 use crate::error::ErrorKind;
-use crate::middleware::MiddlewareContext;
 use futures_util::TryFutureExt;
 use reqwest::Response;
 use std::error::Error as StdError;

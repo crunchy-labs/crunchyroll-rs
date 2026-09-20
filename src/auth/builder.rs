@@ -216,7 +216,7 @@ impl CrunchyrollBuilder {
         E: Into<Box<dyn std::error::Error + Send + Sync + 'static>> + 'static,
         F: Future<Output = Result<reqwest::Response, E>> + Send + 'static,
         S: for<'a> tower_service::Service<
-                crate::middleware::MiddlewareContext<'a>,
+                crate::auth::middleware::MiddlewareContext<'a>,
                 Response = reqwest::Response,
                 Error = E,
                 Future = F,

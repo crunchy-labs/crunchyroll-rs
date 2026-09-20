@@ -55,7 +55,7 @@ impl Executor {
                     .lock()
                     .await
                     .deref_mut()
-                    .call(crate::middleware::MiddlewareContext::new(client, req))
+                    .call(crate::auth::middleware::MiddlewareContext::new(client, req))
                     .await
                     .map_err(|e| crate::internal::middleware::middleware_error_to_error(e, url))?
             } else {

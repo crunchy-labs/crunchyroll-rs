@@ -6,11 +6,16 @@ mod executor;
 mod login;
 mod request;
 
+use serde::{Deserialize, Serialize};
+
 pub mod app_credentials;
-pub use builder::CrunchyrollBuilder;
+#[cfg(feature = "middleware")]
+#[cfg_attr(docsrs, doc(cfg(feature = "middleware")))]
+pub mod middleware;
+
 pub(crate) use executor::Executor;
 
-use serde::{Deserialize, Serialize};
+pub use builder::CrunchyrollBuilder;
 
 /// Stores if the refresh token or etp-rt cookie was used for login. Extract the token and use
 /// it as argument in their associated function ([`CrunchyrollBuilder::login_with_refresh_token`]

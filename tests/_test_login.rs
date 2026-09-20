@@ -2,9 +2,7 @@
 /// Begins with an underscore because this must be the first file to be called
 mod utils;
 
-use crate::utils::SESSION;
-use crunchyroll_rs::Crunchyroll;
-use crunchyroll_rs::crunchyroll::DeviceIdentifier;
+use crunchyroll_rs::{Crunchyroll, auth::DeviceIdentifier};
 use std::env;
 
 #[tokio::test]
@@ -130,6 +128,6 @@ async fn login_anonymously() {
 #[cfg(feature = "__test")]
 #[tokio::test]
 async fn z_expired_token() {
-    let crunchy = SESSION.get().await.unwrap();
+    let crunchy = crate::utils::SESSION.get().await.unwrap();
     assert_result!(crunchy.refresh_jwt().await)
 }
