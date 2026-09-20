@@ -136,6 +136,7 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 
 pub mod account;
+pub mod auth;
 pub mod categories;
 pub mod common;
 pub mod crunchyroll;
@@ -159,12 +160,11 @@ pub mod release_calendar;
 pub mod search;
 
 // internal
-mod auth;
 mod internal;
 
 // internal
+pub(crate) use auth::Executor;
 pub(crate) use common::Request;
-pub(crate) use crunchyroll::Executor;
 pub(crate) use error::Result;
 pub(crate) use internal::macros::{enum_values, options};
 pub(crate) use internal::serde::EmptyJsonProxy;

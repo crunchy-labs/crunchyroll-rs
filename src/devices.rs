@@ -1,7 +1,7 @@
 //! Device management.
 
+use crate::Executor;
 use crate::common::BulkResult;
-use crate::crunchyroll::Executor;
 use crate::{Crunchyroll, Request, Result, enum_values};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

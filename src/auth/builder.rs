@@ -172,13 +172,13 @@ impl CrunchyrollBuilder {
     /// The three arguments belong together: a basic auth token is only valid for the platform
     /// it was issued for and the user agent must almost always represent the platform too.
     /// For example, the basic auth token bundled with the Android phone app is only valid for
-    /// [`DevicePlatform::AndroidPhone`]; using it with any other
-    /// platform (e.g. [`DevicePlatform::TvAndroid`]) will cause stream requests to fail with an error.
+    /// [`DevicePlatform::AndroidPhone`]; using it with any other platform
+    /// (e.g. [`DevicePlatform::TvAndroid`]) will cause stream requests to fail with an error.
     ///
-    /// The user agent should match the stream platform as well, otherwise requests may fail. To
-    /// use a custom user agent, build a client with
-    /// [`CrunchyrollBuilder::predefined_client_builder`], update the user agent header, and
-    /// pass the client via [`CrunchyrollBuilder::client`].
+    /// The user agent should match the stream platform as well, otherwise requests may fail. You
+    /// can pass the user agent here, but it's only set if you don't override the client via
+    /// [`CrunchyrollBuilder::client`]. Either way you should set an user agent, the request will
+    /// fail otherwise.
     ///
     /// Crunchyroll rotates the basic auth tokens from time to time, which would result in
     /// failed logins if those auth tokens aren't also changed in this crate. To prevent this
@@ -186,8 +186,8 @@ impl CrunchyrollBuilder {
     /// [crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts).
     /// This happens every time you login. It's strongly advised that you implement the fetching
     /// process yourself, and use some sort of caching. You can use
-    /// [`app_credentials::get_app_credentials`] to get the credentials from the
-    /// crunchy-labs/artifacts GitHub repo, or implement it completely yourself.
+    /// [`app_credentials::get_app_credentials`] to get the credentials from the crunchy-labs/artifacts
+    /// GitHub repo, or implement it completely yourself.
     ///
     /// Not every login method is available with every basic auth token. For example, the
     /// Android phone basic auth token only supports

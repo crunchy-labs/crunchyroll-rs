@@ -1,5 +1,10 @@
 //! Builder and access to the [`Crunchyroll`] struct which is required to make any action.
 
+use crate::{
+    Executor,
+    auth::{CrunchyrollBuilder, DeviceIdentifier, DevicePlatform, SessionToken},
+};
+
 use reqwest::Client;
 use std::sync::Arc;
 
@@ -47,8 +52,3 @@ impl Crunchyroll {
         self.executor.details.device_platform.clone()
     }
 }
-
-pub(crate) use crate::auth::Executor;
-pub use crate::auth::{
-    CrunchyrollBuilder, DeviceIdentifier, DevicePlatform, SessionToken, app_credentials,
-};

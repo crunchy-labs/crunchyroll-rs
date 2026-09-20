@@ -1,4 +1,4 @@
-use crate::crunchyroll::Executor;
+use crate::Executor;
 use crate::media::util::request_media;
 use crate::media::{AdBreak, ContentDescriptorsWithSymbol, Media, ThumbnailImages};
 use crate::{Crunchyroll, MovieListing, Result};

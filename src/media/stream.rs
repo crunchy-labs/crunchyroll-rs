@@ -1,4 +1,4 @@
-use crate::crunchyroll::DevicePlatform;
+use crate::auth::DevicePlatform;
 use crate::error::{Error, ErrorKind, is_request_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use byteorder::{BigEndian, ReadBytesExt};

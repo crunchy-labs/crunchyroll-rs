@@ -1,6 +1,6 @@
+use crate::Executor;
 use crate::Result;
 use crate::common::{Request, V2BulkResult};
-use crate::crunchyroll::Executor;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 

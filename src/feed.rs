@@ -1,7 +1,7 @@
 //! Feeds like home feed or news feed.
 
+use crate::Executor;
 use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult, V2TypeBulkResult};
-use crate::crunchyroll::Executor;
 use crate::search::{BrowseMediaType, BrowseOptions, BrowseSortType};
 use crate::{Crunchyroll, MediaCollection, Request, Series};
 use chrono::{DateTime, Utc};

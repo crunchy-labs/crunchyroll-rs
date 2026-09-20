@@ -1,8 +1,8 @@
 //! Browse and search related types.
 
 mod search_media {
+    use crate::Executor;
     use crate::common::Request;
-    use crate::crunchyroll::Executor;
     use crate::media::{EpisodeRating, RatingStar, RatingStarDetails};
     use crate::{Concert, Episode, MediaCollection, MovieListing, MusicVideo, Series};
     use serde::{Deserialize, Deserializer, Serialize};

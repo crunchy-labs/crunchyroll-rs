@@ -1,5 +1,5 @@
+use crate::Executor;
 use crate::common::V2BulkResult;
-use crate::crunchyroll::Executor;
 use crate::media::music::concert::Concert;
 use crate::media::util::request_media;
 use crate::media::{MusicGenre, MusicVideo, PosterImages};

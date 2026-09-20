@@ -14,8 +14,8 @@ pub use music::*;
 pub use shared::*;
 pub use stream::*;
 
+use crate::Executor;
 use crate::common::Request;
-use crate::crunchyroll::Executor;
 use crate::internal::sealed::Sealed;
 use crate::{Crunchyroll, Result};
 use std::sync::Arc;

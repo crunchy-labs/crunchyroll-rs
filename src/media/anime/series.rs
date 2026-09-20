@@ -1,5 +1,5 @@
+use crate::Executor;
 use crate::categories::Category;
-use crate::crunchyroll::Executor;
 use crate::media::anime::util::fix_empty_season_versions;
 use crate::media::util::request_media;
 use crate::media::{ContentDescriptorsWithSymbol, LanguagePresentation, Media, PosterImages};

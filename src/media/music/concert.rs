@@ -1,4 +1,4 @@
-use crate::crunchyroll::Executor;
+use crate::Executor;
 use crate::media::music::util::availability_object_to_keys;
 use crate::media::util::request_media;
 use crate::media::{ArtistPreview, ArtistsPreviewList, Media, MusicGenre, ThumbnailImages};

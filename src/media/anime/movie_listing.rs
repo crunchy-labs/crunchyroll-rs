@@ -1,6 +1,6 @@
+use crate::Executor;
 use crate::categories::Category;
 use crate::common::Request;
-use crate::crunchyroll::Executor;
 use crate::media::util::request_media;
 use crate::media::{ContentDescriptorsWithSymbol, Media, PosterImages};
 use crate::{Crunchyroll, Locale, Movie, Result};

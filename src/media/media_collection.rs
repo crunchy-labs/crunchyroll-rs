@@ -1,5 +1,5 @@
+use crate::Executor;
 use crate::common::Request;
-use crate::crunchyroll::Executor;
 use crate::error::{Error, ErrorKind};
 use crate::media::Media;
 use crate::{

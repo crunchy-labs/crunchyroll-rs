@@ -16,6 +16,9 @@ pub struct AppCredentials {
 }
 
 impl AppCredentials {
+    /// Returns the user agent of the Crunchyroll app for android phones. It should be used
+    /// together with [`crate::crunchyroll::DevicePlatform::AndroidPhone`] via
+    /// [`crate::crunchyroll::CrunchyrollBuilder::platform`].
     pub fn android_phone_user_agent(&self) -> String {
         format!(
             "Crunchyroll/{} Android/11 okhttp/5.3.2",
@@ -23,6 +26,9 @@ impl AppCredentials {
         )
     }
 
+    /// Returns the user agent of the Crunchyroll app for android tv. It should be used
+    /// together with [`crate::crunchyroll::DevicePlatform::TvAndroid`] via
+    /// [`crate::crunchyroll::CrunchyrollBuilder::platform`].
     pub fn android_tv_user_agent(&self) -> String {
         format!(
             "Crunchyroll/ANDROIDTV/{}_{} (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)",
@@ -34,6 +40,8 @@ impl AppCredentials {
 pub(super) const APP_CREDENTIALS_URL: &str =
     "https://raw.githubusercontent.com/crunchy-labs/artifacts/refs/heads/main/credentials.json";
 
+/// Fetches the credentials of some official Crunchyroll apps from the
+/// [crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts) GitHub repository.
 pub async fn get_app_credentials() -> Result<AppCredentials, reqwest::Error> {
     reqwest::get(APP_CREDENTIALS_URL).await?.json().await
 }
