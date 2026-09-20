@@ -1,18 +1,13 @@
 [package]
 name = "crunchyroll-rs-internal"
-description = "Internal crate for crunchyroll-rs. Do not use directly."
-include = [
-    "/Cargo.toml",
-    "/LICENSE-APACHE",
-    "/LICENSE-MIT",
-    "/src/**"
-]
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "Internal crate for crunchyroll-rs. Do not use directly."
 repository.workspace = true
 license.workspace = true
+include = ["/Cargo.toml", "/LICENSE-APACHE", "/LICENSE-MIT", "/src/**"]
 
 [lib]
 proc-macro = true
@@ -20,5 +15,5 @@ proc-macro = true
 [dependencies]
 darling = "0.24"
 proc-macro2 = "1.0"
-syn = { version = "3.0", features = ["full"] }
 quote = "1.0"
+syn = { version = "3.0", features = ["full"] }

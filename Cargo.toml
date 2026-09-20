@@ -1,27 +1,24 @@
 [package]
 name = "crunchyroll-rs"
-description = "Pure Rust implementation of the crunchyroll api."
-documentation = "https://docs.rs/crunchyroll-rs"
-readme = "README.md"
-keywords = ["crunchyroll", "anime", "downloader"]
-categories = ["api-bindings"]
-include = [
-    "/Cargo.toml",
-    "/LICENSE-APACHE",
-    "/LICENSE-MIT",
-    "/README.md",
-    "/src/**",
-    "/tests/**"
-]
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+description = "Pure Rust implementation of the crunchyroll api."
+documentation = "https://docs.rs/crunchyroll-rs"
+readme = "README.md"
 repository.workspace = true
 license.workspace = true
+keywords = ["anime", "crunchyroll", "downloader"]
+categories = ["api-bindings"]
+include = ["/Cargo.toml", "/LICENSE-APACHE", "/LICENSE-MIT", "/README.md", "/src/**", "/tests/**"]
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs"]
+all-features = true
 
 [workspace]
-members = [".", "internal", "examples/*"]
+members = [".", "examples/*", "internal"]
 
 [workspace.package]
 # increase version of 'crunchyroll-rs-internal' dependency when updating
@@ -32,33 +29,17 @@ rust-version = "1.88.0"
 repository = "https://github.com/crunchy-labs/crunchyroll-rs"
 license = "MIT OR Apache-2.0"
 
-[features]
-default = ["parse"]
-
-# Add functionality to parse Crunchyroll urls.
-parse = ["dep:regex"]
-# Add functionality to get the release calendar.
-release-calendar = ["parse", "dep:scraper"]
-# Add the ability to specify (tower based) custom middleware services.
-middleware = ["dep:tower-service"]
-# Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
-experimental-stabilizations = []
-
-# Internal! Do not use it outside of testing
-__test = []
-__test_strict = []
-
 [dependencies]
 byteorder = "1.5"
 chrono = { version = ">=0.4.35", features = ["serde"] }
 dash-mpd = { version = "0.20", default-features = false }
-futures-util = { version = "0.3", features = ["std"], default-features = false }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 http = "1.4"
 jsonwebtoken = { version = "11.0", default-features = false, features = ["rust_crypto"] }
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
 reqwest = { version = "0.13.4", features = ["cookies", "json", "multipart", "query", "rustls"] }
-rustls = { version = "0.23.4", default-features = false, features = ["std", "ring", "tls12"] }
+rustls = { version = "0.23.4", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
@@ -67,10 +48,10 @@ tokio = { version = "1.52", features = ["sync"] }
 uuid = { version = "1.24", features = ["v4"] }
 webpki-roots = "1.0"
 
-crunchyroll-rs-internal = { version = "0.18.5", path = "internal" }
+crunchyroll-rs-internal = { path = "internal", version = "0.18.5" }
 
-scraper = { version = "0.27", optional = true }
 regex = { version = "1.12", default-features = false, features = ["std"], optional = true }
+scraper = { version = "0.27", optional = true }
 tower-service = { version = "0.3", optional = true }
 
 [dev-dependencies]
@@ -78,6 +59,18 @@ anyhow = "1.0"
 rand = "0.10"
 tokio = { version = "1.52", features = ["macros", "rt", "rt-multi-thread"] }
 
-[package.metadata.docs.rs]
-rustdoc-args = ["--cfg", "docsrs"]
-all-features = true
+[features]
+default = ["parse"]
+
+# Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
+experimental-stabilizations = []
+# Add the ability to specify (tower based) custom middleware services.
+middleware = ["dep:tower-service"]
+# Add functionality to parse Crunchyroll urls.
+parse = ["dep:regex"]
+# Add functionality to get the release calendar.
+release-calendar = ["dep:scraper", "parse"]
+
+# Internal! Do not use it outside of testing
+__test = []
+__test_strict = []
