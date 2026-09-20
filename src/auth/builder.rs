@@ -3,7 +3,7 @@ use super::login::AuthResponse;
 use super::{DeviceIdentifier, DevicePlatform, SessionToken};
 use crate::Crunchyroll;
 use crate::Locale;
-use crate::auth::app_credentials;
+use crate::auth::platform_credentials;
 use crate::error::{Error, Result};
 use chrono::{Duration, Utc};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
@@ -186,8 +186,8 @@ impl CrunchyrollBuilder {
     /// [crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts).
     /// This happens every time you login. It's strongly advised that you implement the fetching
     /// process yourself, and use some sort of caching. You can use
-    /// [`app_credentials::get_app_credentials`] to get the credentials from the crunchy-labs/artifacts
-    /// GitHub repo, or implement it completely yourself.
+    /// [`platform_credentials::get_platform_credentials`] to get the credentials from the
+    /// crunchy-labs/artifacts GitHub repo, or implement it completely yourself.
     ///
     /// Not every login method is available with every basic auth token. For example, the
     /// Android phone basic auth token only supports
@@ -437,11 +437,13 @@ impl CrunchyrollBuilder {
             Some(session_details) => session_details,
             // fetch default credentials and set them
             None => {
-                let app_credentials = match app_credentials::get_app_credentials().await {
-                    Ok(app_credentials) => app_credentials,
+                let platform_credentials = match platform_credentials::get_platform_credentials()
+                    .await
+                {
+                    Ok(platform_credentials) => platform_credentials,
                     Err(e) => {
                         return Err(Error::from(e).update_msg(|err| {
-                            let message = format!("Error while fetching app credentials. This is most likely a GitHub issue. Check if GitHub is down and/or {} is available. You may use `CrunchyrollBuilder::platform` to override the credentials", app_credentials::APP_CREDENTIALS_URL);
+                            let message = format!("Error while fetching app credentials. This is most likely a GitHub issue. Check if GitHub is down and/or {} is available. You may use `CrunchyrollBuilder::platform` to override the credentials", platform_credentials::PLATFORM_CREDENTIALS_URL);
                             Some(match err {
                                 Some(msg) => format!("{msg}: {message}"),
                                 None => message,
@@ -452,8 +454,8 @@ impl CrunchyrollBuilder {
 
                 CrunchyrollBuilderSessionDetails {
                     device_platform: DevicePlatform::TvAndroid,
-                    user_agent: Some(app_credentials.android_tv_user_agent()),
-                    basic_auth_token: app_credentials.android_tv.basic_auth_token,
+                    user_agent: Some(platform_credentials.android_tv_user_agent()),
+                    basic_auth_token: platform_credentials.android_tv.basic_auth_token,
                 }
             }
         };

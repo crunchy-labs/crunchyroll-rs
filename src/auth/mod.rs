@@ -8,10 +8,12 @@ mod request;
 
 use serde::{Deserialize, Serialize};
 
+#[deprecated(since = "0.19.1", note = "Use `auth::platform_credentials` instead")]
 pub mod app_credentials;
 #[cfg(feature = "middleware")]
 #[cfg_attr(docsrs, doc(cfg(feature = "middleware")))]
 pub mod middleware;
+pub mod platform_credentials;
 
 pub(crate) use executor::Executor;
 

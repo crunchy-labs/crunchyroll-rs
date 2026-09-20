@@ -17,10 +17,11 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let app_credentials = crunchyroll_rs::auth::app_credentials::get_app_credentials().await?;
+    let platform_credentials =
+        crunchyroll_rs::auth::platform_credentials::get_platform_credentials().await?;
 
     let sso_credentials =
-        get_sso_login_credentials_via_webview(&app_credentials.android_phone.client_id)?;
+        get_sso_login_credentials_via_webview(&platform_credentials.android_phone.client_id)?;
 
     let device_identifier = DeviceIdentifier {
         device_type: "ANDROID".to_string(),
@@ -30,8 +31,8 @@ async fn main() -> Result<()> {
     let _crunchyroll = Crunchyroll::builder()
         .platform(
             DevicePlatform::AndroidPhone,
-            app_credentials.android_phone.basic_auth_token.clone(),
-            Some(app_credentials.android_phone_user_agent()),
+            platform_credentials.android_phone.basic_auth_token.clone(),
+            Some(platform_credentials.android_phone_user_agent()),
         )
         .login_with_oauth_code(
             sso_credentials.code,
