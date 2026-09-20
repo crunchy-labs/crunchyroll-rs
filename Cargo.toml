@@ -22,7 +22,7 @@ members = [".", "examples/*", "internal"]
 
 [workspace.package]
 # increase version of 'crunchyroll-rs-internal' dependency when updating
-version = "0.18.5"
+version = "0.19.0"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
 rust-version = "1.88.0"
@@ -35,7 +35,7 @@ byteorder = "1.5"
 chrono = { version = ">=0.4.35", features = ["serde"] }
 dash-mpd = { version = "0.20", default-features = false }
 # increase version of 'crunchyroll-rs-internal' dependency when updating
-crunchyroll-rs-internal = { path = "internal", version = "0.18.5" }
+crunchyroll-rs-internal = { path = "internal", version = "0.19.0" }
 darling = "0.24"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 gtk = "0.18"
