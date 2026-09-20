@@ -21,7 +21,7 @@ all-features = true
 members = [".", "examples/*", "internal"]
 
 [workspace.package]
-# increase version of 'crunchyroll-rs-internal' dependency when updating
+# increase version of 'crunchyroll-rs-internal' dependency when updating, plus the version used in the README example if applicable
 version = "0.19.0"
 authors = ["Crunchy Labs Maintainers"]
 edition = "2024"
