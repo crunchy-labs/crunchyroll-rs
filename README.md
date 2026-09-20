@@ -82,10 +82,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 _More examples can be found in the [examples/](examples) directory._
 
-#### Api Coverage
+#### API coverage
 Crunchyroll regularly updates their api but does not provide any documentation for it.
 Because we do not monitor the api constantly, so we cannot immediately say when a new endpoint is added or something has changed on already existing and implemented endpoints (which is semi-covered by the `__test-strict` feature, at least).
 If you find an endpoint which is not implemented or has changes feel free to open a new [issue](https://github.com/crunchy-labs/crunchyroll-rs/issues) and tell us, or fork the library and implement it yourself.
+
+#### API credentials
+To issue sessions, credentials like the basic auth token and user agent of a Crunchyroll app are needed. By default, they are fetched dynamically from the
+[crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts) repository every time a new session is created. It's **strongly** advised to implement
+the fetching process yourself with some sort of caching. You can use
+`auth::platform_credentials::get_platform_credentials` to get the credentials, and pass them via `CrunchyrollBuilder::platform`, or implement it completely yourself.
 
 #### Cloudflare
 Crunchyroll uses the cloudflare bot protection to detect if requests are made by a human. Obviously this crate makes
