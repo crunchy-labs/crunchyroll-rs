@@ -1,6 +1,6 @@
 use chrono::{Datelike, Utc, Weekday};
 use crunchyroll_rs::Crunchyroll;
-use crunchyroll_rs::crunchyroll::DeviceIdentifier;
+use crunchyroll_rs::auth::DeviceIdentifier;
 use std::env;
 use std::error::Error;
 

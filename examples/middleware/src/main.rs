@@ -1,5 +1,5 @@
 use crunchyroll_rs::auth::DeviceIdentifier;
-use crunchyroll_rs::middleware::MiddlewareContext;
+use crunchyroll_rs::auth::middleware::MiddlewareContext;
 use crunchyroll_rs::{Crunchyroll, Error};
 use reqwest::Response;
 use std::env;

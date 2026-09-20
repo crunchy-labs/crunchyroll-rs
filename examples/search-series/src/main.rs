@@ -1,6 +1,6 @@
 use crunchyroll_rs::Crunchyroll;
+use crunchyroll_rs::auth::DeviceIdentifier;
 use crunchyroll_rs::common::StreamExt;
-use crunchyroll_rs::crunchyroll::DeviceIdentifier;
 use std::env;
 use std::error::Error;
 

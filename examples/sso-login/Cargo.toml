@@ -7,12 +7,12 @@ publish = false
 [dependencies]
 crunchyroll-rs = { path = "../.." }
 
-http = "1.4"
-reqwest = "0.13"
-tao = "0.35"
-tokio = { version = "1.52", features = ["macros", "rt", "rt-multi-thread"] }
-uuid = "1.23"
-wry = "0.55"
+http = { workspace = true }
+reqwest = { workspace = true }
+tao = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
+uuid = { workspace = true }
+wry = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]
-gtk = { version = "0.18" }
+gtk = { workspace = true }

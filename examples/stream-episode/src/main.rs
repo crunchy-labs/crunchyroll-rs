@@ -1,4 +1,4 @@
-use crunchyroll_rs::crunchyroll::DeviceIdentifier;
+use crunchyroll_rs::auth::DeviceIdentifier;
 use crunchyroll_rs::{Crunchyroll, Episode};
 use std::env;
 use std::error::Error;

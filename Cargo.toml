@@ -29,35 +29,66 @@ rust-version = "1.88.0"
 repository = "https://github.com/crunchy-labs/crunchyroll-rs"
 license = "MIT OR Apache-2.0"
 
-[dependencies]
+[workspace.dependencies]
+anyhow = "1.0"
 byteorder = "1.5"
 chrono = { version = ">=0.4.35", features = ["serde"] }
 dash-mpd = { version = "0.20", default-features = false }
+# increase version of 'crunchyroll-rs-internal' dependency when updating
+crunchyroll-rs-internal = { path = "internal", version = "0.18.5" }
+darling = "0.24"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
-http = "1.4"
+gtk = "0.18"
+http = "1.5"
 jsonwebtoken = { version = "11.0", default-features = false, features = ["rust_crypto"] }
+proc-macro2 = "1.0"
 # the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
 # (https://github.com/seanmonstar/reqwest/issues/1837)
-reqwest = { version = "0.13.4", features = ["cookies", "json", "multipart", "query", "rustls"] }
+reqwest = { version = "0.13.5", features = ["cookies", "json", "multipart", "query", "rustls"] }
+rand = "0.10"
+quote = "1.0"
+regex = { version = "1.13", default-features = false, features = ["std"] }
 rustls = { version = "0.23.4", default-features = false, features = ["ring", "std", "tls12"] }
+scraper = "0.27"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
 smart-default = "0.7"
-tokio = { version = "1.52", features = ["sync"] }
+syn = { version = "3.0", features = ["full"] }
+tao = "0.35"
+tokio = { version = "1.53", features = ["sync"] }
+tower-service = "0.3"
 uuid = { version = "1.24", features = ["v4"] }
 webpki-roots = "1.0"
+wry = "0.55"
 
-crunchyroll-rs-internal = { path = "internal", version = "0.18.5" }
+[dependencies]
+byteorder = { workspace = true }
+chrono = { workspace = true }
+dash-mpd = { workspace = true }
+futures-util = { workspace = true }
+http = { workspace = true }
+jsonwebtoken = { workspace = true }
+reqwest = { workspace = true }
+rustls = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_urlencoded = { workspace = true }
+smart-default = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+webpki-roots = { workspace = true }
 
-regex = { version = "1.12", default-features = false, features = ["std"], optional = true }
-scraper = { version = "0.27", optional = true }
-tower-service = { version = "0.3", optional = true }
+crunchyroll-rs-internal = { workspace = true }
+
+regex = { workspace = true, optional = true }
+scraper = { workspace = true, optional = true }
+tower-service = { workspace = true, optional = true }
 
 [dev-dependencies]
-anyhow = "1.0"
-rand = "0.10"
-tokio = { version = "1.52", features = ["macros", "rt", "rt-multi-thread"] }
+anyhow = { workspace = true }
+rand = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 
 [features]
 default = ["parse"]

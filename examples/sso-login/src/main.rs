@@ -1,5 +1,5 @@
 use crunchyroll_rs::Crunchyroll;
-use crunchyroll_rs::crunchyroll::{DeviceIdentifier, DevicePlatform};
+use crunchyroll_rs::auth::{DeviceIdentifier, DevicePlatform};
 use http::Request;
 use reqwest::Url;
 use std::borrow::Cow;
@@ -17,8 +17,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let app_credentials =
-        crunchyroll_rs::crunchyroll::app_credentials::get_app_credentials().await?;
+    let app_credentials = crunchyroll_rs::auth::app_credentials::get_app_credentials().await?;
 
     let sso_credentials =
         get_sso_login_credentials_via_webview(&app_credentials.android_phone.client_id)?;

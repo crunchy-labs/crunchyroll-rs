@@ -13,7 +13,7 @@ include = ["/Cargo.toml", "/LICENSE-APACHE", "/LICENSE-MIT", "/src/**"]
 proc-macro = true
 
 [dependencies]
-darling = "0.24"
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "3.0", features = ["full"] }
+darling = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }
