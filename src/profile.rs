@@ -1,10 +1,17 @@
 //! Multiprofiles.
 
-use crate::crunchyroll::MaturityRating;
-use crate::{Crunchyroll, Executor, Locale, Request, Result, options};
+use crate::{Crunchyroll, Executor, Locale, Request, Result, enum_values, options};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
+
+enum_values! {
+    /// Maturity rating.
+    pub enum MaturityRating {
+        NotMature = "M2"
+        Mature = "M3"
+    }
+}
 
 options! {
     /// Preferences which profile details should be updates.

@@ -143,6 +143,7 @@ pub mod devices;
 pub mod error;
 pub mod feed;
 pub mod list;
+pub mod locale;
 pub mod media;
 #[cfg(feature = "middleware")]
 #[cfg_attr(docsrs, doc(cfg(feature = "middleware")))]
@@ -158,6 +159,7 @@ pub mod release_calendar;
 pub mod search;
 
 // internal
+mod auth;
 mod internal;
 
 // internal
@@ -167,8 +169,9 @@ pub(crate) use error::Result;
 pub(crate) use internal::macros::{enum_values, options};
 pub(crate) use internal::serde::EmptyJsonProxy;
 
-pub use crunchyroll::{Crunchyroll, Locale};
+pub use crunchyroll::Crunchyroll;
 pub use error::Error;
+pub use locale::Locale;
 pub use media::{
     Artist, Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
 };
