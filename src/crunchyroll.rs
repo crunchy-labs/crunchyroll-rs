@@ -154,17 +154,16 @@ impl Crunchyroll {
         self.executor.details.device_identifier.clone()
     }
 
-    /// Return the stream platform for the current session. This is the platform that was
+    /// Return the platform for the current session. This is the platform that was
     /// configured via [`CrunchyrollBuilder::platform`].
-    pub fn stream_platform(&self) -> StreamPlatform {
-        self.executor.details.stream_platform.clone()
+    pub fn device_platform(&self) -> DevicePlatform {
+        self.executor.details.device_platform.clone()
     }
 }
 
 mod auth {
-    use crate::error::{Error, ErrorKind, check_request};
-    use crate::media::StreamPlatform;
-    use crate::{Crunchyroll, Locale, Request, Result};
+    use crate::error::{Error, ErrorKind, Result, check_request};
+    use crate::{Crunchyroll, Locale, Request};
     use chrono::{DateTime, Duration, Utc};
     use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
     use reqwest::{Client, ClientBuilder, IntoUrl, RequestBuilder, header};
@@ -173,6 +172,46 @@ mod auth {
     use std::ops::Add;
     use std::sync::Arc;
     use tokio::sync::RwLock;
+
+    pub mod auth_credentials {
+        use serde::Deserialize;
+
+        #[derive(Deserialize)]
+        pub struct PredefinedCredentialsPlatform {
+            pub client_id: String,
+            pub client_secret: String,
+            pub basic_auth_token: String,
+            pub version: String,
+            pub version_code: String,
+        }
+
+        #[derive(Deserialize)]
+        pub struct PredefinedCredentials {
+            pub android_phone: PredefinedCredentialsPlatform,
+            pub android_tv: PredefinedCredentialsPlatform,
+        }
+
+        impl PredefinedCredentials {
+            pub fn predefined_android_phone_user_agent(&self) -> String {
+                format!(
+                    "Crunchyroll/{} Android/11 okhttp/5.3.2",
+                    self.android_phone.version
+                )
+            }
+
+            pub fn predefined_android_tv_user_agent(&self) -> String {
+                format!(
+                    "Crunchyroll/ANDROIDTV/{}_{} (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)",
+                    self.android_tv.version, self.android_tv.version_code
+                )
+            }
+        }
+
+        pub(super) const PREDEFINED_CREDENTIALS_URL: &str = "https://raw.githubusercontent.com/crunchy-labs/artifacts/refs/heads/main/credentials.json";
+        pub async fn get_predefined_credentials() -> Result<PredefinedCredentials, reqwest::Error> {
+            reqwest::get(PREDEFINED_CREDENTIALS_URL).await?.json().await
+        }
+    }
 
     /// Stores if the refresh token or etp-rt cookie was used for login. Extract the token and use
     /// it as argument in their associated function ([`CrunchyrollBuilder::login_with_refresh_token`]
@@ -228,6 +267,55 @@ mod auth {
         profile_id: Option<String>,
     }
 
+    struct ResolvedCrunchyrollBuilder {
+        client: Client,
+        locale: Locale,
+        preferred_audio_locale: Option<Locale>,
+
+        device_platform: DevicePlatform,
+        basic_auth_token: String,
+
+        #[cfg(feature = "middleware")]
+        middleware: Option<tokio::sync::Mutex<crate::internal::middleware::Middleware>>,
+        #[cfg(feature = "experimental-stabilizations")]
+        fixes: ExecutorFixes,
+    }
+
+    impl ResolvedCrunchyrollBuilder {
+        fn build(
+            self,
+            login_response: AuthResponse,
+            session_token: SessionToken,
+            device_identifier: DeviceIdentifier,
+        ) -> Crunchyroll {
+            Crunchyroll {
+                executor: Arc::new(Executor {
+                    client: self.client,
+                    session: RwLock::new(ExecutorSession {
+                        token_type: login_response.token_type,
+                        access_token: login_response.access_token,
+                        session_token,
+                        session_expire: Utc::now()
+                            .add(Duration::try_seconds(login_response.expires_in as i64).unwrap()),
+                    }),
+                    details: ExecutorDetails {
+                        locale: self.locale,
+                        preferred_audio_locale: self.preferred_audio_locale,
+                        device_identifier,
+                        device_platform: self.device_platform,
+                        basic_auth_token: self.basic_auth_token,
+
+                        account_id: login_response.account_id,
+                    },
+                    #[cfg(feature = "middleware")]
+                    middleware: self.middleware,
+                    #[cfg(feature = "experimental-stabilizations")]
+                    fixes: self.fixes,
+                }),
+            }
+        }
+    }
+
     #[derive(Clone, Debug)]
     pub(crate) struct ExecutorSession {
         pub(crate) token_type: String,
@@ -242,7 +330,7 @@ mod auth {
         pub(crate) locale: Locale,
         pub(crate) preferred_audio_locale: Option<Locale>,
         pub(crate) device_identifier: DeviceIdentifier,
-        pub(crate) stream_platform: StreamPlatform,
+        pub(crate) device_platform: DevicePlatform,
         pub(crate) basic_auth_token: String,
 
         /// The account id is wrapped in a [`Option`] since [`Executor::auth_anonymously`] /
@@ -673,8 +761,8 @@ mod auth {
                     locale: Default::default(),
                     preferred_audio_locale: None,
                     device_identifier: DeviceIdentifier::default(),
-                    stream_platform: Default::default(),
-                    basic_auth_token: CrunchyrollBuilder::ANDROID_TV_BASIC_AUTH_TOKEN.to_string(),
+                    device_platform: Default::default(),
+                    basic_auth_token: "".to_string(),
                     account_id: None,
                 },
                 #[cfg(feature = "middleware")]
@@ -784,14 +872,49 @@ mod auth {
         }
     }
 
+    /// Platforms that can request a [`Stream`]. Because not all platforms have their own variant, use
+    /// [`DevicePlatform::Custom`] to define one.
+    #[derive(Clone, Debug, Default, Deserialize, Serialize)]
+    pub enum DevicePlatform {
+        AndroidPhone,
+        AndroidTablet,
+        ConsolePs4,
+        ConsolePs5,
+        ConsoleSwitch,
+        ConsoleXboxOne,
+        IosIpad,
+        IosIphone,
+        IosVision,
+        #[default]
+        TvAndroid,
+        TvRoku,
+        TvSamsung,
+        TvLg,
+        WebChrome,
+        WebEdge,
+        WebFirefox,
+        WebSafari,
+        Custom {
+            /// A device, e.g. `tv` or `web`.
+            device: String,
+            /// A platform, e.g. `roku` or `chrome`.
+            platform: String,
+        },
+    }
+
+    struct CrunchyrollBuilderSessionDetails {
+        device_platform: DevicePlatform,
+        basic_auth_token: String,
+        user_agent: Option<String>,
+    }
+
     /// A builder to construct a new [`Crunchyroll`] instance. To create it, call
     /// [`Crunchyroll::builder`].
     pub struct CrunchyrollBuilder {
-        client: Client,
+        client: Option<Client>,
         locale: Locale,
         preferred_audio_locale: Option<Locale>,
-        stream_platform: StreamPlatform,
-        basic_auth_token: String,
+        session_details: Option<CrunchyrollBuilderSessionDetails>,
 
         #[cfg(feature = "middleware")]
         middleware: Option<tokio::sync::Mutex<crate::internal::middleware::Middleware>>,
@@ -802,13 +925,10 @@ mod auth {
     impl Default for CrunchyrollBuilder {
         fn default() -> Self {
             Self {
-                client: CrunchyrollBuilder::predefined_client_builder()
-                    .build()
-                    .unwrap(),
+                client: None,
                 locale: Locale::en_US,
                 preferred_audio_locale: None,
-                stream_platform: StreamPlatform::default(),
-                basic_auth_token: CrunchyrollBuilder::ANDROID_TV_BASIC_AUTH_TOKEN.to_string(),
+                session_details: None,
                 #[cfg(feature = "middleware")]
                 middleware: None,
                 #[cfg(feature = "experimental-stabilizations")]
@@ -821,23 +941,7 @@ mod auth {
     }
 
     impl CrunchyrollBuilder {
-        /// The default basic auth token bundled with this crate. It is valid for
-        /// [`StreamPlatform::TvAndroid`] and is what the builder uses if
-        /// [`CrunchyrollBuilder::platform`] is never called.
-        ///
-        /// Crunchyroll rotates basic auth tokens from time to time; this constant is kept
-        /// up-to-date by this crate but may still become invalid between releases. If logins
-        /// start to fail, you may need to supply a fresh token via [`CrunchyrollBuilder::platform`].
-        #[rustfmt::skip] // for scripts that may fetch this
-        pub const ANDROID_TV_BASIC_AUTH_TOKEN: &'static str = "dng1bThwOWZzYm16em15bnZnemo6Q2NjNXp6UkNxTDgtNWpVTDdJZFJRODU2Z0l6WlVZVk0=";
-        #[rustfmt::skip] // for scripts that may fetch this
-        pub const ANDROID_TV_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.71.0_22359 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
-
-        pub const ANDROID_TV_DEFAULT_HEADERS: [(HeaderName, HeaderValue); 4] = [
-            (
-                header::USER_AGENT,
-                HeaderValue::from_static(CrunchyrollBuilder::ANDROID_TV_USER_AGENT),
-            ),
+        pub const ANDROID_TV_DEFAULT_HEADERS: [(HeaderName, HeaderValue); 3] = [
             (header::ACCEPT, HeaderValue::from_static("*/*")),
             (
                 header::ACCEPT_LANGUAGE,
@@ -882,7 +986,7 @@ mod auth {
         /// [`CrunchyrollBuilder::predefined_client_builder`] as base as it has some configurations
         /// which may be needed to make successful requests to Crunchyroll.
         pub fn client(mut self, client: Client) -> CrunchyrollBuilder {
-            self.client = client;
+            self.client = Some(client);
             self
         }
 
@@ -909,25 +1013,25 @@ mod auth {
 
         /// Sets the platform for which a session should be issued for.
         ///
-        /// The two arguments belong together: a basic auth token is only valid for the stream
-        /// platform it was issued for. For example, the basic auth token bundled with the Android
-        /// phone app is only valid for [`StreamPlatform::AndroidPhone`]; using it with any other
-        /// platform (e.g. [`StreamPlatform::TvAndroid`]) will cause stream requests to fail with an
-        /// error.
+        /// The three arguments belong together: a basic auth token is only valid for the platform
+        /// it was issued for and the user agent must almost always represent the platform too.
+        /// For example, the basic auth token bundled with the Android phone app is only valid for
+        /// [`DevicePlatform::AndroidPhone`]; using it with any other
+        /// platform (e.g. [`DevicePlatform::TvAndroid`]) will cause stream requests to fail with an error.
         ///
         /// The user agent should match the stream platform as well, otherwise requests may fail. To
         /// use a custom user agent, build a client with
         /// [`CrunchyrollBuilder::predefined_client_builder`], update the user agent header, and
         /// pass the client via [`CrunchyrollBuilder::client`].
         ///
-        /// Crunchyroll rotates the basic auth tokens from time to time, which will result in
-        /// failing logins. This crate tries to keep the bundled default token
-        /// ([`CrunchyrollBuilder::ANDROID_TV_BASIC_AUTH_TOKEN`], valid for
-        /// [`StreamPlatform::TvAndroid`]) up-to-date and pushes updates as soon as a new token is
-        /// available, but this doesn't always work. If the login fails with the bundled token, or
-        /// if you need a token for a platform that is not bundled, you have to obtain one yourself.
-        /// The [crunchyroll-scripts](https://github.com/crunchy-labs/crunchyroll-scripts)
-        /// repository contains tools to extract tokens.
+        /// Crunchyroll rotates the basic auth tokens from time to time, which would result in
+        /// failed logins if those auth tokens aren't also changed in this crate. To prevent this
+        /// issue, the auth token and user agent are fetched dynamically from
+        /// [crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts).
+        /// This happens every time you login. It's strongly advised that you implement the fetching
+        /// process yourself, and use some sort of caching. You can use
+        /// [`auth_credentials::get_predefined_credentials`] to get the credentials from the
+        /// crunchy-labs/artifacts GitHub repo, or implement it completely yourself.
         ///
         /// Not every login method is available with every basic auth token. For example, the
         /// Android phone basic auth token only supports
@@ -935,11 +1039,15 @@ mod auth {
         /// [`CrunchyrollBuilder::login_with_credentials`] will be rejected.
         pub fn platform(
             mut self,
-            stream_platform: StreamPlatform,
+            device_platform: DevicePlatform,
             basic_auth_token: String,
+            user_agent: Option<String>,
         ) -> CrunchyrollBuilder {
-            self.stream_platform = stream_platform;
-            self.basic_auth_token = basic_auth_token.to_string();
+            self.session_details = Some(CrunchyrollBuilderSessionDetails {
+                device_platform,
+                basic_auth_token,
+                user_agent,
+            });
             self
         }
 
@@ -997,19 +1105,18 @@ mod auth {
             self,
             device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
-            self.pre_login().await?;
+            let resolved = self.resolve().await?;
 
             let login_response = Executor::auth_anonymously(
-                &self.client,
+                &resolved.client,
                 &device_identifier,
                 #[cfg(feature = "middleware")]
-                self.middleware.as_ref(),
+                resolved.middleware.as_ref(),
             )
             .await?;
             let session_token = SessionToken::Anonymous;
 
-            self.post_login(login_response, session_token, device_identifier)
-                .await
+            Ok(resolved.build(login_response, session_token, device_identifier))
         }
 
         /// Logs in with credentials (email and password) and returns a new [`Crunchyroll`] instance.
@@ -1026,23 +1133,22 @@ mod auth {
             password: S,
             device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
-            self.pre_login().await?;
+            let resolved = self.resolve().await?;
 
             let login_response = Executor::auth_with_credentials(
-                &self.client,
+                &resolved.client,
                 email.as_ref(),
                 password.as_ref(),
                 &device_identifier,
-                &self.basic_auth_token,
+                &resolved.basic_auth_token,
                 #[cfg(feature = "middleware")]
-                self.middleware.as_ref(),
+                resolved.middleware.as_ref(),
             )
             .await?;
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(login_response, session_token, device_identifier)
-                .await
+            Ok(resolved.build(login_response, session_token, device_identifier))
         }
 
         /// Logs in with a refresh token. This token is obtained when logging in with
@@ -1060,22 +1166,21 @@ mod auth {
             refresh_token: S,
             device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
-            self.pre_login().await?;
+            let resolved = self.resolve().await?;
 
             let login_response = Executor::auth_with_refresh_token(
-                &self.client,
+                &resolved.client,
                 refresh_token.as_ref(),
                 &device_identifier,
-                &self.basic_auth_token,
+                &resolved.basic_auth_token,
                 #[cfg(feature = "middleware")]
-                self.middleware.as_ref(),
+                resolved.middleware.as_ref(),
             )
             .await?;
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(login_response, session_token, device_identifier)
-                .await
+            Ok(resolved.build(login_response, session_token, device_identifier))
         }
 
         /// Just like [`CrunchyrollBuilder::login_with_refresh_token`] but with the addition that
@@ -1094,23 +1199,22 @@ mod auth {
             profile_id: S,
             device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
-            self.pre_login().await?;
+            let resolved = self.resolve().await?;
 
             let login_response = Executor::auth_with_refresh_token_profile_id(
-                &self.client,
+                &resolved.client,
                 refresh_token.as_ref(),
                 profile_id.as_ref(),
                 &device_identifier,
-                &self.basic_auth_token,
+                &resolved.basic_auth_token,
                 #[cfg(feature = "middleware")]
-                self.middleware.as_ref(),
+                resolved.middleware.as_ref(),
             )
             .await?;
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(login_response, session_token, device_identifier)
-                .await
+            Ok(resolved.build(login_response, session_token, device_identifier))
         }
 
         /// Logs in with the `etp_rt` cookie that is generated when logging in with the browser and
@@ -1118,7 +1222,7 @@ mod auth {
         /// `etp_rt` cookie from your browser.
         ///
         /// This method uses a hardcoded basic auth token which is independent of the one set
-        /// via [`CrunchyrollBuilder::platform`]. The [`StreamPlatform`] configured via
+        /// via [`CrunchyrollBuilder::platform`]. The [`DevicePlatform`] configured via
         /// [`CrunchyrollBuilder::platform`] does still apply.
         ///
         /// *Note*: You need to set the `device_identifier` to the same identifier which were used
@@ -1128,20 +1232,19 @@ mod auth {
             etp_rt: S,
             device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
-            self.pre_login().await?;
+            let resolved = self.resolve().await?;
 
             let login_response = Executor::auth_with_etp_rt(
-                &self.client,
+                &resolved.client,
                 etp_rt.as_ref(),
                 &device_identifier,
                 #[cfg(feature = "middleware")]
-                self.middleware.as_ref(),
+                resolved.middleware.as_ref(),
             )
             .await?;
             let session_token = SessionToken::EtpRt(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(login_response, session_token, device_identifier)
-                .await
+            Ok(resolved.build(login_response, session_token, device_identifier))
         }
 
         /// Log in with an OAuth authorization code and matching `code_verifier`, as returned by
@@ -1155,69 +1258,79 @@ mod auth {
             code_verifier: S,
             device_identifier: DeviceIdentifier,
         ) -> Result<Crunchyroll> {
-            self.pre_login().await?;
+            let resolved = self.resolve().await?;
 
             let login_response = Executor::auth_with_oauth_code(
-                &self.client,
+                &resolved.client,
                 code.as_ref(),
                 code_verifier.as_ref(),
                 &device_identifier,
-                &self.basic_auth_token,
+                &resolved.basic_auth_token,
                 #[cfg(feature = "middleware")]
-                self.middleware.as_ref(),
+                resolved.middleware.as_ref(),
             )
             .await?;
             let session_token =
                 SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
 
-            self.post_login(login_response, session_token, device_identifier)
-                .await
+            Ok(resolved.build(login_response, session_token, device_identifier))
         }
 
-        async fn pre_login(&self) -> Result<()> {
-            // Request the index page to set cookies which are required to bypass the cloudflare bot
-            // check
-            self.client
-                .get("https://www.crunchyroll.com")
-                .send()
-                .await?;
-            Ok(())
-        }
+        async fn resolve(self) -> Result<ResolvedCrunchyrollBuilder> {
+            let session_details = match self.session_details {
+                Some(session_details) => session_details,
+                // fetch default credentials and set them
+                None => {
+                    let predefined_credentials = match auth_credentials::get_predefined_credentials(
+                    )
+                    .await
+                    {
+                        Ok(predefined_credentials) => predefined_credentials,
+                        Err(e) => {
+                            return Err(Error::from(e).update_msg(|err| {
+                                let message = format!("Error while fetching predefined session credentials. This is most likely a GitHub issue. Check if GitHub is down and/or {} is available. You may use `CrunchyrollBuilder::platform` to override the credentials", auth_credentials::PREDEFINED_CREDENTIALS_URL);
+                                Some(match err {
+                                    Some(msg) => format!("{msg}: {message}"),
+                                    None => message,
+                                })
+                            }));
+                        }
+                    };
 
-        async fn post_login(
-            self,
-            login_response: AuthResponse,
-            session_token: SessionToken,
-            device_identifier: DeviceIdentifier,
-        ) -> Result<Crunchyroll> {
-            let crunchy = Crunchyroll {
-                executor: Arc::new(Executor {
-                    client: self.client,
-
-                    session: RwLock::new(ExecutorSession {
-                        token_type: login_response.token_type,
-                        access_token: login_response.access_token,
-                        session_token,
-                        session_expire: Utc::now()
-                            .add(Duration::try_seconds(login_response.expires_in as i64).unwrap()),
-                    }),
-                    details: ExecutorDetails {
-                        locale: self.locale,
-                        preferred_audio_locale: self.preferred_audio_locale,
-                        device_identifier,
-                        stream_platform: self.stream_platform,
-                        basic_auth_token: self.basic_auth_token,
-
-                        account_id: login_response.account_id,
-                    },
-                    #[cfg(feature = "middleware")]
-                    middleware: self.middleware,
-                    #[cfg(feature = "experimental-stabilizations")]
-                    fixes: self.fixes,
-                }),
+                    CrunchyrollBuilderSessionDetails {
+                        device_platform: DevicePlatform::TvAndroid,
+                        user_agent: Some(predefined_credentials.predefined_android_tv_user_agent()),
+                        basic_auth_token: predefined_credentials.android_tv.basic_auth_token,
+                    }
+                }
             };
 
-            Ok(crunchy)
+            let client = match self.client {
+                Some(client) => client,
+                None => {
+                    let mut client_builder = Self::predefined_client_builder();
+                    if let Some(user_agent) = session_details.user_agent {
+                        client_builder = client_builder.user_agent(user_agent.clone())
+                    }
+                    client_builder.build().unwrap()
+                }
+            };
+
+            // Request the index page to set cookies which are required to bypass the cloudflare bot
+            // check
+            client.get("https://www.crunchyroll.com").send().await?;
+
+            Ok(ResolvedCrunchyrollBuilder {
+                client,
+                locale: self.locale,
+                preferred_audio_locale: self.preferred_audio_locale,
+                device_platform: session_details.device_platform,
+                basic_auth_token: session_details.basic_auth_token,
+                #[cfg(feature = "middleware")]
+                middleware: self.middleware,
+                #[cfg(feature = "experimental-stabilizations")]
+                fixes: self.fixes,
+            })
         }
     }
 
@@ -1312,6 +1425,7 @@ mod auth {
     }
 }
 
-use crate::media::StreamPlatform;
 pub(crate) use auth::Executor;
-pub use auth::{CrunchyrollBuilder, DeviceIdentifier, SessionToken};
+pub use auth::{
+    CrunchyrollBuilder, DeviceIdentifier, DevicePlatform, SessionToken, auth_credentials,
+};

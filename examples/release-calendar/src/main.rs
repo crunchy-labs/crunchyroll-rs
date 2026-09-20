@@ -30,7 +30,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     for release in releases_today {
         println!(
             "  {} => {}; Episode {} ({})",
-            release.release_time, release.season_title, release.episode_number, release.episode_title
+            release.release_time,
+            release.season_title,
+            release.episode_number,
+            release.episode_title
         )
     }
 

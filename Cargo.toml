@@ -21,7 +21,7 @@ repository.workspace = true
 license.workspace = true
 
 [workspace]
-members = ["internal"]
+members = [".", "internal", "examples/*"]
 
 [workspace.package]
 # increase version of 'crunchyroll-rs-internal' dependency when updating

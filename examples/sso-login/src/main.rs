@@ -1,6 +1,5 @@
 use crunchyroll_rs::Crunchyroll;
-use crunchyroll_rs::crunchyroll::{CrunchyrollBuilder, DeviceIdentifier};
-use crunchyroll_rs::media::StreamPlatform;
+use crunchyroll_rs::crunchyroll::{DeviceIdentifier, DevicePlatform};
 use http::Request;
 use reqwest::Url;
 use std::borrow::Cow;
@@ -14,33 +13,29 @@ use tao::window::WindowBuilder;
 use uuid::Uuid;
 use wry::{WebViewBuilder, WebViewBuilderExtUnix, WebViewId};
 
-#[rustfmt::skip] // for scripts that may fetch this
-const ANDROID_PHONE_BASIC_AUTH: &str = "ZWhldHBwZWl0dndnY2JnN21waWc6QklkSXM5Njlib0U1SWhGQ2ZyRU92VUxiVTJqcjg0QUw=";
-#[rustfmt::skip] // for scripts that may fetch this
-const ANDROID_PHONE_SSO_CLIENT_ID: &str = "ehetppeitvwgcbg7mpig";
-#[rustfmt::skip] // for scripts that may fetch this
-const ANDROID_PHONE_USER_AGENT: &str = "Crunchyroll/3.120.1 Android/11 okhttp/5.3.2";
-
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let sso_credentials = get_sso_login_credentials_via_webview(ANDROID_PHONE_SSO_CLIENT_ID)?;
+    let predefined_credentials =
+        crunchyroll_rs::crunchyroll::auth_credentials::get_predefined_credentials().await?;
+
+    let sso_credentials =
+        get_sso_login_credentials_via_webview(&predefined_credentials.android_phone.client_id)?;
 
     let device_identifier = DeviceIdentifier {
         device_type: "ANDROID".to_string(),
         ..Default::default()
     };
 
-    let client = CrunchyrollBuilder::predefined_client_builder()
-        .user_agent(ANDROID_PHONE_USER_AGENT)
-        .build()?;
-
     let _crunchyroll = Crunchyroll::builder()
-        .client(client)
         .platform(
-            StreamPlatform::AndroidPhone,
-            ANDROID_PHONE_BASIC_AUTH.to_string(),
+            DevicePlatform::AndroidPhone,
+            predefined_credentials
+                .android_phone
+                .basic_auth_token
+                .clone(),
+            Some(predefined_credentials.predefined_android_phone_user_agent()),
         )
         .login_with_oauth_code(
             sso_credentials.code,

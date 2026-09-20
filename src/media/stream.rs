@@ -1,3 +1,4 @@
+use crate::crunchyroll::DevicePlatform;
 use crate::error::{Error, ErrorKind, is_request_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use byteorder::{BigEndian, ReadBytesExt};
@@ -15,36 +16,6 @@ use std::ops::Not;
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
-/// Platforms that can request a [`Stream`]. Because not all platforms have their own variant, use
-/// [`StreamPlatform::Custom`] to define one.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub enum StreamPlatform {
-    AndroidPhone,
-    AndroidTablet,
-    ConsolePs4,
-    ConsolePs5,
-    ConsoleSwitch,
-    ConsoleXboxOne,
-    IosIpad,
-    IosIphone,
-    IosVision,
-    #[default]
-    TvAndroid,
-    TvRoku,
-    TvSamsung,
-    TvLg,
-    WebChrome,
-    WebEdge,
-    WebFirefox,
-    WebSafari,
-    Custom {
-        /// A device, e.g. `tv` or `web`.
-        device: String,
-        /// A platform, e.g. `roku` or `chrome`.
-        platform: String,
-    },
-}
-
 #[allow(dead_code)]
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
 #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
@@ -53,7 +24,7 @@ pub struct StreamVersion {
     #[serde(skip)]
     pub(crate) executor: Arc<Executor>,
     #[serde(skip)]
-    platform: StreamPlatform,
+    device_platform: DevicePlatform,
     #[serde(skip)]
     optional_media_type: Option<String>,
 
@@ -90,7 +61,7 @@ impl StreamVersion {
                 executor: self.executor.clone(),
             },
             &self.id,
-            &self.platform,
+            &self.device_platform,
         )
         .await
     }
@@ -179,27 +150,27 @@ impl Stream {
     pub async fn from_id(
         crunchyroll: &Crunchyroll,
         id: impl AsRef<str>,
-        stream_platform: &StreamPlatform,
+        device_platform: &DevicePlatform,
     ) -> Result<Self> {
-        let (device, platform) = match &stream_platform {
-            StreamPlatform::AndroidPhone => ("android", "phone"),
-            StreamPlatform::AndroidTablet => ("android", "tablet"),
-            StreamPlatform::ConsolePs4 => ("console", "ps4"),
-            StreamPlatform::ConsolePs5 => ("console", "ps5"),
-            StreamPlatform::ConsoleSwitch => ("console", "switch"),
-            StreamPlatform::ConsoleXboxOne => ("console", "xbox_one"),
-            StreamPlatform::IosIpad => ("ios", "ipad"),
-            StreamPlatform::IosIphone => ("ios", "iphone"),
-            StreamPlatform::IosVision => ("ios", "vision"),
-            StreamPlatform::TvAndroid => ("tv", "android_tv"),
-            StreamPlatform::TvRoku => ("tv", "roku"),
-            StreamPlatform::TvSamsung => ("tv", "samsung"),
-            StreamPlatform::TvLg => ("tv", "lg"),
-            StreamPlatform::WebChrome => ("web", "chrome"),
-            StreamPlatform::WebEdge => ("web", "edge"),
-            StreamPlatform::WebFirefox => ("web", "firefox"),
-            StreamPlatform::WebSafari => ("web", "safari"),
-            StreamPlatform::Custom { device, platform } => (device.as_str(), platform.as_str()),
+        let (device, platform) = match &device_platform {
+            DevicePlatform::AndroidPhone => ("android", "phone"),
+            DevicePlatform::AndroidTablet => ("android", "tablet"),
+            DevicePlatform::ConsolePs4 => ("console", "ps4"),
+            DevicePlatform::ConsolePs5 => ("console", "ps5"),
+            DevicePlatform::ConsoleSwitch => ("console", "switch"),
+            DevicePlatform::ConsoleXboxOne => ("console", "xbox_one"),
+            DevicePlatform::IosIpad => ("ios", "ipad"),
+            DevicePlatform::IosIphone => ("ios", "iphone"),
+            DevicePlatform::IosVision => ("ios", "vision"),
+            DevicePlatform::TvAndroid => ("tv", "android_tv"),
+            DevicePlatform::TvRoku => ("tv", "roku"),
+            DevicePlatform::TvSamsung => ("tv", "samsung"),
+            DevicePlatform::TvLg => ("tv", "lg"),
+            DevicePlatform::WebChrome => ("web", "chrome"),
+            DevicePlatform::WebEdge => ("web", "edge"),
+            DevicePlatform::WebFirefox => ("web", "firefox"),
+            DevicePlatform::WebSafari => ("web", "safari"),
+            DevicePlatform::Custom { device, platform } => (device.as_str(), platform.as_str()),
         };
 
         let endpoint = format!(
@@ -244,7 +215,7 @@ impl Stream {
                         if status.is_some_and(|s| {
                             s == 400 && e.to_string().starts_with("error 40016")
                         }) => {
-                        Err(e.update_msg(|msg| msg.map(|msg| msg + " - This probably means that a custom platform was set and the provided basic auth token is wrong, or the default basic auth token is outdated (if this is the case, check if the library is up-to-date)")))
+                        Err(e.update_msg(|msg| msg.map(|msg| msg + " - This probably means that a custom platform was set and the provided basic auth token is wrong, or the default basic auth token is outdated")))
                     }
                     _ => Err(e),
                 };
@@ -254,7 +225,7 @@ impl Stream {
         stream.id = id.as_ref().to_string();
 
         for version in &mut stream.versions {
-            version.platform = stream_platform.clone();
+            version.device_platform = device_platform.clone();
         }
 
         Ok(stream)
