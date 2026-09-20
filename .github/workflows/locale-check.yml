@@ -1,0 +1,82 @@
+name: locale-check
+
+on:
+  schedule:
+    - cron: "0 0 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Fetch api language configs
+        run: |
+          curl -fsSL https://static.crunchyroll.com/config/i18n/v3/audio_languages.json -o audio_languages.json
+          curl -fsSL https://static.crunchyroll.com/config/i18n/v3/timed_text_languages.json -o timed_text_languages.json
+
+      # merge both api results into one and extract their keys
+      - name: Merge api locales
+        run: jq -r 'keys[]' audio_languages.json timed_text_languages.json | LC_ALL=C sort -u > api_locales.txt
+
+      # extract the locale codes of all `Locale` variants, e.g. `ar_SA = "ar-SA"`
+      - name: Extract locales from `Locale`
+        run: grep -oP '^\s*\w+\s*=\s*"\K[^"]+' src/locale.rs | LC_ALL=C sort -u > locale_locales.txt
+
+      - name: Compare locales
+        id: diff
+        run: |
+          # Anime are inherently in japanese, and thus Crunchyroll doesn't extra list it as language
+          locales_that_can_be_missing_in_api=("ja-JP")
+
+          missing_in_locale=$(comm -13 locale_locales.txt api_locales.txt)
+          missing_in_api=$(comm -23 locale_locales.txt api_locales.txt)
+          for locale in "${locales_that_can_be_missing_in_api[@]}"; do
+            missing_in_api=$(grep -vx "$locale" <<< "$missing_in_api" || true)
+          done
+
+          if [ -z "$missing_in_locale" ] && [ -z "$missing_in_api" ]; then
+            echo "in-sync=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          {
+            echo "body<<EOF"
+            echo "The \`Locale\` enum is out of sync with the Crunchyroll provided locales."
+            echo
+            if [ -n "$missing_in_locale" ]; then
+              echo "**Missing in \`Locale\`** (present in the api results):"
+              echo
+              sed 's/^/- /' <<< "$missing_in_locale"
+              echo
+            fi
+            if [ -n "$missing_in_api" ]; then
+              echo "**No longer in the api results** (present in \`Locale\`):"
+              echo
+              sed 's/^/- /' <<< "$missing_in_api"
+              echo
+            fi
+            echo "Sources:"
+            echo "- https://static.crunchyroll.com/config/i18n/v3/audio_languages.json"
+            echo "- https://static.crunchyroll.com/config/i18n/v3/timed_text_languages.json"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create issue
+        if: steps.diff.outputs.in-sync != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ steps.diff.outputs.body }}
+        run: |
+          gh issue create \
+            --title "[automatic] Locale update" \
+            --body "$BODY"
+          fi
+
+          exit 1
