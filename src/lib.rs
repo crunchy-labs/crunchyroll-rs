@@ -31,12 +31,12 @@
 //! ```
 //!
 //! To issue sessions, credentials like the basic auth token and user agent of a Crunchyroll app are
-//! needed. By default, they are fetched dynamically from the
-//! [crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts) repository every time a new
-//! session is created. It's **strongly** advised to implement the fetching process yourself with
-//! some sort of caching. You can use [`auth::platform_credentials::get_platform_credentials`] to
-//! get the credentials, and pass them via [`auth::CrunchyrollBuilder::platform`], or implement it
-//! completely yourself.
+//! needed. By default, sessions are issued with the basic auth token and user agent of the android
+//! tv app, which are bundled with the library. Since Crunchyroll rotates these credentials
+//! regularly, they are kept up to date by a scheduled action. If you want to issue sessions for
+//! another platform, fetch the credentials yourself via
+//! [`auth::platform_credentials::get_platform_credentials`] — it's **strongly** advised to do this
+//! with some sort of caching — and pass them via [`auth::CrunchyrollBuilder::platform`].
 //!
 //! ## Request media
 //!

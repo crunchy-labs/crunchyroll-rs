@@ -46,7 +46,11 @@ pub(super) const PLATFORM_CREDENTIALS_URL: &str =
     "https://raw.githubusercontent.com/crunchy-labs/artifacts/refs/heads/main/credentials.json";
 
 /// Fetches the credentials of some Crunchyroll apps from the
-/// [crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts) GitHub repository.
+/// [crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts) GitHub repository. They
+/// are needed to issue sessions for platforms whose credentials are not bundled with the
+/// library, like [`crate::auth::DevicePlatform::AndroidPhone`]. It's **strongly** advised to
+/// implement the fetching with some sort of caching, so that the credentials are not fetched
+/// on every login.
 pub async fn get_platform_credentials() -> Result<PlatformCredentials, reqwest::Error> {
     reqwest::get(PLATFORM_CREDENTIALS_URL).await?.json().await
 }

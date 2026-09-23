@@ -3,8 +3,7 @@ use super::login::AuthResponse;
 use super::{DeviceIdentifier, DevicePlatform, SessionToken};
 use crate::Crunchyroll;
 use crate::Locale;
-use crate::auth::platform_credentials;
-use crate::error::{Error, Result};
+use crate::error::Result;
 use chrono::{Duration, Utc};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Client, ClientBuilder, header};
@@ -100,7 +99,22 @@ impl Default for CrunchyrollBuilder {
 }
 
 impl CrunchyrollBuilder {
-    pub const ANDROID_TV_DEFAULT_HEADERS: [(HeaderName, HeaderValue); 3] = [
+    /// The default basic auth token bundled with this crate. It is valid for
+    /// [`DevicePlatform::TvAndroid`] and is what the builder uses if
+    /// [`CrunchyrollBuilder::platform`] is never called.
+    ///
+    /// Crunchyroll rotates basic auth tokens from time to time; this constant is kept
+    /// semi up-to-date by this crate, tokens are only removed if either the old token was invalidated
+    /// or a regular update was made, so it may become invalid for a short period until a new version
+    /// is released. Hence, it's strongly recommended that you provide your own credentials, for example
+    /// via [`CrunchyrollBuilder::platform`] and
+    /// [`crate::auth::platform_credentials::get_platform_credentials`] (with some sort of caching!).
+    #[rustfmt::skip] // for scripts that fetch this
+    pub const ANDROID_TV_BASIC_AUTH_TOKEN: &'static str = "d2Q0cXluNGVxYWJ0Z2Y3cW50cmQ6UFZkY3NwN3V0anM2dEQ3dkhiWHBrX1VVaVdEV18xcjI=";
+    #[rustfmt::skip] // for scripts that fetch this
+    pub const ANDROID_TV_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.72.1_22361 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
+
+    pub const DEFAULT_HEADERS: [(HeaderName, HeaderValue); 3] = [
         (header::ACCEPT, HeaderValue::from_static("*/*")),
         (
             header::ACCEPT_LANGUAGE,
@@ -134,9 +148,7 @@ impl CrunchyrollBuilder {
         Client::builder()
             .https_only(true)
             .cookie_store(true)
-            .default_headers(HeaderMap::from_iter(
-                CrunchyrollBuilder::ANDROID_TV_DEFAULT_HEADERS,
-            ))
+            .default_headers(HeaderMap::from_iter(CrunchyrollBuilder::DEFAULT_HEADERS))
             .use_preconfigured_tls(tls_config)
     }
 
@@ -175,19 +187,17 @@ impl CrunchyrollBuilder {
     /// [`DevicePlatform::AndroidPhone`]; using it with any other platform
     /// (e.g. [`DevicePlatform::TvAndroid`]) will cause stream requests to fail with an error.
     ///
+    /// The basic auth token and user agent of the android tv app (the default platform) are
+    /// bundled with the library. Crunchyroll rotates basic auth tokens from time to time; the
+    /// bundled ones are kept up to date via a scheduled action, but may still become invalid
+    /// between releases. Thus, it's recommended that you fetch the credentials yourself with either
+    /// [`crate::auth::platform_credentials::get_platform_credentials`] and some sort of caching(!)
+    /// or implement it completely yourself.
+    ///
     /// The user agent should match the stream platform as well, otherwise requests may fail. You
     /// can pass the user agent here, but it's only set if you don't override the client via
     /// [`CrunchyrollBuilder::client`]. Either way you should set an user agent, the request will
     /// fail otherwise.
-    ///
-    /// Crunchyroll rotates the basic auth tokens from time to time, which would result in
-    /// failed logins if those auth tokens aren't also changed in this crate. To prevent this
-    /// issue, the auth token and user agent are fetched dynamically from
-    /// [crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts).
-    /// This happens every time you login. It's strongly advised that you implement the fetching
-    /// process yourself, and use some sort of caching. You can use
-    /// [`platform_credentials::get_platform_credentials`] to get the credentials from the
-    /// crunchy-labs/artifacts GitHub repo, or implement it completely yourself.
     ///
     /// Not every login method is available with every basic auth token. For example, the
     /// Android phone basic auth token only supports
@@ -435,29 +445,11 @@ impl CrunchyrollBuilder {
     async fn resolve(self) -> Result<ResolvedCrunchyrollBuilder> {
         let session_details = match self.session_details {
             Some(session_details) => session_details,
-            // fetch default credentials and set them
-            None => {
-                let platform_credentials = match platform_credentials::get_platform_credentials()
-                    .await
-                {
-                    Ok(platform_credentials) => platform_credentials,
-                    Err(e) => {
-                        return Err(Error::from(e).update_msg(|err| {
-                            let message = format!("Error while fetching app credentials. This is most likely a GitHub issue. Check if GitHub is down and/or {} is available. You may use `CrunchyrollBuilder::platform` to override the credentials", platform_credentials::PLATFORM_CREDENTIALS_URL);
-                            Some(match err {
-                                Some(msg) => format!("{msg}: {message}"),
-                                None => message,
-                            })
-                        }));
-                    }
-                };
-
-                CrunchyrollBuilderSessionDetails {
-                    device_platform: DevicePlatform::TvAndroid,
-                    user_agent: Some(platform_credentials.android_tv_user_agent()),
-                    basic_auth_token: platform_credentials.android_tv.basic_auth_token,
-                }
-            }
+            None => CrunchyrollBuilderSessionDetails {
+                device_platform: DevicePlatform::TvAndroid,
+                basic_auth_token: Self::ANDROID_TV_BASIC_AUTH_TOKEN.to_string(),
+                user_agent: Some(Self::ANDROID_TV_USER_AGENT.to_string()),
+            },
         };
 
         let client = match self.client {

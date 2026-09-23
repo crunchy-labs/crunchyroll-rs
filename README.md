@@ -88,10 +88,7 @@ Because we do not monitor the api constantly, so we cannot immediately say when 
 If you find an endpoint which is not implemented or has changes feel free to open a new [issue](https://github.com/crunchy-labs/crunchyroll-rs/issues) and tell us, or fork the library and implement it yourself.
 
 #### API credentials
-To issue sessions, credentials like the basic auth token and user agent of a Crunchyroll app are needed. By default, they are fetched dynamically from the
-[crunchy-labs/artifacts](https://github.com/crunchy-labs/artifacts) repository every time a new session is created. It's **strongly** advised to implement
-the fetching process yourself with some sort of caching. You can use
-`auth::platform_credentials::get_platform_credentials` to get the credentials, and pass them via `CrunchyrollBuilder::platform`, or implement it completely yourself.
+To issue sessions, credentials like the basic auth token and user agent of a Crunchyroll app are needed. By default, sessions are issued with the basic auth token and user agent of the android tv app, which are bundled with the library. Since Crunchyroll rotates these credentials regularly, the bundled creds are kept semi up-to-date by a scheduled action, but there may be cases where the credentials are revoked but the library has no update yet. To prevent this, it's strongly advised that you use fetch the credentials yourself, either with `auth::platform_credentials::get_platform_credentials` and some sort of caching(!), or implement it completely yourself. You can then pass them via `CrunchyrollBuilder::platform`.
 
 #### Cloudflare
 Crunchyroll uses the cloudflare bot protection to detect if requests are made by a human. Obviously this crate makes
