@@ -196,7 +196,7 @@ pub enum ErrorKind {
     },
 }
 
-pub(crate) fn is_request_error<U: AsRef<str>>(
+pub(crate) fn is_structured_error<U: AsRef<str>>(
     value: Value,
     url: U,
     status: &StatusCode,
@@ -232,6 +232,10 @@ pub(crate) fn is_request_error<U: AsRef<str>>(
     let Ok(error_type) = serde_json::from_value::<ErrorType>(value) else {
         return Ok(());
     };
+
+    let mut error_kind = ErrorKind::Request {
+        status: Some(*status),
+    };
     let error_msg = match error_type {
         ErrorType::MessageTypeError { message, r#type } => {
             format!("{type} - {message}")
@@ -244,7 +248,7 @@ pub(crate) fn is_request_error<U: AsRef<str>>(
             let mut msg = if let Some(message) = message {
                 format!("{message} - {code}")
             } else {
-                code
+                code.clone()
             };
             if !context.is_empty() {
                 let details: Vec<String> = context
@@ -253,6 +257,19 @@ pub(crate) fn is_request_error<U: AsRef<str>>(
                     .collect();
                 msg += &format!(": ({})", details.join(", "))
             }
+
+            match code.as_str() {
+                "auth.obtain_access_token.client_inactive" => {
+                    error_kind = ErrorKind::Authentication;
+                    msg += " - Probably the token (and/or user agent) used to issue sessions is wrong or was invalidated by Crunchyroll"
+                }
+                "auth.obtain_access_token.invalid_credentials" => {
+                    error_kind = ErrorKind::Authentication;
+                    msg += " - The login credentials are probably wrong"
+                }
+                _ => (),
+            }
+
             msg
         }
         ErrorType::GenericError { error, other } => {
@@ -268,9 +285,7 @@ pub(crate) fn is_request_error<U: AsRef<str>>(
     };
 
     Err(Error {
-        kind: ErrorKind::Request {
-            status: Some(*status),
-        },
+        kind: error_kind,
         source: None,
         url: Some(url.as_ref().to_string()),
         message: Some(error_msg),
@@ -376,7 +391,7 @@ pub(crate) async fn check_request<T: DeserializeOwned>(resp: Response) -> Result
         url: Some(url.to_string()),
         message: None,
     })?;
-    is_request_error(value.clone(), &url, &status)?;
+    is_structured_error(value.clone(), &url, &status)?;
     serde_json::from_value::<T>(value).map_err(|e| Error {
         kind: ErrorKind::Decode {
             content: Some(raw.to_vec()),

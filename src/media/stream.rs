@@ -1,5 +1,5 @@
 use crate::auth::DevicePlatform;
-use crate::error::{Error, ErrorKind, is_request_error};
+use crate::error::{Error, ErrorKind, is_structured_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use byteorder::{BigEndian, ReadBytesExt};
 use dash_mpd::{ContentProtection, MPD};
@@ -350,7 +350,7 @@ impl StreamData {
             .await?;
         // if the response is json and not xml it should always be an error
         if let Ok(json) = serde_json::from_slice(&raw_mpd) {
-            is_request_error(json, url.as_ref(), &StatusCode::FORBIDDEN)?;
+            is_structured_error(json, url.as_ref(), &StatusCode::FORBIDDEN)?;
         }
 
         let mut mpd: MPD = dash_mpd::parse(&String::from_utf8_lossy(&raw_mpd)).map_err(|e| {
