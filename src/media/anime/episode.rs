@@ -253,6 +253,11 @@ pub struct Episode {
     #[cfg(feature = "__test_strict")]
     // only present when using the browse endpoint. isn't a valid stream id
     stream_guid: Option<String>,
+    // only present if episode is requested via the watchlist.
+    // it's the same output as [`Episode::rating`].
+    // TODO: Check at a later point if this field is also present with other request types
+    #[cfg(feature = "__test_strict")]
+    rating: Option<crate::StrictValue>,
 }
 
 impl Episode {

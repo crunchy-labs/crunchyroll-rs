@@ -17,6 +17,7 @@ pub struct WatchlistEntry {
     #[serde(skip)]
     executor: Arc<Executor>,
 
+    #[serde(default)]
     pub new: bool,
 
     pub is_favorite: bool,

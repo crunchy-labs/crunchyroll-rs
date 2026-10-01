@@ -1,6 +1,6 @@
 //! Commonly used types.
 
-use crate::{Executor, Result};
+use crate::{Executor, Locale, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -264,6 +264,18 @@ pub struct Image {
     pub image_type: String,
     pub height: u32,
     pub width: u32,
+}
+
+/// Images that may have localized text on it.
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+#[cfg_attr(not(feature = "__test_strict"), serde(default))]
+pub struct LocalizedImage {
+    pub url: String,
+
+    /// At the time of writing, always 'localized'
+    pub behavior: String,
+    pub locale: Locale,
 }
 
 /// Helper trait for [`Executor::request`] generic returns.

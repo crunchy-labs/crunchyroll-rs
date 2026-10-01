@@ -1,11 +1,13 @@
 use crate::Executor;
 use crate::categories::Category;
+use crate::common::LocalizedImage;
 use crate::media::anime::util::fix_empty_season_versions;
 use crate::media::util::request_media;
 use crate::media::{ContentDescriptorsWithSymbol, LanguagePresentation, Media, PosterImages};
 use crate::{Crunchyroll, Locale, MusicVideo, Request, Result, Season};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
@@ -96,6 +98,10 @@ pub struct Series {
     pub subtitle_locales: Vec<Locale>,
 
     pub images: PosterImages,
+    /// Images that may have localized text on them. Only [`Some`] if the series was retrieved
+    /// via id or search.
+    #[serde(default)]
+    pub images_localized: Option<HashMap<String, LocalizedImage>>,
 
     /// Categories of the series (Drama, Action, etc.). Can be missing on certain endpoints,
     /// use [`Series::categories`] to get them reliably.

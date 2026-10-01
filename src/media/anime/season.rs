@@ -1,11 +1,12 @@
 use crate::Executor;
-use crate::common::Request;
+use crate::common::{LocalizedImage, Request};
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
 use crate::media::{ContentDescriptorsWithSymbol, LanguagePresentation, Media};
 use crate::{Crunchyroll, Episode, Locale, Result, Series};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, Deserialize, Serialize, smart_default::SmartDefault)]
@@ -114,6 +115,11 @@ pub struct Season {
     pub maturity_ratings: Vec<String>,
     pub is_mature: bool,
     pub mature_blocked: bool,
+
+    /// Images that may have localized text on them. Only [`Some`] if the season was
+    /// retrieved via [`Series::seasons`].
+    #[serde(default)]
+    pub images_localized: HashMap<String, LocalizedImage>,
 
     /// If the season is not available this might contain some information why.
     pub availability_notes: String,
