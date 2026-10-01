@@ -42,6 +42,9 @@ mod search_media {
         pub search_rating: SearchSeriesRating,
         #[serde(flatten)]
         series: Series,
+
+        #[cfg(feature = "__test_strict")]
+        search_metadata: Option<crate::StrictValue>,
     }
 
     pub type SearchEpisodeRating = EpisodeRating;
@@ -57,6 +60,8 @@ mod search_media {
 
         #[cfg(feature = "__test_strict")]
         last_public: Option<crate::StrictValue>,
+        #[cfg(feature = "__test_strict")]
+        search_metadata: Option<crate::StrictValue>,
     }
 
     pub type SearchMovieListingRating = SearchSeriesRating;
@@ -69,6 +74,9 @@ mod search_media {
         pub search_rating: SearchMovieListingRating,
         #[serde(flatten)]
         movie_listing: MovieListing,
+
+        #[cfg(feature = "__test_strict")]
+        search_metadata: Option<crate::StrictValue>,
     }
 
     /// Like [`MusicVideo`], but exclusive for endpoints that search something.
@@ -77,6 +85,9 @@ mod search_media {
     pub struct SearchMusicVideo {
         #[serde(flatten)]
         music_video: MusicVideo,
+
+        #[cfg(feature = "__test_strict")]
+        search_metadata: Option<crate::StrictValue>,
     }
 
     /// Like [`Concert`], but exclusive for endpoints that search something.
@@ -85,6 +96,9 @@ mod search_media {
     pub struct SearchConcert {
         #[serde(flatten)]
         concert: Concert,
+
+        #[cfg(feature = "__test_strict")]
+        search_metadata: Option<crate::StrictValue>,
     }
 
     macro_rules! expose_wrapped {
