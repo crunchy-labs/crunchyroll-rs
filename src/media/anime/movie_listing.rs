@@ -2,7 +2,7 @@ use crate::Executor;
 use crate::categories::Category;
 use crate::common::Request;
 use crate::media::util::request_media;
-use crate::media::{ContentDescriptorsWithSymbol, Media, PosterImages};
+use crate::media::{ContentDescriptorsWithSymbol, LanguagePresentation, Media, PosterImages};
 use crate::{Crunchyroll, Locale, Movie, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -111,6 +111,8 @@ pub struct MovieListing {
 
     /// All versions of this movie listing (same movie listing but each entry has a different language).
     pub versions: Vec<MovieListingVersion>,
+
+    pub language_presentation: Option<LanguagePresentation>,
 
     #[cfg(feature = "__test_strict")]
     extended_maturity_rating: crate::StrictValue,
