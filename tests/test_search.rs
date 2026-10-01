@@ -39,12 +39,13 @@ async fn by_query() {
     let mut default_result = crunchy.query("darling");
     assert_result!(default_result.top_results.next().await.unwrap());
     assert_result!(default_result.series.next().await.unwrap());
-    // movie listings might or might be not present across different countries for this search term
+    // movies might or might be not present across different countries for this search term
     // so this is a workaround to keep the test passing
-    if let Some(result) = default_result.movie_listing.next().await {
+    if let Some(result) = default_result.movie.next().await {
         assert_result!(result)
     }
-    assert_result!(default_result.episode.next().await.unwrap())
+    assert_result!(default_result.episode.next().await.unwrap());
+    assert_result!(default_result.music.next().await.unwrap())
 }
 
 #[tokio::test]

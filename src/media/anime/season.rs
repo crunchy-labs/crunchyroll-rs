@@ -137,7 +137,9 @@ pub struct Season {
     #[cfg(feature = "__test_strict")]
     season_display_number: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
-    extended_maturity_rating: crate::StrictValue,
+    extended_maturity_rating: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    search_metadata: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     seo_title: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]

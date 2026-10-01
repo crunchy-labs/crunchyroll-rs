@@ -4,7 +4,8 @@ mod search_media {
     use crate::Executor;
     use crate::common::Request;
     use crate::media::{EpisodeRating, RatingStar, RatingStarDetails};
-    use crate::{Concert, Episode, MediaCollection, MovieListing, MusicVideo, Series};
+    use crate::{Concert, Episode, MediaCollection, MusicVideo, Series};
+    use serde::de::Error;
     use serde::{Deserialize, Deserializer, Serialize};
     use serde_json::Value;
     use std::ops::{Deref, DerefMut};
@@ -42,9 +43,6 @@ mod search_media {
         pub search_rating: SearchSeriesRating,
         #[serde(flatten)]
         series: Series,
-
-        #[cfg(feature = "__test_strict")]
-        search_metadata: Option<crate::StrictValue>,
     }
 
     pub type SearchEpisodeRating = EpisodeRating;
@@ -60,45 +58,57 @@ mod search_media {
 
         #[cfg(feature = "__test_strict")]
         last_public: Option<crate::StrictValue>,
-        #[cfg(feature = "__test_strict")]
-        search_metadata: Option<crate::StrictValue>,
     }
 
-    pub type SearchMovieListingRating = SearchSeriesRating;
+    pub type SearchMovie = SearchSeries;
 
-    /// Like [`MovieListing`], but exclusive for endpoints that search something.
-    #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
-    #[request(executor(movie_listing))]
-    pub struct SearchMovieListing {
-        #[serde(rename = "rating")]
-        pub search_rating: SearchMovieListingRating,
-        #[serde(flatten)]
-        movie_listing: MovieListing,
-
-        #[cfg(feature = "__test_strict")]
-        search_metadata: Option<crate::StrictValue>,
+    #[derive(Clone, Debug, Serialize, Request)]
+    #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
+    #[serde(untagged)]
+    pub enum SearchMusicType {
+        MusicVideo(MusicVideo),
+        Concert(Concert),
     }
 
-    /// Like [`MusicVideo`], but exclusive for endpoints that search something.
-    #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
-    #[request(executor(music_video))]
-    pub struct SearchMusicVideo {
-        #[serde(flatten)]
-        music_video: MusicVideo,
-
-        #[cfg(feature = "__test_strict")]
-        search_metadata: Option<crate::StrictValue>,
+    impl Default for SearchMusicType {
+        fn default() -> Self {
+            Self::MusicVideo(Default::default())
+        }
     }
 
-    /// Like [`Concert`], but exclusive for endpoints that search something.
-    #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
-    #[request(executor(concert))]
-    pub struct SearchConcert {
-        #[serde(flatten)]
-        concert: Concert,
+    #[allow(clippy::from_over_into)]
+    impl Into<MediaCollection> for SearchMusicType {
+        fn into(self) -> MediaCollection {
+            match self {
+                SearchMusicType::MusicVideo(music_video) => music_video.into(),
+                SearchMusicType::Concert(concert) => concert.into(),
+            }
+        }
+    }
 
-        #[cfg(feature = "__test_strict")]
-        search_metadata: Option<crate::StrictValue>,
+    impl<'de> Deserialize<'de> for SearchMusicType {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let media = MediaCollection::deserialize(deserializer)
+                .map_err(|e| Error::custom(e.to_string()))?;
+
+            match media {
+                MediaCollection::MusicVideo(music_video) => Ok(Self::MusicVideo(music_video)),
+                MediaCollection::Concert(concert) => Ok(Self::Concert(concert)),
+                _ => Err(Error::custom(
+                    "expected music video or concert, got other".to_string(),
+                )),
+            }
+        }
+    }
+
+    #[derive(Clone, Debug, Default, Deserialize, Serialize, Request)]
+    #[request(executor(music_type))]
+    pub struct SearchMusic {
+        #[serde(flatten)]
+        pub music_type: SearchMusicType,
     }
 
     macro_rules! expose_wrapped {
@@ -131,9 +141,6 @@ mod search_media {
     expose_wrapped! {
         SearchSeries: series => Series
         SearchEpisode: episode => Episode
-        SearchMovieListing: movie_listing => MovieListing
-        SearchMusicVideo: music_video => MusicVideo
-        SearchConcert: concert => Concert
     }
 
     /// Like [`MediaCollection`], but exclusive for endpoints that search something.
@@ -142,9 +149,8 @@ mod search_media {
     pub enum SearchMediaCollection {
         Series(SearchSeries),
         Episode(SearchEpisode),
-        MovieListing(SearchMovieListing),
-        MusicVideo(SearchMusicVideo),
-        Concert(SearchConcert),
+        Movie(SearchMovie),
+        Music(SearchMusic),
     }
 
     #[allow(clippy::from_over_into)]
@@ -153,11 +159,8 @@ mod search_media {
             match self {
                 SearchMediaCollection::Series(series) => series.series.into(),
                 SearchMediaCollection::Episode(episode) => episode.episode.into(),
-                SearchMediaCollection::MovieListing(movie_listing) => {
-                    movie_listing.movie_listing.into()
-                }
-                SearchMediaCollection::MusicVideo(music_video) => music_video.music_video.into(),
-                SearchMediaCollection::Concert(concert) => concert.concert.into(),
+                SearchMediaCollection::Movie(movie) => movie.series.into(),
+                SearchMediaCollection::Music(music) => music.music_type.into(),
             }
         }
     }
@@ -190,13 +193,10 @@ mod search_media {
                 "episode" => Ok(SearchMediaCollection::Episode(
                     serde_json::from_value(Value::Object(as_map)).map_err(err_conv)?,
                 )),
-                "movie_listing" => Ok(SearchMediaCollection::MovieListing(
+                "movie_listing" => Ok(SearchMediaCollection::Movie(
                     serde_json::from_value(Value::Object(as_map)).map_err(err_conv)?,
                 )),
-                "musicVideo" => Ok(SearchMediaCollection::MusicVideo(
-                    serde_json::from_value(Value::Object(as_map)).map_err(err_conv)?,
-                )),
-                "musicConcert" => Ok(SearchMediaCollection::Concert(
+                "musicVideo" | "musicConcert" => Ok(SearchMediaCollection::Music(
                     serde_json::from_value(Value::Object(as_map)).map_err(err_conv)?,
                 )),
                 _ => Err(serde::de::Error::custom(format!(
@@ -215,14 +215,11 @@ mod search_media {
                 SearchMediaCollection::Episode(episode) => {
                     Request::__set_executor(episode, executor).await
                 }
-                SearchMediaCollection::MovieListing(movie_listing) => {
-                    Request::__set_executor(movie_listing, executor).await
+                SearchMediaCollection::Movie(movie) => {
+                    Request::__set_executor(movie, executor).await
                 }
-                SearchMediaCollection::MusicVideo(music_video) => {
-                    Request::__set_executor(music_video, executor).await
-                }
-                SearchMediaCollection::Concert(concert) => {
-                    Request::__set_executor(concert, executor).await
+                SearchMediaCollection::Music(music) => {
+                    Request::__set_executor(music, executor).await
                 }
             }
         }
@@ -353,7 +350,7 @@ mod query {
     use crate::Crunchyroll;
     use crate::common::{Pagination, V2BulkResult, V2TypeBulkResult};
     use crate::search::{
-        SearchEpisode, SearchMediaCollection, SearchMovieListing, SearchMusicVideo, SearchSeries,
+        SearchEpisode, SearchMediaCollection, SearchMovie, SearchMusic, SearchSeries,
     };
     use futures_util::FutureExt;
 
@@ -361,9 +358,9 @@ mod query {
     pub struct QueryResults {
         pub top_results: Pagination<SearchMediaCollection>,
         pub series: Pagination<SearchSeries>,
-        pub movie_listing: Pagination<SearchMovieListing>,
+        pub movie: Pagination<SearchMovie>,
         pub episode: Pagination<SearchEpisode>,
-        pub music: Pagination<SearchMusicVideo>,
+        pub music: Pagination<SearchMusic>,
     }
 
     impl Crunchyroll {
@@ -428,24 +425,20 @@ mod query {
                     None,
                     Some(vec![("q", query.as_ref().to_string())]),
                 ),
-                movie_listing: Pagination::new(
+                movie: Pagination::new(
                     |options| {
                         async move {
                             let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
-                            let result: V2BulkResult<V2TypeBulkResult<SearchMovieListing>> =
-                                options
-                                    .executor
-                                    .get(endpoint)
-                                    .query(&[("q", options.extra.get("q").unwrap())])
-                                    .query(&[("type", "movie_listing")])
-                                    .query(&[
-                                        ("limit", options.page_size),
-                                        ("start", options.start),
-                                    ])
-                                    .apply_ratings_query()
-                                    .apply_locale_query()
-                                    .request()
-                                    .await?;
+                            let result: V2BulkResult<V2TypeBulkResult<SearchMovie>> = options
+                                .executor
+                                .get(endpoint)
+                                .query(&[("q", options.extra.get("q").unwrap())])
+                                .query(&[("type", "movie_listing")])
+                                .query(&[("limit", options.page_size), ("start", options.start)])
+                                .apply_ratings_query()
+                                .apply_locale_query()
+                                .request()
+                                .await?;
                             let movie_listing_results = result
                                 .data
                                 .into_iter()
@@ -490,7 +483,7 @@ mod query {
                     |options| {
                         async move {
                             let endpoint = "https://www.crunchyroll.com/content/v2/discover/search";
-                            let result: V2BulkResult<V2TypeBulkResult<SearchMusicVideo>> = options
+                            let result: V2BulkResult<V2TypeBulkResult<SearchMusic>> = options
                                 .executor
                                 .get(endpoint)
                                 .query(&[("q", options.extra.get("q").unwrap())])
@@ -502,7 +495,7 @@ mod query {
                             let music_results = result
                                 .data
                                 .into_iter()
-                                .find(|r| r.result_type == "musicVideo")
+                                .find(|r| r.result_type == "music")
                                 .unwrap_or_default();
                             Ok(music_results.into())
                         }

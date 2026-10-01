@@ -230,7 +230,9 @@ pub struct Episode {
     #[serde(rename = "type")]
     _type: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    extended_maturity_rating: crate::StrictValue,
+    extended_maturity_rating: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    search_metadata: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     available_date: crate::StrictValue,
     #[cfg(feature = "__test_strict")]

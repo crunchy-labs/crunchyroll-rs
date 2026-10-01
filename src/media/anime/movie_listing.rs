@@ -115,7 +115,9 @@ pub struct MovieListing {
     pub language_presentation: Option<LanguagePresentation>,
 
     #[cfg(feature = "__test_strict")]
-    extended_maturity_rating: crate::StrictValue,
+    extended_maturity_rating: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    search_metadata: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     identifier: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]

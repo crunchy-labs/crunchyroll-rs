@@ -66,7 +66,7 @@ pub struct Profile {
     #[cfg(feature = "__test_strict")]
     account_id: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
-    extended_maturity_rating: crate::StrictValue,
+    extended_maturity_rating: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     do_not_sell: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]

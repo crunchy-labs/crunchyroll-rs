@@ -73,6 +73,11 @@ pub struct MusicVideo {
     pub hash: String,
 
     #[cfg(feature = "__test_strict")]
+    new: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
+    #[serde(alias = "search_metadata")]
+    search_metadata: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
     #[serde(rename = "streams_link")]
     streams_link: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
