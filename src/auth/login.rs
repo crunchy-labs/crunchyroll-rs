@@ -77,10 +77,7 @@ impl Executor {
         let body = Self::auth_body(vec![("grant_type", "client_id")], device_identifier);
         let req = client
             .post(endpoint)
-            .header(
-                header::AUTHORIZATION,
-                "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=",
-            )
+            .header(header::AUTHORIZATION, "Basic Y3Jfd2ViOg==")
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
             .header("ETP-Anonymous-ID", &device_identifier.device_id)
             .body(serde_urlencoded::to_string(body).unwrap())
