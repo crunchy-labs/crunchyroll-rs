@@ -36,8 +36,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Test
-        env:
-          ETP_RT: ${{ secrets.ETP_RT }}
         run: cargo test --target ${{ matrix.toolchain }} login_anonymously --all-features
 
   test-full:
@@ -58,13 +56,14 @@ jobs:
 
       - name: Test
         env:
-          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+          ETP_RT: ${{ secrets.ETP_RT }}
+          ETP_RT_DEVICE_ID: ${{ secrets.ETP_RT_DEVICE_ID }}
+          ETP_RT_DEVICE_TYPE: ${{ secrets.ETP_RT_DEVICE_TYPE }}
           IS_PREMIUM: ${{ secrets.IS_PREMIUM }}
         run: |
           cargo test --tests --no-fail-fast --all-features -- --test-threads=1 \
             --skip login_with_refresh_token \
             --skip login_with_refresh_token_profile_id \
-            --skip login_with_etp_rt \
             --skip profiles \
             --skip modify_profile \
             --skip episode_set_playhead \
