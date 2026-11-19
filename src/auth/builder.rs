@@ -111,13 +111,13 @@ impl CrunchyrollBuilder {
     /// via [`CrunchyrollBuilder::platform`] and
     /// [`crate::auth::platform_credentials::get_platform_credentials`] (with some sort of caching!).
     #[rustfmt::skip] // for scripts that fetch this
-    pub const ANDROID_TV_BASIC_AUTH_TOKEN: &'static str = "d2Q0cXluNGVxYWJ0Z2Y3cW50cmQ6UFZkY3NwN3V0anM2dEQ3dkhiWHBrX1VVaVdEV18xcjI=";
+    pub const ANDROID_TV_BASIC_AUTH_TOKEN: &'static str = "c3pybGY4eHJsd2dlMjJteW0xemc6RzBJRHB6aFN3SUNiVFlEaVMyZEdNd2ljVHc4ZVVNSTA=";
     #[rustfmt::skip] // for scripts that fetch this
-    pub const ANDROID_TV_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.72.1_22361 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
+    pub const ANDROID_TV_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.81.0_22375 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
     #[rustfmt::skip] // for scripts that may fetch this
     pub const WEB_BASIC_AUTH_TOKEN: &'static str = "bm9haWhkZXZtXzZpeWcwYThsMHE6";
     #[rustfmt::skip] // for scripts that may fetch this
-    pub const WEB_CHROME_USER_AGENT: &'static str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
+    pub const WEB_CHROME_USER_AGENT: &'static str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/159.0.0.0 Safari/537.36";
 
     pub const DEFAULT_HEADERS: [(HeaderName, HeaderValue); 3] = [
         (header::ACCEPT, HeaderValue::from_static("*/*")),
