@@ -202,7 +202,7 @@ impl CrunchyrollBuilder {
     /// Not every login method is available with every basic auth token. For example, the
     /// Android phone basic auth token only supports
     /// [`CrunchyrollBuilder::login_with_oauth_code`] and the refresh token based methods;
-    /// [`CrunchyrollBuilder::login_with_credentials`] will be rejected.
+    /// [`CrunchyrollBuilder::login_with_etp_rt`] will be rejected.
     pub fn platform(
         mut self,
         device_platform: DevicePlatform,
@@ -285,40 +285,8 @@ impl CrunchyrollBuilder {
         Ok(resolved.build(login_response, session_token, device_identifier))
     }
 
-    /// Logs in with credentials (email and password) and returns a new [`Crunchyroll`] instance.
-    ///
-    /// *Note*: All logins you do with the generated refresh token must have the same
-    /// `device_identifier`, otherwise the login will fail.
-    ///
-    /// *Note*: Many platforms aren't supporting this login method. Expect login errors when
-    /// using a custom [`CrunchyrollBuilder::platform`]. Consider using
-    /// [`CrunchyrollBuilder::login_with_oauth_code`] instead.
-    pub async fn login_with_credentials<S: AsRef<str>>(
-        self,
-        email: S,
-        password: S,
-        device_identifier: DeviceIdentifier,
-    ) -> Result<Crunchyroll> {
-        let resolved = self.resolve().await?;
-
-        let login_response = Executor::auth_with_credentials(
-            &resolved.client,
-            email.as_ref(),
-            password.as_ref(),
-            &device_identifier,
-            &resolved.basic_auth_token,
-            #[cfg(feature = "middleware")]
-            resolved.middleware.as_ref(),
-        )
-        .await?;
-        let session_token =
-            SessionToken::RefreshToken(login_response.refresh_token.clone().unwrap());
-
-        Ok(resolved.build(login_response, session_token, device_identifier))
-    }
-
     /// Logs in with a refresh token. This token is obtained when logging in with
-    /// [`CrunchyrollBuilder::login_with_credentials`].
+    /// [`CrunchyrollBuilder::login_with_oauth_code`].
     ///
     /// *Note*: Even though the tokens used in [`CrunchyrollBuilder::login_with_refresh_token`]
     /// and [`CrunchyrollBuilder::login_with_etp_rt`] are having the same syntax, Crunchyroll

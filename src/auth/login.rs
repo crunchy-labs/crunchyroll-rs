@@ -95,42 +95,6 @@ impl Executor {
         .await
     }
 
-    pub(super) async fn auth_with_credentials(
-        client: &Client,
-        email: &str,
-        password: &str,
-        device_identifier: &DeviceIdentifier,
-        basic_auth_token: &str,
-        #[cfg(feature = "middleware")] middleware: Option<
-            &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
-        >,
-    ) -> Result<AuthResponse> {
-        let endpoint = "https://www.crunchyroll.com/auth/v1/token";
-        let body = Self::auth_body(
-            vec![
-                ("username", email),
-                ("password", password),
-                ("grant_type", "password"),
-            ],
-            device_identifier,
-        );
-        let req = client
-            .post(endpoint)
-            .header(header::AUTHORIZATION, format!("Basic {basic_auth_token}"))
-            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-            .header("ETP-Anonymous-ID", &device_identifier.device_id)
-            .body(serde_urlencoded::to_string(body).unwrap())
-            .build()?;
-
-        Self::send_auth_req(
-            client,
-            req,
-            #[cfg(feature = "middleware")]
-            middleware,
-        )
-        .await
-    }
-
     pub(super) async fn auth_with_refresh_token(
         client: &Client,
         refresh_token: &str,

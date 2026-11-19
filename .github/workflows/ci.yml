@@ -58,8 +58,7 @@ jobs:
 
       - name: Test
         env:
-          EMAIL: ${{ secrets.EMAIL }}
-          PASSWORD: ${{ secrets.PASSWORD }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
           IS_PREMIUM: ${{ secrets.IS_PREMIUM }}
         run: |
           cargo test --tests --no-fail-fast --all-features -- --test-threads=1 \

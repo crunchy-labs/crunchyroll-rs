@@ -24,9 +24,11 @@
 //! let crunchy = Crunchyroll::builder()
 //!     // set the language in which results should be returned
 //!     .locale(Locale::en_US)
-//!     // login with user credentials (other login options are also available)
-//!     // support for username login was dropped by Crunchyroll on December 6th, 2023
-//!     .login_with_credentials("email", "password", Default::default())
+//!     // login with the etp_rt cookie of a browser session; login with email and password directly
+//!     // is no longer supported by Crunchyroll, only via SSO, which requires a webview. see the
+//!     // `auth` module docs for all available login methods, e.g. the sso flow in the `sso-login`
+//!     // example)
+//!     .login_with_etp_rt("etp_rt", Default::default())
 //!     .await?;
 //! ```
 //!

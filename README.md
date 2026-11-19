@@ -55,10 +55,9 @@ use crunchyroll_rs::parse::UrlType;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Log in to Crunchyroll with your email and password.
-    // Support for username login was dropped by Crunchyroll on December 6th, 2023
+    // Log in to Crunchyroll with the etp_rt cookie of your browser session
     let crunchyroll = Crunchyroll::builder()
-        .login_with_credentials("<email>", "<password>", Default::default())
+        .login_with_etp_rt("<etp_rt cookie>", Default::default())
         .await?;
 
     let url = crunchyroll_rs::parse_url("https://www.crunchyroll.com/watch/GRDQPM1ZY/alone-and-lonesome").expect("url is not valid");
@@ -81,6 +80,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 _More examples can be found in the [examples/](examples) directory._
+
+#### Login
+
+- `login_with_etp_rt`: log in with the `etp_rt` cookie that is set when logging in via the browser (used in the example above; **recommended**)
+- `login_with_oauth_code`: SSO/OAuth flow via Crunchyroll's login page, see the [sso-login example](examples/sso-login)
+- `login_with_refresh_token` / `login_with_refresh_token_profile_id`: re-login with a refresh token obtained from one of the other login methods
+- `login_anonymously`: log in without an account
+
+> Direct login with email and password isn't possible anymore, this must now be done by using the SSO flow, which requires a webview.
 
 #### API coverage
 Crunchyroll regularly updates their api but does not provide any documentation for it.

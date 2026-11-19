@@ -6,28 +6,6 @@ use crunchyroll_rs::{Crunchyroll, auth::DeviceIdentifier};
 use std::env;
 
 #[tokio::test]
-async fn login_with_credentials() {
-    let email = env::var("EMAIL").expect("'EMAIL' environment variable not found");
-    let password = env::var("PASSWORD").expect("'PASSWORD' environment variable not found");
-    let is_premium = env::var("IS_PREMIUM")
-        .ok()
-        .map(|e| e.parse::<bool>().unwrap());
-
-    let crunchy = Crunchyroll::builder()
-        .login_with_credentials(email, password, DeviceIdentifier::default())
-        .await;
-
-    assert_result!(crunchy);
-    if let Some(is_premium) = is_premium {
-        assert_eq!(crunchy.as_ref().unwrap().premium().await, is_premium)
-    }
-
-    if !utils::session::has_session() {
-        utils::session::set_session(crunchy.unwrap()).await.unwrap()
-    }
-}
-
-#[tokio::test]
 async fn login_with_refresh_token() {
     let refresh_token =
         env::var("REFRESH_TOKEN").expect("'REFRESH_TOKEN' environment variable not found");

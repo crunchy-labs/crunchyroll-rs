@@ -10,12 +10,11 @@ use tower_service::Service;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let email = env::var("EMAIL").expect("'EMAIL' environment variable not found");
-    let password = env::var("PASSWORD").expect("'PASSWORD' environment variable not found");
+    let etp_rt = env::var("ETP_RT").expect("'ETP_RT' environment variable not found");
 
     let _crunchyroll = Crunchyroll::builder()
         .middleware(RequestPrinterMiddleware)
-        .login_with_credentials(email, password, DeviceIdentifier::default())
+        .login_with_etp_rt(etp_rt, DeviceIdentifier::default())
         .await?;
 
     Ok(())

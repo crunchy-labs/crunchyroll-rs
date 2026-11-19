@@ -1,5 +1,17 @@
 //! Login, session handling and the request execution for the [`Crunchyroll`](crate::Crunchyroll)
 //! struct.
+//!
+//! # Login methods
+//!
+//! The following methods are available to create a session:
+//! - [`CrunchyrollBuilder::login_with_etp_rt`]: login with the `etp_rt` cookie that is set when
+//!   logging in via the browser. This is the recommended way to log in.
+//! - [`CrunchyrollBuilder::login_with_oauth_code`]: SSO/OAuth flow via Crunchyroll's login page
+//!   (see the `sso-login` example for a complete implementation).
+//! - [`CrunchyrollBuilder::login_with_refresh_token`] and
+//!   [`CrunchyrollBuilder::login_with_refresh_token_profile_id`]: re-login with a refresh token
+//!   obtained from one of the other login methods.
+//! - [`CrunchyrollBuilder::login_anonymously`]: login without an account.
 
 mod builder;
 mod executor;
