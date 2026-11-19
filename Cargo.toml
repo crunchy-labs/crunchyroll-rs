@@ -11,7 +11,7 @@ repository.workspace = true
 license.workspace = true
 keywords = ["anime", "crunchyroll", "downloader"]
 categories = ["api-bindings"]
-include = ["/Cargo.toml", "/LICENSE-APACHE", "/LICENSE-MIT", "/README.md", "/src/**", "/tests/**"]
+include = ["/Cargo.toml", "/build.rs", "/LICENSE-APACHE", "/LICENSE-MIT", "/README.md", "/src/**", "/tests/**"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]
@@ -32,6 +32,7 @@ license = "MIT OR Apache-2.0"
 [workspace.dependencies]
 anyhow = "1.0"
 byteorder = "1.5"
+cfg-if = "1.0"
 chrono = { version = ">=0.4.35", features = ["serde"] }
 dash-mpd = { version = "0.20", default-features = false }
 # increase version of 'crunchyroll-rs-internal' dependency when updating
@@ -40,6 +41,7 @@ darling = "0.24"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 gtk = "0.18"
 http = "1.5"
+jiff = { version = "1.0", default-features = false, features = ["std", "serde"] }
 jsonwebtoken = { version = "11.0", default-features = false, features = ["rust_crypto"] }
 proc-macro2 = "1.0"
 reqwest = { version = "0.13.5", features = ["cookies", "json", "multipart", "query", "rustls"] }
@@ -59,10 +61,12 @@ wry = "0.55"
 
 [dependencies]
 byteorder = { workspace = true }
-chrono = { workspace = true }
+cfg-if = { workspace = true }
+chrono = { workspace = true, optional = true }
 dash-mpd = { workspace = true }
 futures-util = { workspace = true }
 http = { workspace = true }
+jiff = { workspace = true }
 jsonwebtoken = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
@@ -85,6 +89,10 @@ uuid = { workspace = true }
 
 [features]
 default = ["parse"]
+
+# Use chrono for the date and time types.
+# Note that chrono is unmaintained, the feature is only here for legacy support and will be removed in a future release.
+chrono = ["dep:chrono"]
 
 # Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
 experimental-stabilizations = []

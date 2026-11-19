@@ -128,6 +128,9 @@
 //! # Features
 //!
 //! - **parse** *(enabled by default)*: Enables url parsing.
+//! - **chrono**: Uses [chrono](https://docs.rs/chrono) instead of **jiff** for the date and time types.
+//!   Note that chrono is unmaintained, the feature is only here for legacy support and will be removed
+//!   in a future release.
 //! - **middleware**: Enables the usage of a [tower-service](https://docs.rs/tower-service) compatible middleware.
 //! - **experimental-stabilizations**: Provides some functions to maybe fix broken api results. See
 //!   [Bugs](#bugs) for more information.
@@ -148,6 +151,7 @@ pub mod auth;
 pub mod categories;
 pub mod common;
 pub mod crunchyroll;
+pub mod date;
 pub mod devices;
 pub mod error;
 pub mod feed;

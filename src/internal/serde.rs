@@ -1,9 +1,9 @@
 use crate::common::Image;
+use crate::date::Duration;
 use crate::error::{Error, ErrorKind};
 use crate::media::Subtitle;
 use crate::profile::Wallpaper;
 use crate::{Locale, Request, Result};
-use chrono::Duration;
 use serde::de::{DeserializeOwned, Error as SerdeError, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
 use serde_json::{Map, Value};
@@ -88,7 +88,9 @@ pub(crate) fn deserialize_millis_to_duration<'de, D>(deserializer: D) -> Result<
 where
     D: Deserializer<'de>,
 {
-    Ok(Duration::try_milliseconds(i64::deserialize(deserializer)?).unwrap())
+    Ok(crate::date::duration_from_millis(i64::deserialize(
+        deserializer,
+    )?))
 }
 
 pub(crate) fn serialize_duration_to_millis<S>(
@@ -98,7 +100,7 @@ pub(crate) fn serialize_duration_to_millis<S>(
 where
     S: serde::Serializer,
 {
-    serializer.serialize_i64(duration.num_milliseconds())
+    serializer.serialize_i64(crate::date::duration_to_millis(duration))
 }
 
 pub(crate) fn deserialize_try_from_string<'de, D, T: FromStr>(

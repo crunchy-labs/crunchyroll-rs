@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use crate::date::DateTime;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
@@ -14,10 +14,10 @@ pub(crate) fn availability_object_to_keys(
     #[cfg_attr(feature = "__test_strict", serde(deny_unknown_fields))]
     #[cfg_attr(not(feature = "__test_strict"), serde(default))]
     struct Availability {
-        #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-        start_date: DateTime<Utc>,
-        #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-        end_date: DateTime<Utc>,
+        #[default(crate::date::epoch())]
+        start_date: DateTime,
+        #[default(crate::date::epoch())]
+        end_date: DateTime,
     }
 
     if let Some(value) = obj.remove("availability") {

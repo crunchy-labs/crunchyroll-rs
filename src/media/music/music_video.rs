@@ -1,9 +1,9 @@
 use crate::Executor;
+use crate::date::{DateTime, Duration};
 use crate::media::music::util::availability_object_to_keys;
 use crate::media::util::request_media;
 use crate::media::{ArtistPreview, ArtistsPreviewList, Media, MusicGenre, ThumbnailImages};
 use crate::{Crunchyroll, MediaCollection, Request, Result};
-use chrono::{DateTime, Duration, Utc};
 use serde::de::{Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::sync::Arc;
@@ -40,25 +40,25 @@ pub struct MusicVideo {
     pub images: ThumbnailImages,
     pub genres: Vec<MusicGenre>,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub created_at: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub updated_at: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub publish_date: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub original_release: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub created_at: DateTime,
+    #[default(crate::date::epoch())]
+    pub updated_at: DateTime,
+    #[default(crate::date::epoch())]
+    pub publish_date: DateTime,
+    #[default(crate::date::epoch())]
+    pub original_release: DateTime,
 
     #[serde(alias = "durationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
-    #[default(Duration::try_milliseconds(0).unwrap())]
+    #[default(crate::date::duration_from_millis(0))]
     pub duration: Duration,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub availability_starts: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub availability_ends: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub availability_starts: DateTime,
+    #[default(crate::date::epoch())]
+    pub availability_ends: DateTime,
 
     pub is_premium_only: bool,
     pub is_public: bool,

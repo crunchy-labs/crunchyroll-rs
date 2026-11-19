@@ -1,11 +1,11 @@
 use crate::Executor;
 use crate::categories::Category;
 use crate::common::{Image, LocalizedImage, Request};
+use crate::date::{DateTime, Duration};
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
 use crate::media::{AdBreak, ContentDescriptorsWithSymbol, LanguagePresentation, Media};
 use crate::{Crunchyroll, Locale, Result, Season, Series};
-use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -153,22 +153,22 @@ pub struct Episode {
     #[serde(alias = "duration_ms")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
-    #[default(Duration::try_milliseconds(0).unwrap())]
+    #[default(crate::date::duration_from_millis(0))]
     pub duration: Duration,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub episode_air_date: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub episode_air_date: DateTime,
     /// The same as episode_air_date as far as I can see.
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub upload_date: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub free_available_date: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub premium_available_date: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub availability_starts: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub availability_ends: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub upload_date: DateTime,
+    #[default(crate::date::epoch())]
+    pub free_available_date: DateTime,
+    #[default(crate::date::epoch())]
+    pub premium_available_date: DateTime,
+    #[default(crate::date::epoch())]
+    pub availability_starts: DateTime,
+    #[default(crate::date::epoch())]
+    pub availability_ends: DateTime,
 
     #[serde(deserialize_with = "crate::internal::serde::deserialize_thumbnail_image")]
     pub images: Vec<Image>,

@@ -2,9 +2,9 @@
 
 use crate::Executor;
 use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult, V2TypeBulkResult};
+use crate::date::DateTime;
 use crate::search::{BrowseMediaType, BrowseOptions, BrowseSortType};
 use crate::{Crunchyroll, MediaCollection, Request, Series};
-use chrono::{DateTime, Utc};
 use futures_util::FutureExt;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -336,8 +336,8 @@ pub struct NewsFeed {
     pub description: String,
 
     pub creator: String,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub publish_date: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub publish_date: DateTime,
 
     #[serde(rename = "image")]
     pub image_link: String,

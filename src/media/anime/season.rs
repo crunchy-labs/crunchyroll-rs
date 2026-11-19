@@ -1,10 +1,10 @@
 use crate::Executor;
 use crate::common::{LocalizedImage, Request};
+use crate::date::DateTime;
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
 use crate::media::{ContentDescriptorsWithSymbol, LanguagePresentation, Media};
 use crate::{Crunchyroll, Episode, Locale, Result, Series};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -15,14 +15,14 @@ use std::sync::Arc;
 pub struct SeasonVersionRestrictionWindow {
     pub audio_locale: Locale,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub watch_start: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub watch_end: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub list_start: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub list_end: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub watch_start: DateTime,
+    #[default(crate::date::epoch())]
+    pub watch_end: DateTime,
+    #[default(crate::date::epoch())]
+    pub list_start: DateTime,
+    #[default(crate::date::epoch())]
+    pub list_end: DateTime,
 
     pub level: Vec<String>,
     pub geo: Vec<String>,

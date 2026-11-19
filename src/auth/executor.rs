@@ -2,12 +2,11 @@ use super::request::{ExecutorRequestBuilder, request};
 use super::{DeviceIdentifier, DevicePlatform, SessionToken};
 use crate::Locale;
 use crate::Request;
+use crate::date::{self, DateTime};
 use crate::error::{Error, ErrorKind, Result};
-use chrono::{DateTime, Duration, Utc};
 use reqwest::header;
 use reqwest::{Client, IntoUrl, RequestBuilder};
 use serde::de::DeserializeOwned;
-use std::ops::Add;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -16,7 +15,7 @@ pub(crate) struct ExecutorSession {
     pub(crate) token_type: String,
     pub(crate) access_token: String,
     pub(crate) session_token: SessionToken,
-    pub(crate) session_expire: DateTime<Utc>,
+    pub(crate) session_expire: DateTime,
 }
 
 #[allow(dead_code)]
@@ -118,7 +117,7 @@ impl Executor {
         mut req: RequestBuilder,
     ) -> Result<RequestBuilder> {
         let mut session = self.session.write().await;
-        if session.session_expire <= Utc::now() {
+        if session.session_expire <= date::now() {
             let login_response = match &session.session_token {
                 SessionToken::RefreshToken(refresh_token) => {
                     Executor::auth_with_refresh_token(
@@ -165,8 +164,7 @@ impl Executor {
                     }
                     SessionToken::Anonymous => SessionToken::Anonymous,
                 },
-                session_expire: Utc::now()
-                    .add(Duration::try_seconds(login_response.expires_in as i64).unwrap()),
+                session_expire: date::add_seconds(date::now(), login_response.expires_in as i64),
             };
         }
 

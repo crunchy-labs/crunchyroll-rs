@@ -1,7 +1,7 @@
 //! Account specific actions.
 
+use crate::date::DateTime;
 use crate::{Crunchyroll, EmptyJsonProxy, Executor, Request, Result};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
@@ -23,8 +23,8 @@ pub struct Account {
     pub email_verified: bool,
     pub has_password: bool,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub created: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub created: DateTime,
 }
 
 /// The [`Account`] struct is actually not required to perform this actions ([`Crunchyroll`] itself

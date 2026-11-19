@@ -1,7 +1,7 @@
 use crate::common::V2BulkResult;
+use crate::date::DateTime;
 use crate::error::{Error, ErrorKind};
 use crate::{Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
@@ -18,8 +18,8 @@ pub struct CrunchylistEntry {
     pub id: String,
     pub list_id: String,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub modified_at: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub modified_at: DateTime,
 
     /// Should only be [`MediaCollection::Series`] or [`MediaCollection::MovieListing`].
     pub panel: MediaCollection,
@@ -66,8 +66,8 @@ struct CrunchylistCreate {
 
     list_id: String,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    modified_at: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    modified_at: DateTime,
 }
 
 impl Crunchylists {
@@ -115,8 +115,8 @@ pub struct Crunchylist {
 
     pub title: String,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub modified_at: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub modified_at: DateTime,
 
     pub is_public: bool,
     pub max: u32,
@@ -197,8 +197,8 @@ pub struct CrunchylistPreview {
 
     pub title: String,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub modified_at: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub modified_at: DateTime,
 
     pub is_public: bool,
     pub total: u32,
@@ -213,8 +213,8 @@ impl CrunchylistPreview {
 
             is_public: bool,
 
-            #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-            modified_at: DateTime<Utc>,
+            #[default(crate::date::epoch())]
+            modified_at: DateTime,
 
             max: u32,
         }

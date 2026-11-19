@@ -1,10 +1,10 @@
 use crate::Executor;
 use crate::categories::Category;
 use crate::common::Request;
+use crate::date::DateTime;
 use crate::media::util::request_media;
 use crate::media::{ContentDescriptorsWithSymbol, LanguagePresentation, Media, PosterImages};
 use crate::{Crunchyroll, Locale, Movie, Result};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -89,10 +89,10 @@ pub struct MovieListing {
 
     pub is_premium_only: bool,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub free_available_date: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub premium_available_date: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub free_available_date: DateTime,
+    #[default(crate::date::epoch())]
+    pub premium_available_date: DateTime,
 
     /// Categories of the listing (Drama, Action, etc.). Can be missing on certain endpoints,
     /// use [`MovieListing::categories()`] to get them reliably.

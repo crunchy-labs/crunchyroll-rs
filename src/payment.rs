@@ -1,7 +1,7 @@
 //! Payment related.
 
+use crate::date::DateTime;
 use crate::{Crunchyroll, Request, Result};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Detailed information about a payment.
@@ -21,7 +21,7 @@ pub struct PaymentInfo {
 #[cfg_attr(not(feature = "__test_strict"), serde(default))]
 pub struct Invoice {
     pub invoice_id: String,
-    pub invoice_date: DateTime<Utc>,
+    pub invoice_date: DateTime,
 
     pub payment_info: PaymentInfo,
 

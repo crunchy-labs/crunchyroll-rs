@@ -2,8 +2,8 @@
 
 use crate::Executor;
 use crate::common::BulkResult;
+use crate::date::DateTime;
 use crate::{Crunchyroll, Request, Result, enum_values};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
@@ -46,17 +46,17 @@ pub struct Device {
 
     pub platform_type: DevicePlatformType,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub created: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub modified: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub created: DateTime,
+    #[default(crate::date::epoch())]
+    pub modified: DateTime,
 
     /// Ip address where the device was last used
     pub ip: String,
     /// Location where the device was last used
     pub location: DeviceLocation,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub last_used: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub last_used: DateTime,
 
     pub synced_offline_content: bool,
     pub deactivated: bool,

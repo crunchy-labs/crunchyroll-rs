@@ -229,9 +229,9 @@ mod search_media {
 mod browse {
     use crate::categories::Category;
     use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult};
+    use crate::date::DateTime;
     use crate::search::SearchMediaCollection;
     use crate::{Crunchyroll, Locale, Request, Result, enum_values, options};
-    use chrono::{DateTime, Utc};
     use futures_util::FutureExt;
     use serde::{Deserialize, Serialize};
 
@@ -301,11 +301,11 @@ mod browse {
         /// Only show entries that were added after this date. Can be used together with
         /// [`BrowseOptions::to_date`] to get a release calendar like response (actually that's the
         /// way Crunchyroll uses to construct the calendar).
-        from_date(DateTime::<Utc>, "from_date", |date: DateTime::<Utc>| date.timestamp_millis()) = None,
+        from_date(DateTime, "from_date", |date: DateTime| crate::date::timestamp_millis(date)) = None,
         /// Only show entries that were added before this date. Can be used together with
         /// [`BrowseOptions::from_date`] to get a release calendar like response (actually that's the
         /// way Crunchyroll uses to construct the calendar).
-        to_date(DateTime::<Utc>, "to_date", |date: DateTime::<Utc>| date.timestamp_millis()) = None,
+        to_date(DateTime, "to_date", |date: DateTime| crate::date::timestamp_millis(date)) = None,
         /// Specifies the media type of the entries.
         media_type(BrowseMediaType, "type") = None
     }

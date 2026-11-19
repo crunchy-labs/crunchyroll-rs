@@ -1,6 +1,6 @@
 use crate::common::{Pagination, PaginationBulkResultMeta, V2BulkResult};
+use crate::date::DateTime;
 use crate::{Crunchyroll, EmptyJsonProxy, MediaCollection, Request, Result};
-use chrono::{DateTime, Utc};
 use futures_util::FutureExt;
 use serde::{Deserialize, Serialize};
 
@@ -17,8 +17,8 @@ pub struct WatchHistoryEntry {
     /// `series` or `movie_listing`.
     pub parent_type: String,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub date_played: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub date_played: DateTime,
     pub playhead: u32,
     pub fully_watched: bool,
 

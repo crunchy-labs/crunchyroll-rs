@@ -1,10 +1,10 @@
 use crate::Executor;
 use crate::common::V2BulkResult;
+use crate::date::{DateTime, Duration};
 use crate::media::music::concert::Concert;
 use crate::media::util::request_media;
 use crate::media::{MusicGenre, MusicVideo, PosterImages};
 use crate::{Crunchyroll, Request, Result};
-use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -71,22 +71,22 @@ pub struct Artist {
     pub name: String,
     pub description: String,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub created_at: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub updated_at: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub publish_date: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub created_at: DateTime,
+    #[default(crate::date::epoch())]
+    pub updated_at: DateTime,
+    #[default(crate::date::epoch())]
+    pub publish_date: DateTime,
 
     #[serde(alias = "totalConcertDurationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
-    #[default(Duration::try_milliseconds(0).unwrap())]
+    #[default(crate::date::duration_from_millis(0))]
     pub total_concert_duration: Duration,
     #[serde(alias = "totalVideoDurationMs")]
     #[serde(deserialize_with = "crate::internal::serde::deserialize_millis_to_duration")]
     #[serde(serialize_with = "crate::internal::serde::serialize_duration_to_millis")]
-    #[default(Duration::try_milliseconds(0).unwrap())]
+    #[default(crate::date::duration_from_millis(0))]
     pub total_video_duration: Duration,
 
     pub images: PosterImages,

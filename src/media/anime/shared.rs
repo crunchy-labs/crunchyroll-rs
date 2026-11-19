@@ -1,5 +1,5 @@
+use crate::date::DateTime;
 use crate::{Request, enum_values};
-use chrono::{DateTime, Utc};
 use serde::de::{DeserializeOwned, Error, IntoDeserializer};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
@@ -115,8 +115,8 @@ pub struct PlayheadInformation {
     pub fully_watched: bool,
 
     /// Date when the last playhead update was
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub last_modified: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub last_modified: DateTime,
 }
 
 enum_values! {

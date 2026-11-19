@@ -1,11 +1,11 @@
 use crate::Executor;
 use crate::categories::Category;
 use crate::common::LocalizedImage;
+use crate::date::DateTime;
 use crate::media::anime::util::fix_empty_season_versions;
 use crate::media::util::request_media;
 use crate::media::{ContentDescriptorsWithSymbol, LanguagePresentation, Media, PosterImages};
 use crate::{Crunchyroll, Locale, MusicVideo, Request, Result, Season};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -41,14 +41,14 @@ pub struct SeriesLivestream {
 
     pub images: PosterImages,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub start_date: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub end_date: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub episode_start_date: DateTime<Utc>,
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub episode_end_date: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub start_date: DateTime,
+    #[default(crate::date::epoch())]
+    pub end_date: DateTime,
+    #[default(crate::date::epoch())]
+    pub episode_start_date: DateTime,
+    #[default(crate::date::epoch())]
+    pub episode_end_date: DateTime,
 }
 
 /// Metadata for a series.

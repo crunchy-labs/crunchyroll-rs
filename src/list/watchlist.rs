@@ -1,9 +1,9 @@
 use crate::common::V2BulkResult;
+use crate::date::DateTime;
 use crate::error::{Error, ErrorKind};
 use crate::{
     Crunchyroll, EmptyJsonProxy, Executor, MediaCollection, Request, Result, enum_values, options,
 };
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
@@ -72,8 +72,8 @@ pub struct SimpleWatchlistEntry {
 
     pub is_favorite: bool,
 
-    #[default(DateTime::<Utc>::from(std::time::SystemTime::UNIX_EPOCH))]
-    pub date_added: DateTime<Utc>,
+    #[default(crate::date::epoch())]
+    pub date_added: DateTime,
 }
 
 impl SimpleWatchlistEntry {

@@ -3,11 +3,10 @@ use super::login::AuthResponse;
 use super::{DeviceIdentifier, DevicePlatform, SessionToken};
 use crate::Crunchyroll;
 use crate::Locale;
+use crate::date;
 use crate::error::Result;
-use chrono::{Duration, Utc};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use reqwest::{Client, ClientBuilder, header};
-use std::ops::Add;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -39,8 +38,10 @@ impl ResolvedCrunchyrollBuilder {
                     token_type: login_response.token_type,
                     access_token: login_response.access_token,
                     session_token,
-                    session_expire: Utc::now()
-                        .add(Duration::try_seconds(login_response.expires_in as i64).unwrap()),
+                    session_expire: date::add_seconds(
+                        date::now(),
+                        login_response.expires_in as i64,
+                    ),
                 }),
                 details: ExecutorDetails {
                     locale: self.locale,
