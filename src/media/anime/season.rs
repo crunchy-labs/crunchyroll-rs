@@ -119,7 +119,7 @@ pub struct Season {
     /// Images that may have localized text on them. Only [`Some`] if the season was
     /// retrieved via [`Series::seasons`].
     #[serde(default)]
-    pub images_localized: HashMap<String, LocalizedImage>,
+    pub images_localized: Option<HashMap<String, LocalizedImage>>,
 
     /// If the season is not available this might contain some information why.
     pub availability_notes: String,

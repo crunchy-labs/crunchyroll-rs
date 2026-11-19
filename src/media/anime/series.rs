@@ -99,7 +99,7 @@ pub struct Series {
 
     pub images: PosterImages,
     /// Images that may have localized text on them. Only [`Some`] if the series was retrieved
-    /// via id or search.
+    /// via id or [`crate::Crunchyroll::browse`].
     #[serde(default)]
     pub images_localized: Option<HashMap<String, LocalizedImage>>,
 
