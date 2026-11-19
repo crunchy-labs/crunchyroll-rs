@@ -20,7 +20,7 @@ jobs:
           toolchain: stable
 
       - name: Check code fmt
-        run: cargo fmt --check
+        run: cargo fmt --all --check
 
   rust-clippy-analyze:
     name: Run rust-clippy analyzing
@@ -48,6 +48,7 @@ jobs:
       - name: Run rust-clippy
         run:
           cargo clippy
+          --workspace
           --all-features
           --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
         continue-on-error: true
