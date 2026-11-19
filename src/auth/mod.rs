@@ -47,9 +47,9 @@ pub struct DeviceIdentifier {
     /// The device id, this is specific for every device type, but usually represented as UUID.
     /// Using [`uuid::Uuid::new_v4`] for it works fine.
     pub device_id: String,
-    /// Type of the device which issues the session, e.g. `ANDROIDTV` (recommended, this is on
-    /// par with the default user agent and [`CrunchyrollBuilder::platform`]),
-    /// `Chrome on Windows`, `iPhone 15` or `SM-G980F` (Samsung Galaxy S20).
+    /// Type of the device which issues the session, e.g. `Chrome on Windows` (matches the default
+    /// web chrome user agent and [`CrunchyrollBuilder::platform`]), `ANDROIDTV`, `iPhone 15` or
+    /// `SM-G980F` (Samsung Galaxy S20).
     pub device_type: String,
     /// Name of the device which issues the session. This may be empty, for example all session
     /// that are created over the website have an empty name; when issues via the app, the name
@@ -80,11 +80,11 @@ pub enum DevicePlatform {
     IosIpad,
     IosIphone,
     IosVision,
-    #[default]
     TvAndroid,
     TvRoku,
     TvSamsung,
     TvLg,
+    #[default]
     WebChrome,
     WebEdge,
     WebFirefox,

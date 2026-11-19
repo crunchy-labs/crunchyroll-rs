@@ -143,6 +143,8 @@ pub struct Stream {
     asset_id: crate::StrictValue,
     #[cfg(feature = "__test_strict")]
     bifs: crate::StrictValue,
+    #[cfg(feature = "__test_strict")]
+    drms: Option<crate::StrictValue>,
 }
 
 impl Stream {

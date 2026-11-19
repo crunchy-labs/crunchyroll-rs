@@ -33,12 +33,11 @@
 //! ```
 //!
 //! To issue sessions, credentials like the basic auth token and user agent of a Crunchyroll app are
-//! needed. By default, sessions are issued with the basic auth token and user agent of the android
-//! tv app, which are bundled with the library. Since Crunchyroll rotates these credentials
-//! regularly, they are kept up to date by a scheduled action. If you want to issue sessions for
-//! another platform, fetch the credentials yourself via
-//! [`auth::platform_credentials::get_platform_credentials`] — it's **strongly** advised to do this
-//! with some sort of caching — and pass them via [`auth::CrunchyrollBuilder::platform`].
+//! needed. By default, sessions are issued with the basic auth token and user agent of the web chrome
+//! client, which are bundled with the library. If you want to issue sessions for another platform,
+//! for example android tv, fetch the credentials yourself via
+//! [`auth::platform_credentials::get_platform_credentials`] (it's **strongly** advised to call this
+//! method with some sort of caching) and pass them via [`auth::CrunchyrollBuilder::platform`].
 //!
 //! ## Request media
 //!
@@ -121,7 +120,7 @@
 //! occurs depending on different factors like your location. If such a block occurs you can try to
 //! create a custom [`reqwest::Client`] which has the needed configuration to bypass this check,
 //! like other user agents or tls backends (note that [`reqwest`] currently only supports
-//! [`native-tls`](https://docs.rs/native-tls/latest/native_tls/) besides [`rustls`] as tls backend,
+//! [`native-tls`](https://docs.rs/native-tls/latest/native_tls/) besides [`rustls`](https://docs.rs/rustls) as tls backend,
 //! which is confirmed to work with openssl on Linux only, on Windows the blocks are even more
 //! aggressive). The configurations may vary on the factors addressed so there is no 100% right way
 //! to do it.

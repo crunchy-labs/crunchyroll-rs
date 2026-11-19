@@ -136,6 +136,7 @@ impl Executor {
                         &self.client,
                         etp_rt.as_str(),
                         &self.details.device_identifier,
+                        &self.details.basic_auth_token,
                         #[cfg(feature = "middleware")]
                         self.middleware.as_ref(),
                     )

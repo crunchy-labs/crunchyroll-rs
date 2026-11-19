@@ -164,6 +164,7 @@ impl Executor {
         client: &Client,
         etp_rt: &str,
         device_identifier: &DeviceIdentifier,
+        basic_auth_token: &str,
         #[cfg(feature = "middleware")] middleware: Option<
             &tokio::sync::Mutex<crate::internal::middleware::Middleware>,
         >,
@@ -172,9 +173,12 @@ impl Executor {
         let body = Self::auth_body(vec![("grant_type", "etp_rt_cookie")], device_identifier);
         let req = client
             .post(endpoint)
-            .header(header::AUTHORIZATION, "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6")
+            .header(header::AUTHORIZATION, format!("Basic {basic_auth_token}"))
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-            .header(header::COOKIE, format!("etp_rt={etp_rt}"))
+            .header(
+                header::COOKIE,
+                format!("device_id={}; etp_rt={etp_rt}", device_identifier.device_id),
+            )
             .body(serde_urlencoded::to_string(body).unwrap())
             .build()?;
 

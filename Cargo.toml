@@ -42,13 +42,10 @@ gtk = "0.18"
 http = "1.5"
 jsonwebtoken = { version = "11.0", default-features = false, features = ["rust_crypto"] }
 proc-macro2 = "1.0"
-# the patch version number is necessary for the 'reqwest' and 'rustls' dependencies to prevent incompatability errors
-# (https://github.com/seanmonstar/reqwest/issues/1837)
 reqwest = { version = "0.13.5", features = ["cookies", "json", "multipart", "query", "rustls"] }
 rand = "0.10"
 quote = "1.0"
 regex = { version = "1.13", default-features = false, features = ["std"] }
-rustls = { version = "0.23.4", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
@@ -58,7 +55,6 @@ tao = "0.35"
 tokio = { version = "1.53", features = ["sync"] }
 tower-service = "0.3"
 uuid = { version = "1.24", features = ["v4"] }
-webpki-roots = "1.0"
 wry = "0.55"
 
 [dependencies]
@@ -69,14 +65,12 @@ futures-util = { workspace = true }
 http = { workspace = true }
 jsonwebtoken = { workspace = true }
 reqwest = { workspace = true }
-rustls = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_urlencoded = { workspace = true }
 smart-default = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
-webpki-roots = { workspace = true }
 
 crunchyroll-rs-internal = { workspace = true }
 

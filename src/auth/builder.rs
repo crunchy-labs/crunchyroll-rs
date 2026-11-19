@@ -99,9 +99,9 @@ impl Default for CrunchyrollBuilder {
 }
 
 impl CrunchyrollBuilder {
-    /// The default basic auth token bundled with this crate. It is valid for
-    /// [`DevicePlatform::TvAndroid`] and is what the builder uses if
-    /// [`CrunchyrollBuilder::platform`] is never called.
+    /// The basic auth token of the android tv app. It is valid for
+    /// [`DevicePlatform::TvAndroid`]; pass it via [`CrunchyrollBuilder::platform`] to use the
+    /// android tv platform.
     ///
     /// Crunchyroll rotates basic auth tokens from time to time; this constant is kept
     /// semi up-to-date by this crate, tokens are only removed if either the old token was invalidated
@@ -113,6 +113,10 @@ impl CrunchyrollBuilder {
     pub const ANDROID_TV_BASIC_AUTH_TOKEN: &'static str = "d2Q0cXluNGVxYWJ0Z2Y3cW50cmQ6UFZkY3NwN3V0anM2dEQ3dkhiWHBrX1VVaVdEV18xcjI=";
     #[rustfmt::skip] // for scripts that fetch this
     pub const ANDROID_TV_USER_AGENT: &'static str = "Crunchyroll/ANDROIDTV/3.72.1_22361 (Android 13.0; en-US; TCL-S5400AF Build/TP1A.220624.014)";
+    #[rustfmt::skip] // for scripts that may fetch this
+    pub const WEB_BASIC_AUTH_TOKEN: &'static str = "bm9haWhkZXZtXzZpeWcwYThsMHE6";
+    #[rustfmt::skip] // for scripts that may fetch this
+    pub const WEB_CHROME_USER_AGENT: &'static str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
     pub const DEFAULT_HEADERS: [(HeaderName, HeaderValue); 3] = [
         (header::ACCEPT, HeaderValue::from_static("*/*")),
@@ -130,26 +134,10 @@ impl CrunchyrollBuilder {
     /// to configure the behavior of the download client. Use [`CrunchyrollBuilder::client`] or
     /// to set your built client.
     pub fn predefined_client_builder() -> ClientBuilder {
-        let tls_config = rustls::ClientConfig::builder_with_provider(
-            rustls::crypto::CryptoProvider {
-                cipher_suites: rustls::crypto::ring::DEFAULT_CIPHER_SUITES.to_vec(),
-                kx_groups: vec![rustls::crypto::ring::kx_group::X25519],
-                ..rustls::crypto::ring::default_provider()
-            }
-            .into(),
-        )
-        .with_protocol_versions(&[&rustls::version::TLS12, &rustls::version::TLS13])
-        .unwrap()
-        .with_root_certificates(rustls::RootCertStore {
-            roots: webpki_roots::TLS_SERVER_ROOTS.into(),
-        })
-        .with_no_client_auth();
-
         Client::builder()
             .https_only(true)
             .cookie_store(true)
             .default_headers(HeaderMap::from_iter(CrunchyrollBuilder::DEFAULT_HEADERS))
-            .use_preconfigured_tls(tls_config)
     }
 
     /// Set a custom client that will be used in all api requests.
@@ -187,10 +175,14 @@ impl CrunchyrollBuilder {
     /// [`DevicePlatform::AndroidPhone`]; using it with any other platform
     /// (e.g. [`DevicePlatform::TvAndroid`]) will cause stream requests to fail with an error.
     ///
-    /// The basic auth token and user agent of the android tv app (the default platform) are
-    /// bundled with the library. Crunchyroll rotates basic auth tokens from time to time; the
-    /// bundled ones are kept up to date via a scheduled action, but may still become invalid
-    /// between releases. Thus, it's recommended that you fetch the credentials yourself with either
+    /// The default platform is [`DevicePlatform::WebChrome`]. The matching web basic auth token
+    /// ([`CrunchyrollBuilder::WEB_BASIC_AUTH_TOKEN`]) and user agent
+    /// ([`CrunchyrollBuilder::WEB_CHROME_USER_AGENT`]) are bundled with the library. If you use
+    /// another platform (e.g. [`DevicePlatform::TvAndroid`]), you have to pass its credentials
+    /// here. Crunchyroll rotates basic auth tokens from time to time, espcially those for mobile
+    /// platforms. The bundled android tv and phone credentials are ones are kept up to date via a
+    /// scheduled action, but may still become invalid between releases. Thus, it's recommended that
+    /// you fetch the credentials yourself with either
     /// [`crate::auth::platform_credentials::get_platform_credentials`] and some sort of caching(!)
     /// or implement it completely yourself.
     ///
@@ -201,8 +193,7 @@ impl CrunchyrollBuilder {
     ///
     /// Not every login method is available with every basic auth token. For example, the
     /// Android phone basic auth token only supports
-    /// [`CrunchyrollBuilder::login_with_oauth_code`] and the refresh token based methods;
-    /// [`CrunchyrollBuilder::login_with_etp_rt`] will be rejected.
+    /// [`CrunchyrollBuilder::login_with_oauth_code`] and the refresh token based methods.
     pub fn platform(
         mut self,
         device_platform: DevicePlatform,
@@ -295,6 +286,9 @@ impl CrunchyrollBuilder {
     ///
     /// *Note*: You need to set the `device_identifier` to the same identifier which were used
     /// in the login that initially created the refresh token, otherwise the login will fail.
+    ///
+    /// *Note*: The configured platform (and its basic auth token) must match the platform the
+    /// refresh token was issued for. The default is [`DevicePlatform::WebChrome`].
     pub async fn login_with_refresh_token<S: AsRef<str>>(
         self,
         refresh_token: S,
@@ -372,6 +366,7 @@ impl CrunchyrollBuilder {
             &resolved.client,
             etp_rt.as_ref(),
             &device_identifier,
+            &resolved.basic_auth_token,
             #[cfg(feature = "middleware")]
             resolved.middleware.as_ref(),
         )
@@ -414,9 +409,9 @@ impl CrunchyrollBuilder {
         let session_details = match self.session_details {
             Some(session_details) => session_details,
             None => CrunchyrollBuilderSessionDetails {
-                device_platform: DevicePlatform::TvAndroid,
-                basic_auth_token: Self::ANDROID_TV_BASIC_AUTH_TOKEN.to_string(),
-                user_agent: Some(Self::ANDROID_TV_USER_AGENT.to_string()),
+                device_platform: DevicePlatform::WebChrome,
+                basic_auth_token: Self::WEB_BASIC_AUTH_TOKEN.to_string(),
+                user_agent: Some(Self::WEB_CHROME_USER_AGENT.to_string()),
             },
         };
 
