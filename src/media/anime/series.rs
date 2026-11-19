@@ -137,6 +137,8 @@ pub struct Series {
     #[cfg(feature = "__test_strict")]
     last_public: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
+    date_updated: Option<crate::StrictValue>,
+    #[cfg(feature = "__test_strict")]
     linked_resource_key: Option<crate::StrictValue>,
     #[cfg(feature = "__test_strict")]
     new: Option<crate::StrictValue>,

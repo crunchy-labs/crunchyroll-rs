@@ -1,12 +1,13 @@
 use crate::Executor;
 use crate::categories::Category;
-use crate::common::{Image, Request};
+use crate::common::{Image, LocalizedImage, Request};
 use crate::media::anime::util::{fix_empty_episode_versions, fix_empty_season_versions};
 use crate::media::util::request_media;
 use crate::media::{AdBreak, ContentDescriptorsWithSymbol, LanguagePresentation, Media};
 use crate::{Crunchyroll, Locale, Result, Season, Series};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Details about up or down votes on an episode.
@@ -171,6 +172,10 @@ pub struct Episode {
 
     #[serde(deserialize_with = "crate::internal::serde::deserialize_thumbnail_image")]
     pub images: Vec<Image>,
+    /// Images that may have localized text on them. Only populated when the episode was
+    /// retrieved via [`crate::Crunchyroll::browse`].
+    #[serde(default)]
+    pub images_localized: HashMap<String, LocalizedImage>,
 
     /// Categories of the series (Drama, Action, etc.). Can be missing on certain endpoints,
     /// use [`Episode::categories()`] to get them reliably.
