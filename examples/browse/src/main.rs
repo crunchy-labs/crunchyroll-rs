@@ -2,7 +2,7 @@ use crunchyroll_rs::Crunchyroll;
 use crunchyroll_rs::auth::DeviceIdentifier;
 use crunchyroll_rs::categories::Category;
 use crunchyroll_rs::common::StreamExt;
-use crunchyroll_rs::search::{BrowseOptions, SearchMediaCollection};
+use crunchyroll_rs::search::{BrowseOptions, SearchMediaCollection, SearchMusicType};
 use std::env;
 use std::error::Error;
 
@@ -30,15 +30,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             SearchMediaCollection::Episode(episode) => {
                 println!("Browse returned episode {}", episode.title)
             }
-            SearchMediaCollection::MovieListing(movie_listing) => {
-                println!("Browse returned movie listing {}", movie_listing.title)
+            SearchMediaCollection::Movie(movie) => {
+                println!("Browse returned movie listing {}", movie.title)
             }
-            SearchMediaCollection::MusicVideo(music_video) => {
-                println!("Browse returned music video {}", music_video.title)
-            }
-            SearchMediaCollection::Concert(concert) => {
-                println!("Browse returned concert {}", concert.title)
-            }
+            SearchMediaCollection::Music(music) => match music.music_type {
+                SearchMusicType::MusicVideo(music_video) => {
+                    println!("Browse returned music video {}", music_video.title)
+                }
+                SearchMusicType::Concert(concert) => {
+                    println!("Browse returned concert {}", concert.title)
+                }
+            },
         }
     }
 
