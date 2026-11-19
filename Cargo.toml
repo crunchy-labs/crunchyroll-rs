@@ -68,6 +68,7 @@ futures-util = { workspace = true }
 http = { workspace = true }
 jiff = { workspace = true }
 jsonwebtoken = { workspace = true }
+regex = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -78,7 +79,6 @@ uuid = { workspace = true }
 
 crunchyroll-rs-internal = { workspace = true }
 
-regex = { workspace = true, optional = true }
 tower-service = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -88,18 +88,14 @@ tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 uuid = { workspace = true }
 
 [features]
-default = ["parse"]
 
 # Use chrono for the date and time types.
 # Note that chrono is unmaintained, the feature is only here for legacy support and will be removed in a future release.
 chrono = ["dep:chrono"]
-
 # Add various stabilizations as Crunchyroll delivers wrong api results in some cases.
 experimental-stabilizations = []
 # Add the ability to specify (tower based) custom middleware services.
 middleware = ["dep:tower-service"]
-# Add functionality to parse Crunchyroll urls.
-parse = ["dep:regex"]
 
 # Internal! Do not use it outside of testing
 __test = []

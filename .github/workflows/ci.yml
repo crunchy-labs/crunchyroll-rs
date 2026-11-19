@@ -36,7 +36,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Test
-        run: cargo test --target ${{ matrix.toolchain }} login_anonymously --features "middleware parse __test __test-strict"
+        run: cargo test --target ${{ matrix.toolchain }} login_anonymously --features "__test __test_strict"
 
   test-compile-with-features:
     runs-on: ubuntu-latest
@@ -60,8 +60,14 @@ jobs:
       - name: Compile with chrono
         run: cargo build --target ${{ matrix.toolchain }} --no-default-features --features "chrono"
 
+      - name: Compile with middleware
+        run: cargo build --target ${{ matrix.toolchain }} --no-default-features --features "middleware"
+
       - name: Compile with experimental-stabilizations
         run: cargo build --target ${{ matrix.toolchain }} --no-default-features --features "experimental-stabilizations"
+
+      - name: Compile with all user-facing features
+        run: cargo build --target ${{ matrix.toolchain }} --no-default-features --features "chrono experimental-stabilizations middleware"
 
   test-full:
     runs-on: ubuntu-latest
@@ -86,7 +92,7 @@ jobs:
           ETP_RT_DEVICE_TYPE: ${{ secrets.ETP_RT_DEVICE_TYPE }}
           IS_PREMIUM: ${{ secrets.IS_PREMIUM }}
         run: |
-          cargo test --tests --no-fail-fast --no-default-features --features "middleware parse __test __test_strict" -- --test-threads=1 \
+          cargo test --tests --no-fail-fast --no-default-features --features "middleware __test __test_strict" -- --test-threads=1 \
             --skip login_with_refresh_token \
             --skip login_with_refresh_token_profile_id \
             --skip profiles \

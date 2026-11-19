@@ -14,7 +14,6 @@ static EPISODE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// Types of Crunchyroll urls, pointing to media.
-#[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 #[derive(Clone, Debug)]
 pub enum UrlType {
     /// The parsed url points to a series. Use [`crate::Series::from_id`] with the value of this
@@ -43,7 +42,6 @@ pub enum UrlType {
 }
 
 /// Extract information out of Crunchyroll urls which are pointing to media.
-#[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub fn parse_url<S: AsRef<str>>(url: S) -> Option<UrlType> {
     if let Some(capture) = SERIES_REGEX.captures(url.as_ref()) {
         let id = capture["id"].to_string();

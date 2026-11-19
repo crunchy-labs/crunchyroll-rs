@@ -1,5 +1,3 @@
-#![cfg(feature = "parse")]
-
 use crunchyroll_rs::UrlType;
 
 mod utils;

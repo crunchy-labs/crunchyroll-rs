@@ -127,7 +127,6 @@
 //!
 //! # Features
 //!
-//! - **parse** *(enabled by default)*: Enables url parsing.
 //! - **chrono**: Uses [chrono](https://docs.rs/chrono) instead of **jiff** for the date and time types.
 //!   Note that chrono is unmaintained, the feature is only here for legacy support and will be removed
 //!   in a future release.
@@ -158,8 +157,6 @@ pub mod feed;
 pub mod list;
 pub mod locale;
 pub mod media;
-#[cfg(feature = "parse")]
-#[cfg_attr(docsrs, doc(cfg(feature = "parse")))]
 pub mod parse;
 pub mod payment;
 pub mod profile;
@@ -181,7 +178,6 @@ pub use locale::Locale;
 pub use media::{
     Artist, Concert, Episode, MediaCollection, Movie, MovieListing, MusicVideo, Season, Series,
 };
-#[cfg(feature = "parse")]
 pub use parse::{UrlType, parse_url};
 
 #[cfg(feature = "__test_strict")]
