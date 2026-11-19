@@ -88,7 +88,6 @@ tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 uuid = { workspace = true }
 
 [features]
-
 # Use chrono for the date and time types.
 # Note that chrono is unmaintained, the feature is only here for legacy support and will be removed in a future release.
 chrono = ["dep:chrono"]
