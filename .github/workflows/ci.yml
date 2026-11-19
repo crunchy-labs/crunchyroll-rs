@@ -55,19 +55,19 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Compile with no default features
-        run: cargo build --target ${{ matrix.toolchain }} --no-default-features
+        run: cargo build --no-default-features
 
       - name: Compile with chrono
-        run: cargo build --target ${{ matrix.toolchain }} --no-default-features --features "chrono"
+        run: cargo build --no-default-features --features "chrono"
 
       - name: Compile with middleware
-        run: cargo build --target ${{ matrix.toolchain }} --no-default-features --features "middleware"
+        run: cargo build --no-default-features --features "middleware"
 
       - name: Compile with experimental-stabilizations
-        run: cargo build --target ${{ matrix.toolchain }} --no-default-features --features "experimental-stabilizations"
+        run: cargo build --no-default-features --features "experimental-stabilizations"
 
       - name: Compile with all user-facing features
-        run: cargo build --target ${{ matrix.toolchain }} --no-default-features --features "chrono experimental-stabilizations middleware"
+        run: cargo build --no-default-features --features "chrono experimental-stabilizations middleware"
 
   test-full:
     runs-on: ubuntu-latest
