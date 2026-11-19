@@ -129,7 +129,6 @@
 //! # Features
 //!
 //! - **parse** *(enabled by default)*: Enables url parsing.
-//! - **release-calendar**: Enables the `release_calendar` module to get upcoming episode releases.
 //! - **middleware**: Enables the usage of a [tower-service](https://docs.rs/tower-service) compatible middleware.
 //! - **experimental-stabilizations**: Provides some functions to maybe fix broken api results. See
 //!   [Bugs](#bugs) for more information.
@@ -161,9 +160,6 @@ pub mod media;
 pub mod parse;
 pub mod payment;
 pub mod profile;
-#[cfg(feature = "release-calendar")]
-#[cfg_attr(docsrs, doc(cfg(feature = "release-calendar")))]
-pub mod release_calendar;
 pub mod search;
 
 // internal

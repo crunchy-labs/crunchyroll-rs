@@ -119,7 +119,7 @@ macro_rules! enum_values {
 /// }
 /// ```
 macro_rules! options {
-    ($(#[$struct_attribute:meta])* $name:ident; $($(#[$attribute:meta])* $field:ident($t:ty, $query_name:literal) = $default:expr),*) => {
+    ($(#[$struct_attribute:meta])* $name:ident; $($(#[$attribute:meta])* $field:ident($t:ty, $query_name:literal $(, $transform:expr)?) = $default:expr),*) => {
         $(
             #[$struct_attribute]
         )*
@@ -156,8 +156,12 @@ macro_rules! options {
             pub(crate) fn into_query(self) -> Vec<(String, String)> {
                 crate::internal::serde::query_to_urlencoded([
                     $(
-                        ($query_name, if let Some(field) = self.$field {
-                            Some(serde_json::to_value(field).unwrap())
+                        ($query_name, if let Some(v) = self.$field {
+                            $(
+                                let v = $transform(v);
+                            )?
+
+                            Some(serde_json::to_value(v).unwrap())
                         } else { None })
                     ),*
                 ].to_vec()).unwrap()
@@ -168,6 +172,10 @@ macro_rules! options {
                 let mut map = serde_json::Map::new();
                 $(
                     if let Some(v) = self.$field {
+                        $(
+                            let v = $transform(v);
+                        )?
+
                         map.insert($query_name.to_string(), serde_json::to_value(v).unwrap());
                     }
                 );*;
