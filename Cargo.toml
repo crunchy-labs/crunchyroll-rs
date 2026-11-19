@@ -81,6 +81,7 @@ tower-service = { workspace = true, optional = true }
 anyhow = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
+uuid = { workspace = true }
 
 [features]
 default = ["parse"]
