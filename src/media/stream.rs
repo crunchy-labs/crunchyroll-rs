@@ -2,7 +2,7 @@ use crate::auth::DevicePlatform;
 use crate::error::{Error, ErrorKind, is_structured_error};
 use crate::{Crunchyroll, Executor, Locale, Request, Result};
 use byteorder::{BigEndian, ReadBytesExt};
-use dash_mpd::{ContentProtection, MPD};
+use dash_mpd_core::{ContentProtection, MPD};
 use http::header;
 use regex::Regex;
 use reqwest::StatusCode;
@@ -355,15 +355,16 @@ impl StreamData {
             is_structured_error(json, url.as_ref(), &StatusCode::FORBIDDEN)?;
         }
 
-        let mut mpd: MPD = dash_mpd::parse(&String::from_utf8_lossy(&raw_mpd)).map_err(|e| {
-            Error::error_from_other_error_and_url(
-                e,
-                ErrorKind::Decode {
-                    content: Some(raw_mpd.clone()),
-                },
-                url.as_ref(),
-            )
-        })?;
+        let mut mpd: MPD =
+            dash_mpd_core::parse(&String::from_utf8_lossy(&raw_mpd)).map_err(|e| {
+                Error::error_from_other_error_and_url(
+                    e,
+                    ErrorKind::Decode {
+                        content: Some(raw_mpd.clone()),
+                    },
+                    url.as_ref(),
+                )
+            })?;
 
         let err_fn = |msg: &str| {
             Error::error_from_kind_and_url(
