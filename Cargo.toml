@@ -15,7 +15,8 @@ include = ["/Cargo.toml", "/build.rs", "/LICENSE-APACHE", "/LICENSE-MIT", "/READ
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]
-all-features = true
+all-features = false
+features = ["experimental-stabilizations", "middleware"]
 
 [workspace]
 members = [".", "examples/*", "internal"]
